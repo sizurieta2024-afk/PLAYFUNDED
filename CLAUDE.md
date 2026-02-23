@@ -1,5 +1,8 @@
 # PlayFunded — Claude Code Context
 
+## Skill Graph
+Read `.claude/skills/graph/index.md` at the start of every session before writing any code. It maps all domain concepts, architecture decisions, and gotchas across 13 linked files.
+
 ## What This Is
 Spanish-first sports prop trading firm platform for Latin America.
 Users buy challenges, trade sports props, pass phases, get funded accounts.

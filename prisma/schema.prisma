@@ -1,0 +1,494 @@
+// PlayFunded — Prisma Schema
+// All monetary amounts stored as integer cents (never floats)
+// All timestamps in UTC
+// All IDs are UUIDs
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserRole {
+  user
+  admin
+}
+
+enum Language {
+  es
+  en
+}
+
+enum ChallengeStatus {
+  active
+  passed
+  failed
+  funded
+}
+
+enum PhaseType {
+  phase1
+  phase2
+  funded
+}
+
+enum PickStatus {
+  pending
+  won
+  lost
+  void
+  push
+}
+
+enum PaymentMethod {
+  card
+  usdt
+  usdc
+  btc
+  mercadopago
+}
+
+enum PaymentStatus {
+  pending
+  processing
+  completed
+  failed
+  refunded
+}
+
+enum PayoutMethod {
+  bank_wire
+  usdt
+  usdc
+  btc
+  paypal
+}
+
+enum PayoutStatus {
+  pending
+  processing
+  paid
+  failed
+}
+
+enum KycStatus {
+  not_required
+  pending
+  approved
+  rejected
+}
+
+enum IdType {
+  passport
+  national_id
+  drivers_license
+}
+
+enum MarketRequestStatus {
+  pending
+  reviewed
+  approved
+  rejected
+}
+
+enum AffiliateCommissionRate {
+  five
+  ten
+}
+
+// ============================================================
+// USER
+// ============================================================
+
+model User {
+  id                 String    @id @default(uuid())
+  email              String    @unique
+  name               String?
+  avatar             String?
+  language           Language  @default(es)
+  country            String?   // ISO 3166-1 alpha-2 (e.g. "MX", "AR")
+  role               UserRole  @default(user)
+  isBanned           Boolean   @default(false)
+  banReason          String?
+  selfExcludedUntil  DateTime?
+  isPermExcluded     Boolean   @default(false)
+  weeklyDepositLimit Int?      // USD cents
+
+  // Supabase Auth ID (links to auth.users)
+  supabaseId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  challenges       Challenge[]
+  picks            Pick[]
+  payments         Payment[]
+  payouts          Payout[]
+  affiliate        Affiliate?
+  marketRequests   MarketRequest[]
+  kycSubmission    KycSubmission?
+  followedTraders  Follow[]          @relation("follower")
+  followers        Follow[]          @relation("following")
+
+  @@index([email])
+  @@index([role])
+}
+
+// ============================================================
+// TIER (challenge product)
+// ============================================================
+
+model Tier {
+  id              String   @id @default(uuid())
+  name            String   // e.g. "Starter $1K", "Pro $5K", "Elite $10K"
+  fee             Int      // USD cents — challenge purchase price
+  fundedBankroll  Int      // USD cents — simulated bankroll on funded phase
+  profitSplitPct  Int      // e.g. 70 or 80 (percent)
+  minPicks        Int      @default(15)
+  guideIncluded   Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  challenges Challenge[]
+  payments   Payment[]
+}
+
+// ============================================================
+// CHALLENGE
+// ============================================================
+
+model Challenge {
+  id              String          @id @default(uuid())
+  userId          String
+  tierId          String
+  status          ChallengeStatus @default(active)
+  phase           PhaseType       @default(phase1)
+
+  // Balances — all in USD cents
+  balance         Int             // Current simulated balance
+  startBalance    Int             // Balance at phase start (for daily loss calc)
+  highestBalance  Int             // All-time highest balance (for drawdown calc)
+  peakBalance     Int             // Alias: same as highestBalance, kept for clarity
+
+  // Phase completion targets
+  phase1StartBalance Int?
+  phase2StartBalance Int?
+
+  // Timing
+  startedAt       DateTime        @default(now())
+  pausedUntil     DateTime?
+  pauseUsed       Boolean         @default(false)
+  completedAt     DateTime?
+  failedAt        DateTime?
+  fundedAt        DateTime?
+
+  // Streak tracking (funded phase only)
+  currentStreak   Int             @default(0) // consecutive profitable months
+  bonusSplitPct   Int             @default(0) // extra % from streak bonus
+
+  // Gift
+  isGift          Boolean         @default(false)
+  giftedByUserId  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user    User      @relation(fields: [userId], references: [id])
+  tier    Tier      @relation(fields: [tierId], references: [id])
+  picks   Pick[]
+  payouts Payout[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([phase])
+  @@index([userId, status])
+}
+
+// ============================================================
+// PICK
+// ============================================================
+
+model Pick {
+  id              String     @id @default(uuid())
+  challengeId     String
+  userId          String
+  sport           String     // "football", "basketball", "american_football", "mma", "tennis"
+  league          String     // "liga_mx", "nba", "nfl", etc.
+  event           String     // Event identifier from odds provider
+  eventName       String?    // Human-readable event name
+  marketType      String     // "moneyline", "spread", "total", "player_prop"
+  selection       String     // What the user picked
+  odds            Float      // Decimal odds (e.g. 2.50) — NOT stored as cents
+  stake           Int        // USD cents — amount wagered
+  potentialPayout Int        // USD cents — stake × odds (rounded)
+  actualPayout    Int        @default(0) // USD cents — 0 if lost/void/push, else potentialPayout
+
+  status    PickStatus @default(pending)
+  isParlay  Boolean    @default(false)
+  isLive    Boolean    @default(false)
+
+  placedAt   DateTime  @default(now())
+  settledAt  DateTime?
+  eventStart DateTime?
+
+  // Public feed
+  isPublic       Boolean @default(false) // funded traders can opt-in
+  showStakeAmt   Boolean @default(false) // show actual $ amount (default: show % only)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  challenge   Challenge    @relation(fields: [challengeId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
+  parlayLegs  ParlayLeg[]
+
+  @@index([challengeId])
+  @@index([status])
+  @@index([placedAt])
+  @@index([challengeId, status])
+  @@index([challengeId, placedAt])
+}
+
+// ============================================================
+// PARLAY LEG
+// ============================================================
+
+model ParlayLeg {
+  id          String     @id @default(uuid())
+  pickId      String
+  sport       String
+  league      String
+  event       String
+  eventName   String?
+  marketType  String
+  selection   String
+  odds        Float      // Decimal odds for this leg
+  status      PickStatus @default(pending)
+
+  // Relations
+  pick Pick @relation(fields: [pickId], references: [id])
+
+  @@index([pickId])
+}
+
+// ============================================================
+// PAYMENT (incoming — challenge purchases)
+// ============================================================
+
+model Payment {
+  id          String        @id @default(uuid())
+  userId      String
+  tierId      String
+  amount      Int           // USD cents
+  currency    String        @default("USD")
+  method      PaymentMethod
+  status      PaymentStatus @default(pending)
+  providerRef String?       // Stripe payment_intent_id, MP payment_id, NOWPayments payment_id
+  metadata    Json?         // Provider-specific extra data
+
+  // Crypto-specific
+  cryptoAddress  String?
+  cryptoAmount   Float?
+  cryptoNetwork  String?
+  cryptoExpiry   DateTime?
+
+  // Gift purchase
+  isGift          Boolean @default(false)
+  giftRecipientEmail String?
+  giftToken       String?  @unique // redemption token
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+  tier Tier @relation(fields: [tierId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([providerRef])
+}
+
+// ============================================================
+// PAYOUT (outgoing — funded trader profits)
+// ============================================================
+
+model Payout {
+  id          String       @id @default(uuid())
+  userId      String
+  challengeId String
+  amount      Int          // USD cents
+  splitPct    Int          // profit split % at time of payout
+  method      PayoutMethod
+  status      PayoutStatus @default(pending)
+
+  // Admin
+  adminNote   String?
+  txRef       String?      // payment reference / transaction ID
+
+  // Rollover
+  isRollover  Boolean      @default(false) // true if user chose to rollover profits
+
+  requestedAt DateTime     @default(now())
+  approvedAt  DateTime?
+  paidAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id])
+  challenge Challenge @relation(fields: [challengeId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([challengeId])
+}
+
+// ============================================================
+// KYC SUBMISSION
+// ============================================================
+
+model KycSubmission {
+  id         String    @id @default(uuid())
+  userId     String    @unique
+  status     KycStatus @default(pending)
+
+  // Personal info
+  fullName   String
+  dateOfBirth DateTime
+  country    String
+
+  // Documents
+  idType     IdType
+  idFrontUrl String    // Supabase Storage private bucket URL
+  idBackUrl  String?   // Optional (some IDs are single-page)
+
+  // Admin review
+  reviewedAt DateTime?
+  reviewNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ============================================================
+// AFFILIATE
+// ============================================================
+
+model Affiliate {
+  id             String                  @id @default(uuid())
+  userId         String                  @unique
+  code           String                  @unique // PF-XXXXXX format
+  commissionRate AffiliateCommissionRate @default(five) // 5% or 10%
+
+  // Aggregate stats (updated on each conversion for fast reads)
+  totalClicks      Int @default(0)
+  totalConversions Int @default(0)
+  totalEarned      Int @default(0) // USD cents, lifetime
+  pendingPayout    Int @default(0) // USD cents, unpaid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User             @relation(fields: [userId], references: [id])
+  clicks AffiliateClick[]
+
+  @@index([code])
+}
+
+// ============================================================
+// AFFILIATE CLICK
+// ============================================================
+
+model AffiliateClick {
+  id               String   @id @default(uuid())
+  affiliateId      String
+  ip               String
+  userAgent        String?
+  convertedToUserId String? // set when click converted to a purchase
+  conversionAmount  Int?    // USD cents — challenge fee paid
+  commissionEarned  Int?    // USD cents — affiliate's cut
+
+  createdAt DateTime @default(now())
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id])
+
+  @@index([affiliateId])
+  @@index([convertedToUserId])
+}
+
+// ============================================================
+// MARKET REQUEST
+// ============================================================
+
+model MarketRequest {
+  id          String              @id @default(uuid())
+  userId      String
+  sport       String
+  league      String
+  description String
+  status      MarketRequestStatus @default(pending)
+  adminNote   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([status])
+  @@index([userId])
+}
+
+// ============================================================
+// ODDS CACHE
+// ============================================================
+
+model OddsCache {
+  id         String   @id @default(uuid())
+  sport      String
+  league     String
+  event      String   // Provider event ID
+  eventName  String?
+  startTime  DateTime
+  markets    Json     // Full market data from provider
+  fetchedAt  DateTime @default(now())
+  provider   String   // "odds_api", "api_football", etc.
+  isLive     Boolean  @default(false)
+
+  @@unique([sport, league, event, startTime])
+  @@index([sport, league])
+  @@index([startTime])
+  @@index([fetchedAt])
+}
+
+// ============================================================
+// FOLLOW (community — funded trader follows)
+// ============================================================
+
+model Follow {
+  id          String @id @default(uuid())
+  followerId  String // user who is following
+  followingId String // funded trader being followed
+
+  createdAt DateTime @default(now())
+
+  follower  User @relation("follower", fields: [followerId], references: [id])
+  following User @relation("following", fields: [followingId], references: [id])
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}

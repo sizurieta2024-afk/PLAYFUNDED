@@ -147,7 +147,7 @@ model User {
 
 model Tier {
   id              String   @id @default(uuid())
-  name            String   // e.g. "Starter $1K", "Pro $5K", "Elite $10K"
+  name            String   @unique // e.g. "Starter $1K", "Pro $5K", "Elite $10K"
   fee             Int      // USD cents — challenge purchase price
   fundedBankroll  Int      // USD cents — simulated bankroll on funded phase
   profitSplitPct  Int      // e.g. 70 or 80 (percent)

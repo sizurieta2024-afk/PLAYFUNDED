@@ -1,4 +1,8 @@
-import { createBrowserClient, createServerClient as createSsrServerClient, type CookieOptions } from '@supabase/ssr'
+import {
+  createBrowserClient,
+  createServerClient as createSsrServerClient,
+  type CookieOptions,
+} from '@supabase/ssr'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 

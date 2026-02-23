@@ -32,10 +32,10 @@ Goal: working login. You can't test anything until this session is done.
 - [ ] Add geo-block check to middleware for non-authenticated routes
 - [x] Geo-block added to middleware (public routes only)
 - [x] src/app/dashboard/page.tsx — temp placeholder
-- [ ] Test full auth flow: sign up → verify → sign in → redirect to /dashboard
+- [x] Test full auth flow: sign up → verify → sign in → redirect to /dashboard
 - [x] RLS: users_own_row + service_full_access on User table
 - [x] Build passes, TypeScript clean
-- [ ] Commit: "feat(auth): supabase auth, google oauth, geo-block"
+- [x] Commit: "feat(auth): supabase auth, google oauth, geo-block"
 
 ## Session 3 — Design System + Layout Shell
 Goal: shared layout, dark/light mode, Inter font, i18n wired up. All in one session because i18n without pages to put strings in is wasted effort.

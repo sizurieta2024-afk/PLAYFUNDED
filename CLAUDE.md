@@ -28,7 +28,7 @@ Full spec in README.md. Task tracker in .claude/plans/todo.md.
 | Session | Section | Status |
 |---------|---------|--------|
 | 1 | Infrastructure: Prisma, Supabase libs, middleware | ✅ DONE |
-| 2 | Supabase setup + full authentication + geo-block | TODO |
+| 2 | Supabase setup + full authentication + geo-block | ✅ DONE |
 | 3 | Design system + layout shell + i18n wired up | TODO |
 | 4 | Challenge purchase flow (Stripe) | TODO |
 | 5 | Mercado Pago + NOWPayments + exchange rates | TODO |
@@ -49,9 +49,9 @@ Full spec in README.md. Task tracker in .claude/plans/todo.md.
 | 18 | Backup + deploy | TODO |
 
 ## Current Session Scope
-Working on: Session 2 — Authentication implementation
-Infrastructure complete: DB migrated, tiers seeded, Google OAuth configured, .env.local filled
-Remaining: DB password → .env.local, then build login/signup pages + geo-block
+Working on: Session 3 — Design system + layout shell + i18n
+Session 2 complete: auth pages live, Google OAuth working, geo-block active, RLS set
+Next: tailwind color tokens, next-themes, next-intl [locale] routing, Navbar, Footer
 
 ## File Conventions
 - API routes: src/app/api/[resource]/route.ts

@@ -49,9 +49,9 @@ Full spec in README.md. Task tracker in .claude/plans/todo.md.
 | 18 | Backup + deploy | TODO |
 
 ## Current Session Scope
-Working on: Session 2 — Supabase Setup + Authentication
-Prerequisite: User must complete steps in .claude/memory/before-session-2.md first
-Goal: working login (Google OAuth, email), geo-block USA, first DB migration
+Working on: Session 2 — Authentication implementation
+Infrastructure complete: DB migrated, tiers seeded, Google OAuth configured, .env.local filled
+Remaining: DB password → .env.local, then build login/signup pages + geo-block
 
 ## File Conventions
 - API routes: src/app/api/[resource]/route.ts

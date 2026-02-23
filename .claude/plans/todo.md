@@ -11,24 +11,30 @@
 
 ---
 
-## ⚠️ BEFORE SESSION 2 — You must do this first (manual, takes 10 min)
-See .claude/memory/before-session-2.md for exact step-by-step instructions.
-
 ## Session 2 — Supabase Setup + Authentication
 Goal: working login. You can't test anything until this session is done.
-- [ ] Create Supabase project and run first migration (`npm run db:migrate`)
-- [ ] Run seed (`npm run db:seed`) — creates the 4 tiers in DB
-- [ ] Configure Google OAuth in Supabase dashboard
-- [ ] Configure Apple Sign-In in Supabase dashboard
-- [ ] src/app/auth/login/page.tsx — login page with Google, Apple, email buttons
-- [ ] src/app/auth/signup/page.tsx — signup page
-- [ ] src/app/auth/verify/page.tsx — email verification page
-- [ ] src/app/actions/auth.ts — signIn, signUp, signOut server actions
-- [ ] src/lib/geo.ts — USA geo-block via ipapi.co (cache in session 1 hour)
+- [x] Create Supabase project (pvwynjnifdmaisswtwiz, sa-east-1)
+- [x] Run first migration — all 13 tables created
+- [x] Run seed — 4 tiers seeded (Starter $1K, Pro $5K, Elite $10K, Champion $25K)
+- [x] Configure Google OAuth in Supabase (Client ID + Secret set via API)
+- [x] .env.local — anon key + service_role key filled in
+- [ ] Configure Apple Sign-In — skipped (web-first, add later)
+- [x] DB password → .env.local (aws-1-sa-east-1 host)
+- [x] src/app/api/auth/google/route.ts — OAuth initiation
+- [x] src/app/auth/callback/route.ts — session exchange + user upsert
+- [x] src/app/auth/login/page.tsx — Google + email/password login
+- [x] src/app/auth/signup/page.tsx — signup page
+- [x] src/app/auth/verify/page.tsx — verify page
+- [x] src/app/auth/geo-blocked/page.tsx — bilingual block page
+- [x] src/app/actions/auth.ts — signInWithEmail, signUpWithEmail, signOut
+- [x] src/lib/geo.ts — USA geo-block (2s timeout, fail-open)
+- [x] src/components/auth/GeoBlockScreen.tsx — bilingual block UI
 - [ ] Add geo-block check to middleware for non-authenticated routes
-- [ ] src/components/auth/GeoBlock.tsx — full-page block component (bilingual)
+- [x] Geo-block added to middleware (public routes only)
+- [x] src/app/dashboard/page.tsx — temp placeholder
 - [ ] Test full auth flow: sign up → verify → sign in → redirect to /dashboard
-- [ ] RLS policies: users can only read/write own rows in User table
+- [x] RLS: users_own_row + service_full_access on User table
+- [x] Build passes, TypeScript clean
 - [ ] Commit: "feat(auth): supabase auth, google oauth, geo-block"
 
 ## Session 3 — Design System + Layout Shell

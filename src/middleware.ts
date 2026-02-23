@@ -1,13 +1,22 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { isGeoBlocked } from '@/lib/geo'
 
 const PROTECTED_PREFIXES = ['/dashboard', '/admin']
 const WEBHOOK_PREFIX = '/api/webhooks'
 
+// These paths are never geo-checked (avoid redirect loops and block auth)
+const GEO_EXEMPT_PREFIXES = [
+  '/auth/geo-blocked',
+  '/api/webhooks',
+  '/api/auth',
+  '/_next',
+]
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Webhooks bypass all auth checks
+  // Webhooks bypass everything
   if (pathname.startsWith(WEBHOOK_PREFIX)) {
     return NextResponse.next()
   }
@@ -16,7 +25,25 @@ export async function middleware(request: NextRequest) {
     request: { headers: request.headers },
   })
 
-  // Create Supabase client that refreshes session cookies in middleware
+  // ── Geo-block: only check public-facing pages ──────────────────────────
+  const isGeoExempt =
+    GEO_EXEMPT_PREFIXES.some((p) => pathname.startsWith(p)) ||
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/admin')
+
+  if (!isGeoExempt) {
+    const ip =
+      request.headers.get('x-real-ip') ??
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+      '127.0.0.1'
+
+    const blocked = await isGeoBlocked(ip)
+    if (blocked) {
+      return NextResponse.redirect(new URL('/auth/geo-blocked', request.url))
+    }
+  }
+
+  // ── Supabase session refresh ────────────────────────────────────────────
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -51,14 +78,14 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(prefix)
   )
 
-  // Unauthenticated user accessing protected route
+  // Unauthenticated → protected route
   if (isProtected && !session) {
     const loginUrl = new URL('/auth/login', request.url)
     loginUrl.searchParams.set('redirectTo', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
-  // Admin-only routes — server-side role check
+  // Admin route — server-side role check (never trust client)
   if (pathname.startsWith('/admin') && session) {
     const { data: user } = await supabase
       .from('User')
@@ -71,7 +98,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Authenticated users hitting auth pages — redirect to dashboard
+  // Authenticated user hitting auth pages → send to dashboard
   if (
     session &&
     (pathname.startsWith('/auth/login') || pathname.startsWith('/auth/signup'))

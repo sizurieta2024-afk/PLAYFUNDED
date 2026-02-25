@@ -29,7 +29,7 @@ Full spec in README.md. Task tracker in .claude/plans/todo.md.
 |---------|---------|--------|
 | 1 | Infrastructure: Prisma, Supabase libs, middleware | ✅ DONE |
 | 2 | Supabase setup + full authentication + geo-block | ✅ DONE |
-| 3 | Design system + layout shell + i18n wired up | TODO |
+| 3 | Design system + layout shell + i18n wired up | ✅ DONE |
 | 4 | Challenge purchase flow (Stripe) | TODO |
 | 5 | Mercado Pago + NOWPayments + exchange rates | TODO |
 | 6 | Odds feed integration | TODO |
@@ -49,9 +49,9 @@ Full spec in README.md. Task tracker in .claude/plans/todo.md.
 | 18 | Backup + deploy | TODO |
 
 ## Current Session Scope
-Working on: Session 3 — Design system + layout shell + i18n
-Session 2 complete: auth pages live, Google OAuth working, geo-block active, RLS set
-Next: tailwind color tokens, next-themes, next-intl [locale] routing, Navbar, Footer
+Session 3 complete. Next: Session 4 — Challenge purchase flow (Stripe)
+Design system: Plus Jakarta Sans, dark/light tokens, next-intl [locale] routing live
+Colors: dark #0c0f1a / light #f1f5f9, brand green #10b981, gold #f59e0b
 
 ## File Conventions
 - API routes: src/app/api/[resource]/route.ts

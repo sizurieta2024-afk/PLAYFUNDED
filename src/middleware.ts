@@ -1,35 +1,44 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import createIntlMiddleware from 'next-intl/middleware'
 import { isGeoBlocked } from '@/lib/geo'
+import { routing } from '@/i18n/routing'
+
+const intlMiddleware = createIntlMiddleware(routing)
 
 const PROTECTED_PREFIXES = ['/dashboard', '/admin']
 const WEBHOOK_PREFIX = '/api/webhooks'
+const API_PREFIX = '/api'
 
-// These paths are never geo-checked (avoid redirect loops and block auth)
+// Paths that skip geo-block
 const GEO_EXEMPT_PREFIXES = [
   '/auth/geo-blocked',
   '/api/webhooks',
   '/api/auth',
   '/_next',
+  '/dashboard',
+  '/admin',
 ]
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Webhooks bypass everything
+  // ── 1. Webhooks bypass everything ────────────────────────────────────
   if (pathname.startsWith(WEBHOOK_PREFIX)) {
     return NextResponse.next()
   }
 
-  let response = NextResponse.next({
-    request: { headers: request.headers },
-  })
+  // ── 2. API routes: skip intl, just pass through ───────────────────────
+  if (pathname.startsWith(API_PREFIX)) {
+    return NextResponse.next()
+  }
 
-  // ── Geo-block: only check public-facing pages ──────────────────────────
-  const isGeoExempt =
-    GEO_EXEMPT_PREFIXES.some((p) => pathname.startsWith(p)) ||
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/admin')
+  // ── 3. Geo-block: only check public-facing pages ─────────────────────
+  // Strip locale prefix for exempt check (e.g. /en/auth/geo-blocked → /auth/geo-blocked)
+  const pathnameWithoutLocale = pathname.replace(/^\/(es-419|en)/, '') || '/'
+  const isGeoExempt = GEO_EXEMPT_PREFIXES.some(
+    (p) => pathnameWithoutLocale.startsWith(p) || pathname.startsWith(p)
+  )
 
   if (!isGeoExempt) {
     const ip =
@@ -43,7 +52,17 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // ── Supabase session refresh ────────────────────────────────────────────
+  // ── 4. Run next-intl middleware (locale detection + routing) ──────────
+  const intlResponse = intlMiddleware(request)
+
+  // If intl wants to redirect (e.g. normalise locale prefix), honour it
+  if (intlResponse.status === 307 || intlResponse.status === 302 || intlResponse.status === 308) {
+    return intlResponse
+  }
+
+  // ── 5. Supabase session refresh ───────────────────────────────────────
+  let response = intlResponse
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -54,16 +73,12 @@ export async function middleware(request: NextRequest) {
         },
         set(name: string, value: string, options: CookieOptions) {
           request.cookies.set({ name, value, ...options })
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          })
+          response = NextResponse.next({ request: { headers: request.headers } })
           response.cookies.set({ name, value, ...options })
         },
         remove(name: string, options: CookieOptions) {
           request.cookies.set({ name, value: '', ...options })
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          })
+          response = NextResponse.next({ request: { headers: request.headers } })
           response.cookies.set({ name, value: '', ...options })
         },
       },
@@ -74,19 +89,19 @@ export async function middleware(request: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession()
 
-  const isProtected = PROTECTED_PREFIXES.some((prefix) =>
-    pathname.startsWith(prefix)
-  )
+  // Normalise path (strip locale prefix) for protected-route checks
+  const cleanPath = pathnameWithoutLocale || pathname
+  const isProtected = PROTECTED_PREFIXES.some((prefix) => cleanPath.startsWith(prefix))
 
-  // Unauthenticated → protected route
+  // ── 6. Unauthenticated → protected route ─────────────────────────────
   if (isProtected && !session) {
     const loginUrl = new URL('/auth/login', request.url)
     loginUrl.searchParams.set('redirectTo', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
-  // Admin route — server-side role check (never trust client)
-  if (pathname.startsWith('/admin') && session) {
+  // ── 7. Admin route — server-side role check ───────────────────────────
+  if (cleanPath.startsWith('/admin') && session) {
     const { data: user } = await supabase
       .from('User')
       .select('role')
@@ -98,10 +113,10 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Authenticated user hitting auth pages → send to dashboard
+  // ── 8. Authenticated user hitting auth pages → redirect to dashboard ──
   if (
     session &&
-    (pathname.startsWith('/auth/login') || pathname.startsWith('/auth/signup'))
+    (cleanPath.startsWith('/auth/login') || cleanPath.startsWith('/auth/signup'))
   ) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }

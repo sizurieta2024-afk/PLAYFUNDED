@@ -1,0 +1,84 @@
+{
+  "nav": {
+    "brand": "PlayFunded",
+    "slogan": "Nuestro riesgo, tus ganancias",
+    "challenges": "Desafíos",
+    "howItWorks": "Cómo funciona",
+    "leaderboard": "Líderes",
+    "faq": "FAQ",
+    "login": "Iniciar sesión",
+    "signup": "Comenzar gratis",
+    "dashboard": "Mi dashboard",
+    "signout": "Cerrar sesión"
+  },
+  "footer": {
+    "slogan": "Nuestro riesgo, tus ganancias",
+    "tagline": "La plataforma de trading deportivo para América Latina",
+    "product": "Producto",
+    "challenges": "Desafíos",
+    "howItWorks": "Cómo funciona",
+    "leaderboard": "Tabla de líderes",
+    "faq": "Preguntas frecuentes",
+    "legal": "Legal",
+    "terms": "Términos y condiciones",
+    "privacy": "Política de privacidad",
+    "responsibleGambling": "Juego responsable",
+    "support": "Soporte",
+    "contact": "Contacto",
+    "affiliate": "Programa de afiliados",
+    "disclaimer": "PlayFunded es una plataforma educativa de trading deportivo. No somos un servicio de apuestas. Las ganancias son simuladas y los pagos se basan en rendimiento demostrado.",
+    "rights": "Todos los derechos reservados"
+  },
+  "auth": {
+    "login": {
+      "title": "PlayFunded",
+      "subtitle": "Inicia sesión en tu cuenta",
+      "googleButton": "Continuar con Google",
+      "orEmail": "o con email",
+      "emailLabel": "Email",
+      "emailPlaceholder": "tu@email.com",
+      "passwordLabel": "Contraseña",
+      "passwordPlaceholder": "Tu contraseña",
+      "submitButton": "Iniciar sesión",
+      "submitLoading": "Iniciando sesión...",
+      "noAccount": "¿No tienes cuenta?",
+      "signupLink": "Regístrate gratis",
+      "forgotPassword": "¿Olvidaste tu contraseña?"
+    },
+    "signup": {
+      "title": "PlayFunded",
+      "subtitle": "Crea tu cuenta y empieza a tradear",
+      "googleButton": "Continuar con Google",
+      "orEmail": "o con email",
+      "nameLabel": "Nombre",
+      "nameOptional": "(opcional)",
+      "namePlaceholder": "Tu nombre",
+      "emailLabel": "Email",
+      "emailPlaceholder": "tu@email.com",
+      "passwordLabel": "Contraseña",
+      "passwordPlaceholder": "Mínimo 8 caracteres",
+      "submitButton": "Crear cuenta",
+      "submitLoading": "Creando cuenta...",
+      "terms": "Al registrarte aceptas nuestros",
+      "termsLink": "Términos y Condiciones",
+      "haveAccount": "¿Ya tienes cuenta?",
+      "loginLink": "Inicia sesión"
+    },
+    "verify": {
+      "title": "Revisa tu email",
+      "description": "Te enviamos un enlace de confirmación. Haz clic en él para activar tu cuenta y comenzar.",
+      "noEmail": "¿No recibiste el email?",
+      "checkSpam": "Revisa tu carpeta de spam o correo no deseado",
+      "checkEmail": "Verifica que el email sea correcto",
+      "waitRetry": "Espera unos minutos y vuelve a intentar",
+      "backToLogin": "← Volver al inicio de sesión"
+    },
+    "geoBlocked": {
+      "title": "Servicio no disponible en tu región",
+      "description": "PlayFunded no está disponible en los Estados Unidos en este momento. Estamos trabajando para expandir nuestros servicios.",
+      "titleEn": "Service Not Available in Your Region",
+      "descriptionEn": "PlayFunded is not currently available in the United States. We are working to expand our services to your region.",
+      "errorCode": "Error: GEO_RESTRICTED_US"
+    }
+  }
+}

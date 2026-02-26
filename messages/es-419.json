@@ -29,6 +29,42 @@
     "disclaimer": "PlayFunded es una plataforma educativa de trading deportivo. No somos un servicio de apuestas. Las ganancias son simuladas y los pagos se basan en rendimiento demostrado.",
     "rights": "Todos los derechos reservados"
   },
+  "challenges": {
+    "pageTitle": "Elige tu desafío",
+    "pageSubtitle": "Demuestra tu talento. Supera las fases. Obtén una cuenta financiada.",
+    "fundedBankroll": "Bankroll financiado",
+    "profitSplit": "División de ganancias",
+    "entryFee": "Cuota de entrada",
+    "minPicks": "Mínimo de picks",
+    "guideIncluded": "Guía incluida",
+    "buyButton": "Comprar desafío",
+    "popular": "Más popular",
+    "phase1Target": "+20% en Fase 1",
+    "phase2Target": "+20% en Fase 2",
+    "dailyLoss": "Pérdida diaria máx. 10%",
+    "drawdown": "Drawdown máx. 15%",
+    "loginRequired": "Inicia sesión para comprar",
+    "perMonth": "picks",
+    "rulesTitle": "Reglas del desafío",
+    "starterDesc": "Perfecto para comenzar tu camino como trader deportivo.",
+    "proDesc": "Para traders serios que quieren escalar.",
+    "eliteDesc": "Para los mejores traders con historial probado.",
+    "championDesc": "El nivel más alto. Para expertos comprobados.",
+    "yes": "Sí",
+    "no": "No"
+  },
+  "checkout": {
+    "successTitle": "¡Pago exitoso!",
+    "successSubtitle": "Tu desafío ha sido activado.",
+    "successDescription": "Ya puedes ingresar a tu dashboard y comenzar a operar. ¡Buena suerte!",
+    "successButton": "Ir al dashboard",
+    "cancelTitle": "Pago cancelado",
+    "cancelSubtitle": "No se realizó ningún cargo.",
+    "cancelDescription": "Puedes volver a intentarlo cuando quieras.",
+    "cancelButton": "Volver a los desafíos",
+    "processing": "Procesando...",
+    "redirecting": "Redirigiendo a pago seguro..."
+  },
   "auth": {
     "login": {
       "title": "PlayFunded",

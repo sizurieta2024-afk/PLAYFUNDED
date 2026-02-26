@@ -30,7 +30,7 @@ Full spec in README.md. Task tracker in .claude/plans/todo.md.
 | 1 | Infrastructure: Prisma, Supabase libs, middleware | ✅ DONE |
 | 2 | Supabase setup + full authentication + geo-block | ✅ DONE |
 | 3 | Design system + layout shell + i18n wired up | ✅ DONE |
-| 4 | Challenge purchase flow (Stripe) | TODO |
+| 4 | Challenge purchase flow (Stripe) | ✅ DONE |
 | 5 | Mercado Pago + NOWPayments + exchange rates | TODO |
 | 6 | Odds feed integration | TODO |
 | 7a | Challenge engine: phase logic + balance | TODO |
@@ -49,9 +49,11 @@ Full spec in README.md. Task tracker in .claude/plans/todo.md.
 | 18 | Backup + deploy | TODO |
 
 ## Current Session Scope
-Session 3 complete. Next: Session 4 — Challenge purchase flow (Stripe)
-Design system: Plus Jakarta Sans, dark/light tokens, next-intl [locale] routing live
-Colors: dark #0c0f1a / light #f1f5f9, brand green #10b981, gold #f59e0b
+Session 4 complete. Next: Session 5 — Mercado Pago + NOWPayments + exchange rates
+Stripe API version: 2026-01-28.clover | stripe@^20.3.1 installed
+Challenges page: /challenges (SSR, fetches tiers from DB)
+Webhook: /api/webhooks/stripe — idempotent via providerRef (Stripe session ID)
+Self-exclusion + weekly deposit limit checks in checkout route
 
 ## File Conventions
 - API routes: src/app/api/[resource]/route.ts

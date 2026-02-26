@@ -29,6 +29,42 @@
     "disclaimer": "PlayFunded is an educational sports trading platform. We are not a gambling service. Profits are simulated and payouts are based on demonstrated performance.",
     "rights": "All rights reserved"
   },
+  "challenges": {
+    "pageTitle": "Choose your challenge",
+    "pageSubtitle": "Prove your skill. Pass the phases. Get funded.",
+    "fundedBankroll": "Funded bankroll",
+    "profitSplit": "Profit split",
+    "entryFee": "Entry fee",
+    "minPicks": "Minimum picks",
+    "guideIncluded": "Guide included",
+    "buyButton": "Buy challenge",
+    "popular": "Most popular",
+    "phase1Target": "+20% in Phase 1",
+    "phase2Target": "+20% in Phase 2",
+    "dailyLoss": "Max daily loss 10%",
+    "drawdown": "Max drawdown 15%",
+    "loginRequired": "Sign in to purchase",
+    "perMonth": "picks",
+    "rulesTitle": "Challenge rules",
+    "starterDesc": "Perfect for starting your sports trading journey.",
+    "proDesc": "For serious traders ready to scale.",
+    "eliteDesc": "For top traders with a proven track record.",
+    "championDesc": "The highest level. For proven experts only.",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "checkout": {
+    "successTitle": "Payment successful!",
+    "successSubtitle": "Your challenge has been activated.",
+    "successDescription": "You can now go to your dashboard and start trading. Good luck!",
+    "successButton": "Go to dashboard",
+    "cancelTitle": "Payment cancelled",
+    "cancelSubtitle": "You were not charged.",
+    "cancelDescription": "You can try again whenever you're ready.",
+    "cancelButton": "Back to challenges",
+    "processing": "Processing...",
+    "redirecting": "Redirecting to secure checkout..."
+  },
   "auth": {
     "login": {
       "title": "PlayFunded",

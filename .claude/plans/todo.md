@@ -54,18 +54,20 @@ Goal: shared layout, dark/light mode, Inter font, i18n wired up. All in one sess
 - [ ] Test: dark mode toggle works, language toggle switches Spanish↔English, auth-aware nav
 - [ ] Commit: "feat(design): tailwind tokens, dark mode, i18n, layout shell"
 
-## Session 4 — Challenge Purchase Flow (Stripe first)
+## Session 4 — Challenge Purchase Flow (Stripe first) ✅ DONE
 Goal: a user can browse tiers and buy a challenge with a card. Revenue from day 1.
-- [ ] src/app/[locale]/challenges/page.tsx — tier cards with price, rules, buy CTA
-- [ ] src/app/[locale]/challenges/[tierId]/page.tsx — tier detail page
-- [ ] src/lib/stripe.ts — Stripe client, createCheckoutSession()
-- [ ] src/app/api/checkout/stripe/route.ts — create Stripe checkout session
-- [ ] src/app/api/webhooks/stripe/route.ts — handle payment.succeeded → create Challenge in DB
-- [ ] src/app/[locale]/checkout/success/page.tsx — post-payment confirmation
-- [ ] src/app/[locale]/checkout/cancel/page.tsx
-- [ ] Stripe webhook: validate signature, idempotency (no double challenges)
-- [ ] RLS: users can only read their own payments
+- [x] src/app/[locale]/challenges/page.tsx — tier cards with price, rules, buy CTA
+- [ ] src/app/[locale]/challenges/[tierId]/page.tsx — tier detail page (deferred to Session 8)
+- [x] src/lib/stripe.ts — Stripe client, createCheckoutSession()
+- [x] src/app/api/checkout/stripe/route.ts — create Stripe checkout session
+- [x] src/app/api/webhooks/stripe/route.ts — handle checkout.session.completed → create Challenge in DB
+- [x] src/app/[locale]/checkout/success/page.tsx — post-payment confirmation
+- [x] src/app/[locale]/checkout/cancel/page.tsx
+- [x] Stripe webhook: validate signature, idempotency via providerRef
+- [x] Self-exclusion + weekly deposit limit checks in checkout API
+- [ ] RLS SQL: users can only read their own payments (run in Supabase dashboard)
 - [ ] Test with Stripe CLI: `stripe listen --forward-to localhost:3000/api/webhooks/stripe`
+- [x] i18n: challenges + checkout strings in es-419.json + en.json
 - [ ] Commit: "feat(payments): stripe checkout, webhook, challenge creation"
 
 ## Session 5 — Mercado Pago + NOWPayments

@@ -9,10 +9,9 @@ import { useState } from "react";
 
 interface NavbarProps {
   isAuthenticated?: boolean;
-  userName?: string;
 }
 
-export function Navbar({ isAuthenticated = false, userName }: NavbarProps) {
+export function Navbar({ isAuthenticated = false }: NavbarProps) {
   const t = useTranslations("nav");
   const [mobileOpen, setMobileOpen] = useState(false);
 

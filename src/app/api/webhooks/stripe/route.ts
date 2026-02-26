@@ -3,11 +3,6 @@ import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import type Stripe from "stripe";
 
-// Disable body parsing — Stripe signature verification needs the raw body
-export const config = {
-  api: { bodyParser: false },
-};
-
 async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
 ): Promise<void> {

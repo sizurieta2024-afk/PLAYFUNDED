@@ -10,11 +10,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  // 1. Authenticate
+  // Auth required — must be logged in to purchase
   const supabase = createServerClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {
     return NextResponse.json(
@@ -23,7 +21,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 2. Validate body
   let body: z.infer<typeof bodySchema>;
   try {
     body = bodySchema.parse(await req.json());
@@ -36,9 +33,7 @@ export async function POST(req: NextRequest) {
 
   const { tierId, locale } = body;
 
-  // 3. Load tier
   const tier = await prisma.tier.findUnique({ where: { id: tierId } });
-
   if (!tier || !tier.isActive) {
     return NextResponse.json(
       { error: "Tier not found or inactive", code: "TIER_NOT_FOUND" },
@@ -46,7 +41,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 4. Load the user record (created on auth callback)
   const user = await prisma.user.findUnique({
     where: { supabaseId: session.user.id },
     select: { id: true, email: true, selfExcludedUntil: true, isPermExcluded: true, weeklyDepositLimit: true },
@@ -59,7 +53,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 5. Self-exclusion check
   if (user.isPermExcluded) {
     return NextResponse.json(
       { error: "Account permanently excluded", code: "PERM_EXCLUDED" },
@@ -74,22 +67,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 6. Weekly deposit limit check (if set)
   if (user.weeklyDepositLimit !== null) {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-
     const weeklySpend = await prisma.payment.aggregate({
-      where: {
-        userId: user.id,
-        status: "completed",
-        createdAt: { gte: weekAgo },
-      },
+      where: { userId: user.id, status: "completed", createdAt: { gte: weekAgo } },
       _sum: { amount: true },
     });
-
-    const spentThisWeek = weeklySpend._sum.amount ?? 0;
-    if (spentThisWeek + tier.fee > user.weeklyDepositLimit) {
+    if ((weeklySpend._sum.amount ?? 0) + tier.fee > user.weeklyDepositLimit) {
       return NextResponse.json(
         { error: "Weekly deposit limit exceeded", code: "DEPOSIT_LIMIT" },
         { status: 403 },
@@ -97,7 +82,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 7. Create Stripe checkout session
   try {
     const checkoutUrl = await createCheckoutSession({
       tierId: tier.id,
@@ -107,10 +91,9 @@ export async function POST(req: NextRequest) {
       userEmail: user.email,
       locale,
     });
-
     return NextResponse.json({ url: checkoutUrl });
   } catch (err) {
-    console.error("[checkout/stripe] createCheckoutSession error:", err);
+    console.error("[checkout/stripe] error:", err);
     return NextResponse.json(
       { error: "Failed to create checkout session", code: "STRIPE_ERROR" },
       { status: 500 },

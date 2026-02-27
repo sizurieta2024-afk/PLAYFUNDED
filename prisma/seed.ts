@@ -7,46 +7,60 @@ const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
 
 async function main() {
-  // Seed challenge tiers
-  // Fees and bankrolls stored in USD cents
   const tiers = [
     {
-      name: 'Starter $1K',
-      fee: 2000,           // $20 USD
-      fundedBankroll: 100000,  // $1,000 USD
+      name: 'Starter',
+      fee: 2000,             // $20 USD
+      fundedBankroll: 50000, // $500 USD
       profitSplitPct: 70,
       minPicks: 15,
       guideIncluded: false,
       sortOrder: 1,
     },
     {
-      name: 'Pro $5K',
-      fee: 9900,           // $99 USD
-      fundedBankroll: 500000,  // $5,000 USD
-      profitSplitPct: 75,
+      name: 'Pro',
+      fee: 5000,              // $50 USD
+      fundedBankroll: 150000, // $1,500 USD
+      profitSplitPct: 72,
       minPicks: 15,
-      guideIncluded: true,
+      guideIncluded: false,
       sortOrder: 2,
     },
     {
-      name: 'Elite $10K',
-      fee: 19900,          // $199 USD
-      fundedBankroll: 1000000, // $10,000 USD
-      profitSplitPct: 80,
+      name: 'Elite',
+      fee: 10000,             // $100 USD
+      fundedBankroll: 400000, // $4,000 USD
+      profitSplitPct: 75,
       minPicks: 15,
       guideIncluded: true,
       sortOrder: 3,
     },
     {
-      name: 'Champion $25K',
-      fee: 49900,          // $499 USD
-      fundedBankroll: 2500000, // $25,000 USD
+      name: 'Master',
+      fee: 20000,              // $200 USD
+      fundedBankroll: 1000000, // $10,000 USD
       profitSplitPct: 80,
-      minPicks: 15,
+      minPicks: 20,
       guideIncluded: true,
       sortOrder: 4,
     },
+    {
+      name: 'Legend',
+      fee: 50000,              // $500 USD
+      fundedBankroll: 2500000, // $25,000 USD
+      profitSplitPct: 80,
+      minPicks: 20,
+      guideIncluded: true,
+      sortOrder: 5,
+    },
   ]
+
+  // Delete old tiers first to avoid stale data
+  await prisma.tier.deleteMany({
+    where: {
+      name: { in: ['Starter $1K', 'Pro $5K', 'Elite $10K', 'Champion $25K'] },
+    },
+  })
 
   for (const tier of tiers) {
     await prisma.tier.upsert({
@@ -54,10 +68,10 @@ async function main() {
       update: tier,
       create: tier,
     })
-    console.log(`✓ Tier: ${tier.name} — $${tier.fee / 100} entry → $${tier.fundedBankroll / 100} funded`)
+    console.log(`✓ ${tier.name} — $${tier.fee / 100} entry → $${tier.fundedBankroll / 100} funded @ ${tier.profitSplitPct}%`)
   }
 
-  console.log('\n✅ Seed complete')
+  console.log('\n✅ Seed complete — 5 tiers')
 }
 
 main()

@@ -38,10 +38,11 @@ export default async function ChallengesPage({
   const isAuthenticated = !!session;
 
   const tierDescriptions: Record<string, string> = {
-    "Starter $1K": t("starterDesc"),
-    "Pro $5K": t("proDesc"),
-    "Elite $10K": t("eliteDesc"),
-    "Champion $25K": t("championDesc"),
+    Starter: t("starterDesc"),
+    Pro: t("proDesc"),
+    Elite: t("eliteDesc"),
+    Master: t("masterDesc"),
+    Legend: t("legendDesc"),
   };
 
   return (
@@ -56,41 +57,57 @@ export default async function ChallengesPage({
         </p>
       </div>
 
-      {/* Tier grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-        {tiers.map((tier) => (
-          <TierCard
+      {/* Tier grid — 1 col → 2 col → 3+2 centered → 5 in a row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 xl:grid-cols-5 gap-4">
+        {tiers.map((tier, index) => (
+          <div
             key={tier.id}
-            tier={tier}
-            isAuthenticated={isAuthenticated}
-            locale={locale}
-            description={tierDescriptions[tier.name] ?? ""}
-            t={{
-              fundedBankroll: t("fundedBankroll"),
-              profitSplit: t("profitSplit"),
-              entryFee: t("entryFee"),
-              minPicks: t("minPicks"),
-              guideIncluded: t("guideIncluded"),
-              buyButton: t("buyButton"),
-              popular: t("popular"),
-              phase1Target: t("phase1Target"),
-              phase2Target: t("phase2Target"),
-              dailyLoss: t("dailyLoss"),
-              drawdown: t("drawdown"),
-              loginRequired: t("loginRequired"),
-              redirecting: t("redirecting"),
-              yes: t("yes"),
-              no: t("no"),
-            }}
-          />
+            className={`md:col-span-2 xl:col-span-1${index === 3 ? " md:col-start-2 xl:col-start-auto" : ""}`}
+          >
+            <TierCard
+              tier={tier}
+              isAuthenticated={isAuthenticated}
+              locale={locale}
+              description={tierDescriptions[tier.name] ?? ""}
+              t={{
+                fundedBankroll: t("fundedBankroll"),
+                profitSplit: t("profitSplit"),
+                entryFee: t("entryFee"),
+                minPicks: t("minPicks"),
+                guideIncluded: t("guideIncluded"),
+                buyButton: t("buyButton"),
+                popular: t("popular"),
+                phase1Target: t("phase1Target"),
+                phase2Target: t("phase2Target"),
+                dailyLoss: t("dailyLoss"),
+                drawdown: t("drawdown"),
+                loginRequired: t("loginRequired"),
+                redirecting: t("redirecting"),
+                yes: t("yes"),
+                no: t("no"),
+                selectPaymentMethod: t("selectPaymentMethod"),
+                card: t("card"),
+                crypto: t("crypto"),
+                cryptoSelectCurrency: t("cryptoSelectCurrency"),
+                usdt: t("usdt"),
+                usdc: t("usdc"),
+                btc: t("btc"),
+                payWith: t("payWith"),
+              }}
+            />
+          </div>
         ))}
       </div>
 
       {/* Rules footer note */}
       <div className="mt-14 rounded-xl border border-border bg-muted/40 p-6 text-sm text-muted-foreground space-y-1.5 max-w-3xl mx-auto">
         <p className="font-semibold text-foreground">{t("rulesTitle")}</p>
-        <p>{t("phase1Target")} · {t("phase2Target")}</p>
-        <p>{t("dailyLoss")} · {t("drawdown")}</p>
+        <p>
+          {t("phase1Target")} · {t("phase2Target")}
+        </p>
+        <p>
+          {t("dailyLoss")} · {t("drawdown")}
+        </p>
       </div>
     </div>
   );

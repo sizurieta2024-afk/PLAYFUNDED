@@ -11,58 +11,58 @@
 @layer base {
   /* ── PlayFunded Light Mode ──────────────────────────────────────────── */
   :root {
-    --background: 210 40% 96%;        /* #f1f5f9 slate-100 */
+    --background: 210 40% 96%;        /* #f1f5f9 */
     --foreground: 222 47% 11%;        /* #0f172a */
     --card: 0 0% 100%;                /* #ffffff */
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 160 84% 33%;           /* #059669 — darker green for light mode contrast */
+    --primary: 154 40% 25%;           /* #2d6a4f — darker for light bg contrast */
     --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 91%;         /* #e2e8f0 */
     --secondary-foreground: 222 47% 11%;
     --muted: 210 40% 93%;
     --muted-foreground: 215 16% 47%;  /* #475569 */
-    --accent: 43 96% 56%;             /* #f59e0b gold */
+    --accent: 27 87% 67%;             /* #f4a261 gold — spec */
     --accent-foreground: 222 47% 11%;
     --destructive: 0 84% 60%;         /* #ef4444 */
     --destructive-foreground: 0 0% 100%;
     --border: 214 32% 91%;            /* #e2e8f0 */
     --input: 214 32% 91%;
-    --ring: 160 84% 33%;
-    --chart-1: 160 84% 39%;
+    --ring: 154 40% 25%;
+    --chart-1: 154 40% 30%;
     --chart-2: 217 91% 60%;
     --chart-3: 262 83% 58%;
-    --chart-4: 43 96% 56%;
+    --chart-4: 27 87% 67%;
     --chart-5: 0 84% 60%;
     --radius: 0.625rem;
   }
 
-  /* ── PlayFunded Dark Mode ───────────────────────────────────────────── */
+  /* ── PlayFunded Dark Mode — spec: bg #0a0a0f / surface #1a1a2e / green #2d6a4f / gold #f4a261 */
   .dark {
-    --background: 225 37% 7%;         /* #0c0f1a */
+    --background: 240 20% 5%;         /* #0a0a0f — spec */
     --foreground: 210 40% 96%;        /* #f1f5f9 */
-    --card: 222 36% 11%;              /* #121826 */
+    --card: 240 28% 14%;              /* #1a1a2e — spec surface */
     --card-foreground: 210 40% 96%;
-    --popover: 222 36% 11%;
+    --popover: 240 28% 14%;
     --popover-foreground: 210 40% 96%;
-    --primary: 160 84% 39%;           /* #10b981 */
+    --primary: 154 40% 30%;           /* #2d6a4f — spec green */
     --primary-foreground: 0 0% 100%;
-    --secondary: 222 30% 15%;         /* #1e2535 elevated */
+    --secondary: 240 27% 20%;         /* #252540 — elevated surface */
     --secondary-foreground: 210 40% 96%;
-    --muted: 222 30% 15%;
+    --muted: 240 27% 20%;
     --muted-foreground: 215 20% 65%;  /* #94a3b8 */
-    --accent: 43 96% 56%;             /* #f59e0b gold */
+    --accent: 27 87% 67%;             /* #f4a261 — spec gold */
     --accent-foreground: 222 47% 11%;
     --destructive: 0 84% 60%;         /* #ef4444 */
     --destructive-foreground: 0 0% 100%;
-    --border: 222 26% 22%;            /* #2a3347 */
-    --input: 222 26% 22%;
-    --ring: 160 84% 39%;
-    --chart-1: 160 84% 39%;
+    --border: 240 26% 19%;            /* #1e2040 */
+    --input: 240 26% 19%;
+    --ring: 154 40% 30%;
+    --chart-1: 154 40% 30%;
     --chart-2: 217 91% 60%;
     --chart-3: 262 83% 58%;
-    --chart-4: 43 96% 56%;
+    --chart-4: 27 87% 67%;
     --chart-5: 0 84% 60%;
     --radius: 0.625rem;
   }

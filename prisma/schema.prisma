@@ -175,10 +175,11 @@ model Challenge {
   phase           PhaseType       @default(phase1)
 
   // Balances — all in USD cents
-  balance         Int             // Current simulated balance
-  startBalance    Int             // Balance at phase start (for daily loss calc)
-  highestBalance  Int             // All-time highest balance (for drawdown calc)
-  peakBalance     Int             // Alias: same as highestBalance, kept for clarity
+  balance            Int             // Current simulated balance
+  startBalance       Int             // Balance at phase start (fixed — for daily loss limit calc)
+  dailyStartBalance  Int             @default(0) // Balance at start of current UTC day (reset by cron at 00:00 UTC)
+  highestBalance     Int             // All-time highest balance (for drawdown calc)
+  peakBalance        Int             // Alias: same as highestBalance, kept for clarity
 
   // Phase completion targets
   phase1StartBalance Int?
@@ -230,6 +231,7 @@ model Pick {
   marketType      String     // "moneyline", "spread", "total", "player_prop"
   selection       String     // What the user picked
   odds            Float      // Decimal odds (e.g. 2.50) — NOT stored as cents
+  linePoint       Float?     // Spread or total line (e.g. -3.5, 220.5) — null for moneyline
   stake           Int        // USD cents — amount wagered
   potentialPayout Int        // USD cents — stake × odds (rounded)
   actualPayout    Int        @default(0) // USD cents — 0 if lost/void/push, else potentialPayout

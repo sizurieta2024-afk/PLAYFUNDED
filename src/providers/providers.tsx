@@ -1,12 +1,12 @@
-'use client'
+"use client";
 
-import { ThemeProvider } from 'next-themes'
-import { NextIntlClientProvider, type AbstractIntlMessages } from 'next-intl'
+import { ThemeProvider } from "next-themes";
+import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 
 interface ProvidersProps {
-  children: React.ReactNode
-  locale: string
-  messages: AbstractIntlMessages
+  children: React.ReactNode;
+  locale: string;
+  messages: AbstractIntlMessages;
 }
 
 export function Providers({ children, locale, messages }: ProvidersProps) {
@@ -15,11 +15,10 @@ export function Providers({ children, locale, messages }: ProvidersProps) {
       <ThemeProvider
         attribute="class"
         defaultTheme="dark"
-        enableSystem
         disableTransitionOnChange
       >
         {children}
       </ThemeProvider>
     </NextIntlClientProvider>
-  )
+  );
 }

@@ -1,11 +1,11 @@
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 
-const plusJakarta = Plus_Jakarta_Sans({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-plus-jakarta",
-  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -23,7 +23,7 @@ export default function RootLayout({
   return (
     <html suppressHydrationWarning>
       <body
-        className={`${plusJakarta.variable} ${geistMono.variable} font-sans antialiased`}
+        className={`${inter.variable} ${geistMono.variable} font-sans antialiased`}
       >
         {children}
       </body>

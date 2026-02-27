@@ -31,14 +31,12 @@ Full spec in README.md. Task tracker in .claude/plans/todo.md.
 | 2 | Supabase setup + full authentication + geo-block | ✅ DONE |
 | 3 | Design system + layout shell + i18n wired up | ✅ DONE |
 | 4 | Challenge purchase flow (Stripe) | ✅ DONE |
-| 5 | Mercado Pago + NOWPayments + exchange rates | TODO |
-| 6 | Odds feed integration | TODO |
-| 7a | Challenge engine: phase logic + balance | TODO |
-| 7b | Challenge engine: drawdown + stake cap + auto-fail | TODO |
-| 7c | Challenge engine: pause + streak + funded rules | TODO |
-| 8 | Pick placement interface | TODO |
-| 9 | Pick settlement engine | TODO |
-| 10 | User dashboard + analytics | TODO |
+| 5 | Mercado Pago + NOWPayments + exchange rates | ✅ DONE |
+| 6 | Odds feed integration | ✅ DONE |
+| 7 | Challenge engine: balance, risk, phases, pause, streak, rollover | ✅ DONE |
+| 8 | Pick placement interface | ✅ DONE |
+| 9 | Pick settlement engine | ✅ DONE |
+| 10 | User dashboard + analytics | ✅ DONE |
 | 11 | Payout system + KYC | TODO |
 | 12 | Admin panel | TODO |
 | 13 | Affiliate program | TODO |
@@ -49,11 +47,18 @@ Full spec in README.md. Task tracker in .claude/plans/todo.md.
 | 18 | Backup + deploy | TODO |
 
 ## Current Session Scope
-Session 4 complete. Next: Session 5 — Mercado Pago + NOWPayments + exchange rates
-Stripe API version: 2026-01-28.clover | stripe@^20.3.1 installed
-Challenges page: /challenges (SSR, fetches tiers from DB)
-Webhook: /api/webhooks/stripe — idempotent via providerRef (Stripe session ID)
-Self-exclusion + weekly deposit limit checks in checkout route
+Sessions 1–10 complete. Next: Session 11 — Payout System + KYC
+Dashboard routes: /dashboard (overview), /dashboard/challenge/[id] (detail + charts), /dashboard/analytics (combined stats)
+Dashboard components: src/components/dashboard/ — ChallengeCard, MetricBar, BalanceChart, WinRateChart, PicksTable
+Dev server runs on PORT 3001 (not 3000) — NEXT_PUBLIC_APP_URL=http://localhost:3001
+Dev server start: tmux new-session -d -s playfunded "node_modules/.bin/next dev -p 3001"
+Odds sync (dev): POST /api/odds/sync with Authorization: Bearer CRON_SECRET
+CRON_SECRET: set in .env.local (093822ad...)
+Stripe CLI at ~/stripe — forward to localhost:3001/api/webhooks/stripe
+Pick placement: /dashboard/picks — event browser, stake form, recent picks
+Challenge engine: src/lib/challenge/ — balance, risk, phases, pause, streak, rollover, event-lock
+Webhooks: /api/webhooks/stripe, /api/webhooks/mercadopago, /api/webhooks/nowpayments — all idempotent via providerRef
+Test user: sizurieta2024@gmail.com — Pro tier challenge, $1,450 balance, 1 pending pick (Lakers @ 2.10)
 
 ## File Conventions
 - API routes: src/app/api/[resource]/route.ts

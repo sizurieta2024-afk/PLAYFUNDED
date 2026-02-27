@@ -10,14 +10,12 @@ function getStripeClient(): Stripe {
   });
 }
 
-// Lazy singleton — initialized only when first called (not at build time)
 let _stripe: Stripe | null = null;
 export function getStripe(): Stripe {
   if (!_stripe) _stripe = getStripeClient();
   return _stripe;
 }
 
-// Named export for direct use in webhook (needs access to webhooks.constructEvent)
 export const stripe = {
   webhooks: {
     constructEvent: (
@@ -28,21 +26,12 @@ export const stripe = {
       return getStripe().webhooks.constructEvent(body, sig, secret);
     },
   },
-  checkout: {
-    sessions: {
-      create: (
-        params: Stripe.Checkout.SessionCreateParams,
-      ): Promise<Stripe.Checkout.Session> => {
-        return getStripe().checkout.sessions.create(params);
-      },
-    },
-  },
 };
 
 interface CreateCheckoutSessionParams {
   tierId: string;
   tierName: string;
-  feeInCents: number; // USD cents
+  feeInCents: number;
   userId: string;
   userEmail: string;
   locale: string;
@@ -56,7 +45,7 @@ export async function createCheckoutSession({
   userEmail,
   locale,
 }: CreateCheckoutSessionParams): Promise<string> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
   const localePath = locale === "en" ? "/en" : "";
 
   const session = await getStripe().checkout.sessions.create({
@@ -78,10 +67,7 @@ export async function createCheckoutSession({
         quantity: 1,
       },
     ],
-    metadata: {
-      tierId,
-      userId,
-    },
+    metadata: { tierId, userId },
     success_url: `${baseUrl}${localePath}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${baseUrl}${localePath}/checkout/cancel`,
     billing_address_collection: "auto",

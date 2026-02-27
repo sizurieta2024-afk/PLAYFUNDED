@@ -13,30 +13,22 @@ async function handleCheckoutCompleted(
     return;
   }
 
-  // Idempotency: skip if a payment record already exists for this session
+  // Idempotency — skip if already processed
   const existing = await prisma.payment.findFirst({
     where: { providerRef: session.id },
   });
-
   if (existing) {
-    console.log(
-      "[webhook/stripe] Duplicate event for session:",
-      session.id,
-      "— skipping",
-    );
+    console.log("[webhook/stripe] Duplicate event, skipping:", session.id);
     return;
   }
 
-  // Load tier
   const tier = await prisma.tier.findUnique({ where: { id: tierId } });
   if (!tier) {
     console.error("[webhook/stripe] Tier not found:", tierId);
     return;
   }
 
-  // Create Payment + Challenge atomically
   await prisma.$transaction(async (tx) => {
-    // 1. Record the payment
     await tx.payment.create({
       data: {
         userId,
@@ -56,7 +48,6 @@ async function handleCheckoutCompleted(
       },
     });
 
-    // 2. Create the challenge
     await tx.challenge.create({
       data: {
         userId,
@@ -65,6 +56,7 @@ async function handleCheckoutCompleted(
         phase: "phase1",
         balance: tier.fundedBankroll,
         startBalance: tier.fundedBankroll,
+        dailyStartBalance: tier.fundedBankroll,
         highestBalance: tier.fundedBankroll,
         peakBalance: tier.fundedBankroll,
         phase1StartBalance: tier.fundedBankroll,
@@ -72,16 +64,13 @@ async function handleCheckoutCompleted(
     });
   });
 
-  // Send welcome email (non-blocking — fire & forget)
-  // Email will be wired in Session 17 when Resend is set up
   console.log(
-    `[webhook/stripe] Challenge created for user ${userId}, tier ${tier.name}`,
+    `[webhook/stripe] Challenge created — userId: ${userId}, tier: ${tier.name}`,
   );
 }
 
 export async function POST(req: NextRequest) {
   if (!process.env.STRIPE_WEBHOOK_SECRET) {
-    console.error("[webhook/stripe] STRIPE_WEBHOOK_SECRET not set");
     return NextResponse.json(
       { error: "Webhook secret not configured" },
       { status: 500 },
@@ -91,7 +80,7 @@ export async function POST(req: NextRequest) {
   const sig = req.headers.get("stripe-signature");
   if (!sig) {
     return NextResponse.json(
-      { error: "Missing stripe-signature header" },
+      { error: "Missing stripe-signature" },
       { status: 400 },
     );
   }
@@ -114,31 +103,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
-        if (session.payment_status === "paid") {
-          await handleCheckoutCompleted(session);
-        }
-        break;
-      }
-
-      // Log other events for future use
-      case "payment_intent.payment_failed": {
-        const pi = event.data.object as Stripe.PaymentIntent;
-        console.log(
-          "[webhook/stripe] Payment failed:",
-          pi.id,
-          pi.last_payment_error?.message,
-        );
-        break;
-      }
-
-      default:
-        // Ignore unhandled events
-        break;
+    if (
+      event.type === "checkout.session.completed" &&
+      (event.data.object as Stripe.Checkout.Session).payment_status === "paid"
+    ) {
+      await handleCheckoutCompleted(
+        event.data.object as Stripe.Checkout.Session,
+      );
     }
-
     return NextResponse.json({ received: true });
   } catch (err) {
     console.error("[webhook/stripe] Handler error:", err);

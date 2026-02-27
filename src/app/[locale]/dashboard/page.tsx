@@ -94,6 +94,7 @@ export default async function DashboardPage({
     lost: t("lost"),
     placePick: t("placePick"),
     viewDetail: t("viewDetail"),
+    payouts: t("payouts"),
   };
 
   const STATUS_STYLES: Record<string, string> = {

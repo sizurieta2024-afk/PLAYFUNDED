@@ -14,7 +14,7 @@ interface ChallengeCardProps {
     peakBalance: number; // cents
     dailyStartBalance: number; // cents
     phase: string;
-    status: string;
+    status: string; // "active" | "funded" | "failed" | "completed"
     startedAt: string; // ISO
     phase1StartBalance: number | null;
     phase2StartBalance: number | null;
@@ -226,6 +226,14 @@ export function ChallengeCard({
           >
             {t.placePick}
           </Link>
+          {challenge.status === "funded" && (
+            <Link
+              href="/dashboard/payouts"
+              className="flex-1 text-center py-2 rounded-lg border border-pf-brand/30 bg-pf-brand/10 text-pf-brand text-xs font-semibold hover:bg-pf-brand/20 transition-colors"
+            >
+              {t.payouts ?? "Payouts"}
+            </Link>
+          )}
           <Link
             href={`/dashboard/challenge/${challenge.id}`}
             className="flex-1 text-center py-2 rounded-lg border border-border bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border/60 transition-colors"

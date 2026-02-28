@@ -3,6 +3,56 @@ import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import type Stripe from "stripe";
 
+async function attributeAffiliateCommission(
+  userId: string,
+  feeInCents: number,
+): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { referredByCode: true },
+  });
+  if (!user?.referredByCode) return;
+
+  const affiliate = await prisma.affiliate.findUnique({
+    where: { code: user.referredByCode },
+  });
+  if (!affiliate) return;
+
+  // Guard: don't double-attribute if already commissioned for this user
+  const alreadyConverted = await prisma.affiliateClick.findFirst({
+    where: { affiliateId: affiliate.id, convertedToUserId: userId },
+  });
+  if (alreadyConverted) return;
+
+  const ratePct = affiliate.commissionRate === "five" ? 5 : 10;
+  const commission = Math.floor((feeInCents * ratePct) / 100);
+
+  const ip = "conversion";
+  await prisma.$transaction([
+    prisma.affiliateClick.create({
+      data: {
+        affiliateId: affiliate.id,
+        ip,
+        convertedToUserId: userId,
+        conversionAmount: feeInCents,
+        commissionEarned: commission,
+      },
+    }),
+    prisma.affiliate.update({
+      where: { id: affiliate.id },
+      data: {
+        totalConversions: { increment: 1 },
+        totalEarned: { increment: commission },
+        pendingPayout: { increment: commission },
+      },
+    }),
+  ]);
+
+  console.log(
+    `[affiliate] Commission $${(commission / 100).toFixed(2)} → affiliate ${affiliate.code} for user ${userId}`,
+  );
+}
+
 async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
 ): Promise<void> {
@@ -63,6 +113,11 @@ async function handleCheckoutCompleted(
       },
     });
   });
+
+  // Affiliate commission — fire-and-forget (non-blocking, non-critical)
+  void attributeAffiliateCommission(userId, tier.fee).catch((err) =>
+    console.error("[webhook/stripe] affiliate commission error:", err),
+  );
 
   console.log(
     `[webhook/stripe] Challenge created — userId: ${userId}, tier: ${tier.name}`,

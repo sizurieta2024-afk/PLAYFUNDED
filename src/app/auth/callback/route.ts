@@ -1,24 +1,34 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase'
-import { prisma } from '@/lib/prisma'
+import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@/lib/supabase";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/dashboard'
+  const { searchParams, origin } = new URL(request.url);
+  const code = searchParams.get("code");
+  const next = searchParams.get("next") ?? "/dashboard";
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/auth/login?error=missing_code`)
+    return NextResponse.redirect(`${origin}/auth/login?error=missing_code`);
   }
 
-  const supabase = createServerClient()
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+  const supabase = createServerClient();
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data.session) {
-    return NextResponse.redirect(`${origin}/auth/login?error=auth_failed`)
+    return NextResponse.redirect(`${origin}/auth/login?error=auth_failed`);
   }
 
-  const { user } = data.session
+  const { user } = data.session;
+
+  // Capture referral code from cookie (set before signup via /ref/[code])
+  const refCode = request.cookies.get("pf_ref")?.value ?? null;
+
+  // Check if this is a truly new user (for ref attribution)
+  const existingUser = await prisma.user.findUnique({
+    where: { supabaseId: user.id },
+    select: { id: true, referredByCode: true },
+  });
+  const isNewUser = !existingUser;
 
   // Sync Supabase user into our Postgres User table
   await prisma.user.upsert({
@@ -34,6 +44,7 @@ export async function GET(request: NextRequest) {
         (user.user_metadata?.avatar_url as string | undefined) ??
         (user.user_metadata?.picture as string | undefined) ??
         null,
+      referredByCode: refCode,
     },
     update: {
       email: user.email!,
@@ -45,14 +56,16 @@ export async function GET(request: NextRequest) {
         (user.user_metadata?.avatar_url as string | undefined) ??
         (user.user_metadata?.picture as string | undefined) ??
         undefined,
+      // Only set referredByCode on first-ever login, never overwrite
+      ...(isNewUser && refCode ? { referredByCode: refCode } : {}),
     },
-  })
+  });
 
   // Respect x-forwarded-host in production (e.g. Vercel)
-  const forwardedHost = request.headers.get('x-forwarded-host')
-  if (forwardedHost && process.env.NODE_ENV !== 'development') {
-    return NextResponse.redirect(`https://${forwardedHost}${next}`)
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  if (forwardedHost && process.env.NODE_ENV !== "development") {
+    return NextResponse.redirect(`https://${forwardedHost}${next}`);
   }
 
-  return NextResponse.redirect(`${origin}${next}`)
+  return NextResponse.redirect(`${origin}${next}`);
 }

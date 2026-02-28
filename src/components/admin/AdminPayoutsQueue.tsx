@@ -9,9 +9,10 @@ interface PayoutRow {
   splitPct: number;
   method: string;
   status: string;
+  isAffiliate: boolean;
   requestedAt: string;
   user: { email: string; name: string | null };
-  challenge: { tier: { name: string } };
+  challenge: { tier: { name: string } } | null;
 }
 
 function formatUSD(cents: number) {
@@ -30,7 +31,11 @@ export function AdminPayoutsQueue({ payouts }: { payouts: PayoutRow[] }) {
   }
 
   if (payouts.length === 0) {
-    return <p className="text-sm text-muted-foreground py-8 text-center">No pending payouts.</p>;
+    return (
+      <p className="text-sm text-muted-foreground py-8 text-center">
+        No pending payouts.
+      </p>
+    );
   }
 
   return (
@@ -44,12 +49,20 @@ export function AdminPayoutsQueue({ payouts }: { payouts: PayoutRow[] }) {
               </p>
               <p className="text-xs text-muted-foreground">{p.user.email}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {p.challenge.tier.name} · via {p.method} · {new Date(p.requestedAt).toLocaleDateString()}
+                {p.isAffiliate
+                  ? "Affiliate commission"
+                  : (p.challenge?.tier.name ?? "—")}{" "}
+                · via {p.method} ·{" "}
+                {new Date(p.requestedAt).toLocaleDateString()}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xl font-bold tabular-nums text-pf-brand">{formatUSD(p.amount)}</p>
-              <p className="text-xs text-muted-foreground">{p.splitPct}% split</p>
+              <p className="text-xl font-bold tabular-nums text-pf-brand">
+                {formatUSD(p.amount)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {p.splitPct}% split
+              </p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -57,14 +70,18 @@ export function AdminPayoutsQueue({ payouts }: { payouts: PayoutRow[] }) {
               type="text"
               placeholder="TX Reference (for approval)"
               value={txRefs[p.id] ?? ""}
-              onChange={(e) => setTxRefs((prev) => ({ ...prev, [p.id]: e.target.value }))}
+              onChange={(e) =>
+                setTxRefs((prev) => ({ ...prev, [p.id]: e.target.value }))
+              }
               className="flex-1 min-w-40 text-xs px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-pf-brand/40"
             />
             <input
               type="text"
               placeholder="Admin note (optional)"
               value={notes[p.id] ?? ""}
-              onChange={(e) => setNotes((prev) => ({ ...prev, [p.id]: e.target.value }))}
+              onChange={(e) =>
+                setNotes((prev) => ({ ...prev, [p.id]: e.target.value }))
+              }
               className="flex-1 min-w-40 text-xs px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none"
             />
             <button

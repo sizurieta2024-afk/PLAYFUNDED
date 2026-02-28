@@ -123,6 +123,9 @@ model User {
   // Supabase Auth ID (links to auth.users)
   supabaseId String? @unique
 
+  // Affiliate attribution — set at signup if user arrived via ref link
+  referredByCode String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -330,7 +333,7 @@ model Payment {
 model Payout {
   id          String       @id @default(uuid())
   userId      String
-  challengeId String
+  challengeId String?      // null for affiliate commission payouts
   amount      Int          // USD cents
   splitPct    Int          // profit split % at time of payout
   method      PayoutMethod
@@ -343,6 +346,9 @@ model Payout {
   // Rollover
   isRollover  Boolean      @default(false) // true if user chose to rollover profits
 
+  // Affiliate
+  isAffiliate Boolean      @default(false) // true for affiliate commission payouts
+
   requestedAt DateTime     @default(now())
   approvedAt  DateTime?
   paidAt      DateTime?
@@ -350,8 +356,8 @@ model Payout {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User      @relation(fields: [userId], references: [id])
-  challenge Challenge @relation(fields: [challengeId], references: [id])
+  user      User       @relation(fields: [userId], references: [id])
+  challenge Challenge? @relation(fields: [challengeId], references: [id])
 
   @@index([userId])
   @@index([status])

@@ -7,7 +7,11 @@ export default async function AdminPayoutsPage({
   searchParams: Promise<{ status?: string }>;
 }) {
   const { status } = await searchParams;
-  const statusFilter = (status ?? "pending") as "pending" | "processing" | "paid" | "failed";
+  const statusFilter = (status ?? "pending") as
+    | "pending"
+    | "processing"
+    | "paid"
+    | "failed";
 
   const payouts = await prisma.payout.findMany({
     where: { status: statusFilter, isRollover: false },
@@ -25,9 +29,10 @@ export default async function AdminPayoutsPage({
     splitPct: p.splitPct,
     method: p.method,
     status: p.status,
+    isAffiliate: p.isAffiliate,
     requestedAt: p.requestedAt.toISOString(),
     user: p.user,
-    challenge: { tier: p.challenge.tier },
+    challenge: p.challenge ? { tier: p.challenge.tier } : null,
   }));
 
   const statuses = ["pending", "processing", "paid", "failed"];

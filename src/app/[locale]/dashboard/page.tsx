@@ -191,6 +191,24 @@ export default async function DashboardPage({
         </section>
       )}
 
+      {/* ── Quick links ──────────────────────────────────────────────────── */}
+      <section className="flex flex-wrap gap-2">
+        {[
+          { href: "/dashboard/picks", label: t("placePick") },
+          { href: "/dashboard/analytics", label: t("viewAnalytics") },
+          { href: "/dashboard/payouts", label: t("payouts") },
+          { href: "/dashboard/affiliate", label: "Affiliate" },
+        ].map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            {link.label}
+          </Link>
+        ))}
+      </section>
+
       {/* ── Recent picks ─────────────────────────────────────────────────── */}
       {recentPicks.length > 0 && (
         <section>

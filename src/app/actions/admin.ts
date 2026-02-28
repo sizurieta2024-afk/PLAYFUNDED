@@ -146,6 +146,24 @@ export async function setAffiliateRate(
   );
 }
 
+export async function adminMarkAffiliatePaid(
+  affiliateId: string,
+  note?: string,
+) {
+  const admin = await requireAdmin();
+  // Mark any pending affiliate payout for this affiliate's user as paid
+  const affiliate = await prisma.affiliate.findUnique({
+    where: { id: affiliateId },
+    select: { userId: true },
+  });
+  if (!affiliate) return;
+  await prisma.payout.updateMany({
+    where: { userId: affiliate.userId, isAffiliate: true, status: "pending" },
+    data: { status: "paid", paidAt: new Date(), adminNote: note ?? null },
+  });
+  await audit(admin.id, "affiliate_paid", "affiliate", affiliateId, note);
+}
+
 // ── Market Requests ───────────────────────────────────────────────────
 
 export async function adminUpdateMarketRequest(

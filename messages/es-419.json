@@ -196,7 +196,8 @@
     "settledPicks": "Cerradas",
     "pendingPicks": "Pendientes",
     "profitability": "Rentabilidad",
-    "payouts": "Pagos"
+    "payouts": "Pagos",
+    "settings": "Configuración"
   },
   "analytics": {
     "pageTitle": "Analíticas",
@@ -425,5 +426,35 @@
       "descriptionEn": "PlayFunded is not currently available in the United States. We are working to expand our services to your region.",
       "errorCode": "Error: GEO_RESTRICTED_US"
     }
+  },
+  "settings": {
+    "pageTitle": "Configuración",
+    "profileSection": "Perfil",
+    "emailLabel": "Correo electrónico",
+    "nameLabel": "Nombre",
+    "weeklyLimitSection": "Límite semanal de depósito",
+    "weeklyLimitDesc": "Limita cuánto puedes depositar en una ventana de 7 días.",
+    "noLimit": "Sin límite",
+    "save": "Guardar",
+    "removeLimit": "Quitar límite",
+    "limitSaved": "Límite guardado",
+    "limitRemoved": "Límite eliminado",
+    "limitInvalid": "Ingresa un monto entre $10 y $100,000",
+    "safetySection": "Seguridad de cuenta",
+    "safetyDesc": "La autoexclusión te impide comprar nuevos desafíos durante el período seleccionado. Aplica en todos los métodos de pago.",
+    "permExcludedStatus": "Tu cuenta está excluida permanentemente de comprar desafíos.",
+    "tempExcludedStatus": "Autoexclusión activa hasta el {date}.",
+    "cancelExclusion": "Cancelar exclusión",
+    "exclusionCancelled": "Exclusión cancelada",
+    "selfExcludeLink": "Configurar autoexclusión",
+    "choosePeriod": "Selecciona el período de exclusión",
+    "period_30d": "30 días",
+    "period_90d": "90 días",
+    "period_180d": "6 meses",
+    "period_permanent": "Permanente",
+    "permWarning": "Esto no se puede deshacer. Escribe CONFIRM para continuar.",
+    "confirmExclude": "Confirmar exclusión",
+    "cancel": "Cancelar",
+    "excludeSuccess": "Autoexclusión activada"
   }
 }

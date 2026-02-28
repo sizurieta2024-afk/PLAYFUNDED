@@ -198,6 +198,7 @@ export default async function DashboardPage({
           { href: "/dashboard/analytics", label: t("viewAnalytics") },
           { href: "/dashboard/payouts", label: t("payouts") },
           { href: "/dashboard/affiliate", label: "Affiliate" },
+          { href: "/dashboard/settings", label: t("settings") },
         ].map((link) => (
           <Link
             key={link.href}

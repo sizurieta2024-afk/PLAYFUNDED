@@ -117,6 +117,7 @@ export function TierCard({
   t,
 }: TierCardProps) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showMethodSelector, setShowMethodSelector] = useState(false);
   const [selectedCrypto, setSelectedCrypto] =
     useState<CryptoCurrency>("usdttrc20");
@@ -128,12 +129,14 @@ export function TierCard({
       router.push("/auth/login");
       return;
     }
+    setError(null);
     setShowMethodSelector(true);
   }
 
   async function handlePayment(method: PaymentMethod) {
     setShowMethodSelector(false);
     setLoading(true);
+    setError(null);
 
     try {
       const endpoint =
@@ -150,26 +153,35 @@ export function TierCard({
         body: JSON.stringify(body),
       });
 
+      const data = (await res.json()) as {
+        url?: string;
+        address?: string;
+        error?: string;
+        code?: string;
+      };
+
       if (!res.ok) {
         setLoading(false);
+        setError(data.error ?? "Payment failed. Please try again.");
         return;
       }
-
-      const data = (await res.json()) as { url?: string; address?: string };
 
       if (data.url) {
         window.location.href = data.url;
       } else if (data.address) {
-        // For crypto: redirect to a crypto payment page with the invoice data
         const params = new URLSearchParams(
           Object.entries(data as Record<string, string>).filter(
             ([, v]) => v != null,
           ),
         );
         router.push(`/checkout/crypto?${params.toString()}`);
+      } else {
+        setLoading(false);
+        setError("Unexpected response. Please try again.");
       }
     } catch {
       setLoading(false);
+      setError("Network error. Please check your connection.");
     }
   }
 
@@ -255,6 +267,9 @@ export function TierCard({
           )}
         </ul>
 
+        {error && (
+          <p className="text-xs text-red-400 text-center mb-2">{error}</p>
+        )}
         <button
           onClick={handleBuy}
           disabled={loading}

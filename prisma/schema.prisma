@@ -136,6 +136,7 @@ model User {
   kycSubmission    KycSubmission?
   followedTraders  Follow[]          @relation("follower")
   followers        Follow[]          @relation("following")
+  auditLogs        AuditLog[]
 
   @@index([email])
   @@index([role])
@@ -474,6 +475,27 @@ model OddsCache {
   @@index([sport, league])
   @@index([startTime])
   @@index([fetchedAt])
+}
+
+// ============================================================
+// AUDIT LOG (admin mutations)
+// ============================================================
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  adminId    String
+  action     String   // e.g. "ban_user", "approve_kyc", "override_challenge"
+  targetType String   // "user", "challenge", "payout", "kyc", "market_request", "affiliate"
+  targetId   String
+  note       String?
+
+  createdAt DateTime @default(now())
+
+  admin User @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([targetType, targetId])
+  @@index([createdAt])
 }
 
 // ============================================================

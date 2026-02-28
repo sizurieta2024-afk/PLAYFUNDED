@@ -5,6 +5,7 @@ import { routing } from "@/i18n/routing";
 import { Providers } from "@/providers/providers";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 import { createServerClient } from "@/lib/supabase";
 import type { Metadata } from "next";
 
@@ -45,6 +46,7 @@ export default async function LocaleLayout({
         <Navbar isAuthenticated={!!session} />
         <main className="flex-1">{children}</main>
         <Footer />
+        <ChatWidget />
       </div>
     </Providers>
   );

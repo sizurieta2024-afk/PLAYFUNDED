@@ -35,6 +35,8 @@ interface CreateCheckoutSessionParams {
   userId: string;
   userEmail: string;
   locale: string;
+  isGift?: boolean;
+  giftRecipientEmail?: string;
 }
 
 export async function createCheckoutSession({
@@ -44,6 +46,8 @@ export async function createCheckoutSession({
   userId,
   userEmail,
   locale,
+  isGift = false,
+  giftRecipientEmail,
 }: CreateCheckoutSessionParams): Promise<string> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
   const localePath = locale === "en" ? "/en" : "";
@@ -57,17 +61,28 @@ export async function createCheckoutSession({
           currency: "usd",
           unit_amount: feeInCents,
           product_data: {
-            name: `PlayFunded — ${tierName}`,
+            name: isGift
+              ? `PlayFunded — ${tierName} (Gift)`
+              : `PlayFunded — ${tierName}`,
             description:
               locale === "en"
-                ? "Sports trading challenge — prove your skill, get funded."
-                : "Desafío de trading deportivo — demuestra tu talento, obtén financiamiento.",
+                ? isGift
+                  ? `Sports trading challenge gift for ${giftRecipientEmail ?? "recipient"}.`
+                  : "Sports trading challenge — prove your skill, get funded."
+                : isGift
+                  ? `Regalo de desafío de trading deportivo para ${giftRecipientEmail ?? "destinatario"}.`
+                  : "Desafío de trading deportivo — demuestra tu talento, obtén financiamiento.",
           },
         },
         quantity: 1,
       },
     ],
-    metadata: { tierId, userId },
+    metadata: {
+      tierId,
+      userId,
+      isGift: isGift ? "true" : "false",
+      giftRecipientEmail: giftRecipientEmail ?? "",
+    },
     success_url: `${baseUrl}${localePath}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${baseUrl}${localePath}/checkout/cancel`,
     billing_address_collection: "auto",

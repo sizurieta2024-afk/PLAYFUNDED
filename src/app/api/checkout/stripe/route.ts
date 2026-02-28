@@ -7,12 +7,16 @@ import { z } from "zod";
 const bodySchema = z.object({
   tierId: z.string().uuid(),
   locale: z.string().min(2).max(10),
+  isGift: z.boolean().optional(),
+  giftRecipientEmail: z.string().email().optional(),
 });
 
 export async function POST(req: NextRequest) {
   // Auth required — must be logged in to purchase
   const supabase = createServerClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   if (!session) {
     return NextResponse.json(
@@ -31,7 +35,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { tierId, locale } = body;
+  const { tierId, locale, isGift, giftRecipientEmail } = body;
 
   const tier = await prisma.tier.findUnique({ where: { id: tierId } });
   if (!tier || !tier.isActive) {
@@ -43,7 +47,13 @@ export async function POST(req: NextRequest) {
 
   const user = await prisma.user.findUnique({
     where: { supabaseId: session.user.id },
-    select: { id: true, email: true, selfExcludedUntil: true, isPermExcluded: true, weeklyDepositLimit: true },
+    select: {
+      id: true,
+      email: true,
+      selfExcludedUntil: true,
+      isPermExcluded: true,
+      weeklyDepositLimit: true,
+    },
   });
 
   if (!user) {
@@ -71,7 +81,11 @@ export async function POST(req: NextRequest) {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     const weeklySpend = await prisma.payment.aggregate({
-      where: { userId: user.id, status: "completed", createdAt: { gte: weekAgo } },
+      where: {
+        userId: user.id,
+        status: "completed",
+        createdAt: { gte: weekAgo },
+      },
       _sum: { amount: true },
     });
     if ((weeklySpend._sum.amount ?? 0) + tier.fee > user.weeklyDepositLimit) {
@@ -90,6 +104,8 @@ export async function POST(req: NextRequest) {
       userId: user.id,
       userEmail: user.email,
       locale,
+      isGift,
+      giftRecipientEmail,
     });
     return NextResponse.json({ url: checkoutUrl });
   } catch (err) {

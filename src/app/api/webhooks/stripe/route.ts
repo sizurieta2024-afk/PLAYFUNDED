@@ -56,7 +56,7 @@ async function attributeAffiliateCommission(
 async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
 ): Promise<void> {
-  const { tierId, userId } = session.metadata ?? {};
+  const { tierId, userId, isGift, giftRecipientEmail } = session.metadata ?? {};
 
   if (!tierId || !userId) {
     console.error("[webhook/stripe] Missing metadata on session:", session.id);
@@ -78,6 +78,11 @@ async function handleCheckoutCompleted(
     return;
   }
 
+  const giftToken =
+    isGift === "true"
+      ? `GFT-${Math.random().toString(36).slice(2, 10).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
+      : null;
+
   await prisma.$transaction(async (tx) => {
     await tx.payment.create({
       data: {
@@ -88,6 +93,9 @@ async function handleCheckoutCompleted(
         method: "card",
         status: "completed",
         providerRef: session.id,
+        isGift: isGift === "true",
+        giftRecipientEmail: giftRecipientEmail || null,
+        giftToken,
         metadata: {
           stripePaymentIntentId:
             typeof session.payment_intent === "string"
@@ -98,20 +106,23 @@ async function handleCheckoutCompleted(
       },
     });
 
-    await tx.challenge.create({
-      data: {
-        userId,
-        tierId,
-        status: "active",
-        phase: "phase1",
-        balance: tier.fundedBankroll,
-        startBalance: tier.fundedBankroll,
-        dailyStartBalance: tier.fundedBankroll,
-        highestBalance: tier.fundedBankroll,
-        peakBalance: tier.fundedBankroll,
-        phase1StartBalance: tier.fundedBankroll,
-      },
-    });
+    // Gift: don't create Challenge now — recipient claims via /redeem/[token]
+    if (isGift !== "true") {
+      await tx.challenge.create({
+        data: {
+          userId,
+          tierId,
+          status: "active",
+          phase: "phase1",
+          balance: tier.fundedBankroll,
+          startBalance: tier.fundedBankroll,
+          dailyStartBalance: tier.fundedBankroll,
+          highestBalance: tier.fundedBankroll,
+          peakBalance: tier.fundedBankroll,
+          phase1StartBalance: tier.fundedBankroll,
+        },
+      });
+    }
   });
 
   // Affiliate commission — fire-and-forget (non-blocking, non-critical)

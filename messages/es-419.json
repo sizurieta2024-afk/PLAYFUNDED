@@ -304,6 +304,38 @@
     "fileWrongType": "Solo se permiten JPG, PNG, PDF",
     "required": "Este campo es obligatorio"
   },
+  "leaderboard": {
+    "pageTitle": "Tabla de líderes",
+    "pageSubtitle": "Los mejores traders financiados por rendimiento P&L.",
+    "rank": "#",
+    "trader": "Trader",
+    "tier": "Nivel",
+    "pnlPct": "P&L %",
+    "winRate": "Tasa de acierto",
+    "picks": "Picks",
+    "viewProfile": "Ver →",
+    "empty": "Aún no hay traders financiados.",
+    "anonymous": "Anónimo",
+    "fundedTrader": "Trader Financiado",
+    "recentPicks": "Picks recientes",
+    "noPicks": "Aún no hay picks liquidados."
+  },
+  "gift": {
+    "pageTitle": "¡Recibiste un regalo!",
+    "pageSubtitle": "Alguien te regaló un desafío de PlayFunded. Reclámalo para empezar a operar.",
+    "claimButton": "Reclamar mi desafío",
+    "claiming": "Reclamando...",
+    "claimedTitle": "¡Desafío reclamado!",
+    "claimedDesc": "Redirigiendo a tu panel...",
+    "loginNote": "Debes iniciar sesión para reclamar este regalo.",
+    "errorInvalid": "Este enlace de regalo no es válido o ha expirado.",
+    "errorClaimed": "Este regalo ya fue reclamado.",
+    "errorOwnGift": "No puedes reclamar tu propio regalo.",
+    "giftLabel": "Comprar como regalo",
+    "giftRecipientEmail": "Email del destinatario",
+    "giftRecipientPlaceholder": "amigo@email.com",
+    "giftNote": "Recibirá un enlace para reclamar su desafío."
+  },
   "affiliate": {
     "pageTitle": "Programa de Afiliados",
     "pageSubtitle": "Gana comisiones refiriendo nuevos traders a PlayFunded.",

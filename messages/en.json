@@ -304,6 +304,38 @@
     "fileWrongType": "Only JPG, PNG, PDF allowed",
     "required": "This field is required"
   },
+  "leaderboard": {
+    "pageTitle": "Leaderboard",
+    "pageSubtitle": "Top funded traders by P&L performance.",
+    "rank": "#",
+    "trader": "Trader",
+    "tier": "Tier",
+    "pnlPct": "P&L %",
+    "winRate": "Win rate",
+    "picks": "Picks",
+    "viewProfile": "View →",
+    "empty": "No funded traders yet.",
+    "anonymous": "Anonymous",
+    "fundedTrader": "Funded Trader",
+    "recentPicks": "Recent picks",
+    "noPicks": "No settled picks yet."
+  },
+  "gift": {
+    "pageTitle": "You received a gift!",
+    "pageSubtitle": "Someone gifted you a PlayFunded challenge. Claim it to start trading.",
+    "claimButton": "Claim my challenge",
+    "claiming": "Claiming...",
+    "claimedTitle": "Challenge claimed!",
+    "claimedDesc": "Redirecting to your dashboard...",
+    "loginNote": "You must be signed in to claim this gift.",
+    "errorInvalid": "This gift link is invalid or has expired.",
+    "errorClaimed": "This gift has already been claimed.",
+    "errorOwnGift": "You cannot claim your own gift.",
+    "giftLabel": "Buy as a gift",
+    "giftRecipientEmail": "Recipient email",
+    "giftRecipientPlaceholder": "friend@email.com",
+    "giftNote": "They'll receive a link to claim their challenge."
+  },
   "affiliate": {
     "pageTitle": "Affiliate Program",
     "pageSubtitle": "Earn commissions by referring new traders to PlayFunded.",

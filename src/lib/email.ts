@@ -1,6 +1,5 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.RESEND_FROM_EMAIL ?? "noreply@playfunded.com";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://playfunded.com";
 
@@ -47,6 +46,7 @@ export async function sendEmail(
 ): Promise<void> {
   if (!process.env.RESEND_API_KEY) return; // silent no-op in dev without key
   try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({ from: FROM, to, subject, html });
   } catch (err) {
     console.error("[email] send failed:", to, subject, err);
@@ -55,7 +55,10 @@ export async function sendEmail(
 }
 
 // ── 1. Welcome ───────────────────────────────────────────────────────────────
-export function welcomeEmail(name: string | null): { subject: string; html: string } {
+export function welcomeEmail(name: string | null): {
+  subject: string;
+  html: string;
+} {
   const n = name ?? "there";
   return {
     subject: "Welcome to PlayFunded 🎯",
@@ -244,7 +247,10 @@ export function payoutRejectedEmail(
 }
 
 // ── 9. KYC Approved ─────────────────────────────────────────────────────────
-export function kycApprovedEmail(name: string | null): { subject: string; html: string } {
+export function kycApprovedEmail(name: string | null): {
+  subject: string;
+  html: string;
+} {
   const n = name ?? "Trader";
   return {
     subject: "Identity verified ✅",

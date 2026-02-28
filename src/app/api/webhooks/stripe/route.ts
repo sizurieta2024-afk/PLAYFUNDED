@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import type Stripe from "stripe";
+import {
+  sendEmail,
+  challengePurchasedEmail,
+  giftVoucherEmail,
+} from "@/lib/email";
 
 async function attributeAffiliateCommission(
   userId: string,
@@ -125,10 +130,34 @@ async function handleCheckoutCompleted(
     }
   });
 
-  // Affiliate commission — fire-and-forget (non-blocking, non-critical)
+  // Affiliate commission — fire-and-forget
   void attributeAffiliateCommission(userId, tier.fee).catch((err) =>
     console.error("[webhook/stripe] affiliate commission error:", err),
   );
+
+  // Transactional emails
+  const buyer = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, name: true },
+  });
+  if (buyer) {
+    if (isGift === "true" && giftRecipientEmail && giftToken) {
+      const { subject, html } = giftVoucherEmail(
+        giftRecipientEmail,
+        buyer.name,
+        tier.name,
+        giftToken,
+      );
+      void sendEmail(giftRecipientEmail, subject, html);
+    } else {
+      const { subject, html } = challengePurchasedEmail(
+        buyer.name,
+        tier.name,
+        tier.fundedBankroll,
+      );
+      void sendEmail(buyer.email, subject, html);
+    }
+  }
 
   console.log(
     `[webhook/stripe] Challenge created — userId: ${userId}, tier: ${tier.name}`,

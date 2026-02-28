@@ -9,6 +9,13 @@ import type {
   MarketRequestStatus,
   AffiliateCommissionRate,
 } from "@prisma/client";
+import {
+  sendEmail,
+  payoutPaidEmail,
+  payoutRejectedEmail,
+  kycApprovedEmail,
+  kycRejectedEmail,
+} from "@/lib/email";
 
 async function requireAdmin() {
   const supabase = createServerClient();
@@ -87,7 +94,7 @@ export async function adminUpdatePayout(
 ) {
   const admin = await requireAdmin();
   const newStatus: PayoutStatus = action === "approve" ? "paid" : "failed";
-  await prisma.payout.update({
+  const payout = await prisma.payout.update({
     where: { id: payoutId },
     data: {
       status: newStatus,
@@ -96,6 +103,7 @@ export async function adminUpdatePayout(
       approvedAt: action === "approve" ? new Date() : null,
       paidAt: action === "approve" ? new Date() : null,
     },
+    include: { user: { select: { email: true, name: true } } },
   });
   await audit(
     admin.id,
@@ -104,6 +112,22 @@ export async function adminUpdatePayout(
     payoutId,
     adminNote ?? txRef,
   );
+  if (action === "approve") {
+    const { subject, html } = payoutPaidEmail(
+      payout.user.name,
+      payout.amount,
+      payout.method,
+      txRef,
+    );
+    void sendEmail(payout.user.email, subject, html);
+  } else {
+    const { subject, html } = payoutRejectedEmail(
+      payout.user.name,
+      payout.amount,
+      adminNote,
+    );
+    void sendEmail(payout.user.email, subject, html);
+  }
 }
 
 // ── KYC ───────────────────────────────────────────────────────────────
@@ -115,15 +139,23 @@ export async function adminUpdateKyc(
 ) {
   const admin = await requireAdmin();
   const newStatus: KycStatus = action === "approve" ? "approved" : "rejected";
-  await prisma.kycSubmission.update({
+  const kyc = await prisma.kycSubmission.update({
     where: { id: submissionId },
     data: {
       status: newStatus,
       reviewedAt: new Date(),
       reviewNote: reviewNote ?? null,
     },
+    include: { user: { select: { email: true, name: true } } },
   });
   await audit(admin.id, `${action}_kyc`, "kyc", submissionId, reviewNote);
+  if (action === "approve") {
+    const { subject, html } = kycApprovedEmail(kyc.user.name);
+    void sendEmail(kyc.user.email, subject, html);
+  } else {
+    const { subject, html } = kycRejectedEmail(kyc.user.name, reviewNote);
+    void sendEmail(kyc.user.email, subject, html);
+  }
 }
 
 // ── Affiliates ────────────────────────────────────────────────────────

@@ -11,6 +11,12 @@ import { prisma } from "@/lib/prisma";
 import { LEAGUE_CONFIG } from "@/lib/odds/types";
 import { fetchScores, type GameResult } from "@/lib/odds/scores";
 import { gradePick, buildPostSettlementUpdate } from "@/lib/settlement/settle";
+import {
+  sendEmail,
+  phase1PassedEmail,
+  fundedEmail,
+  challengeFailedEmail,
+} from "@/lib/email";
 
 function isAuthorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -22,9 +28,7 @@ function isAuthorized(req: NextRequest): boolean {
 function getOddsApiSportKey(sport: string, league: string): string | null {
   const config = LEAGUE_CONFIG.find(
     (l) =>
-      l.sport === sport &&
-      l.league === league &&
-      l.provider === "odds_api",
+      l.sport === sport && l.league === league && l.provider === "odds_api",
   );
   return config?.providerKey ?? null;
 }
@@ -60,7 +64,10 @@ export async function POST(req: NextRequest) {
     },
     include: {
       challenge: {
-        include: { tier: true },
+        include: {
+          tier: true,
+          user: { select: { email: true, name: true } },
+        },
       },
     },
   });
@@ -154,9 +161,7 @@ export async function POST(req: NextRequest) {
 
       // The new pick is about to join settled count if won/lost/push
       const settledPickCount =
-        settlement.status === "void"
-          ? settledCount
-          : settledCount + 1;
+        settlement.status === "void" ? settledCount : settledCount + 1;
 
       // Build challenge update
       const settlePick = {
@@ -165,12 +170,13 @@ export async function POST(req: NextRequest) {
         actualPayout: settlement.actualPayout,
       };
 
-      const { challengeUpdate } = buildPostSettlementUpdate(
-        settlePick,
-        challenge,
-        challenge.tier,
-        settledPickCount,
-      );
+      const { challengeUpdate, autoFail, phaseAdvance } =
+        buildPostSettlementUpdate(
+          settlePick,
+          challenge,
+          challenge.tier,
+          settledPickCount,
+        );
 
       // Atomic transaction: update pick + challenge
       await prisma.$transaction([
@@ -187,6 +193,34 @@ export async function POST(req: NextRequest) {
           data: challengeUpdate,
         }),
       ]);
+
+      // Fire transactional emails for significant challenge state changes
+      const userEmail = challenge.user.email;
+      const userName = challenge.user.name;
+      if (autoFail) {
+        const { subject, html } = challengeFailedEmail(
+          userName,
+          challenge.tier.name,
+          "drawdown or daily loss limit exceeded",
+        );
+        void sendEmail(userEmail, subject, html);
+      } else if (phaseAdvance) {
+        if (challenge.phase === "phase1") {
+          const { subject, html } = phase1PassedEmail(
+            userName,
+            challenge.tier.name,
+          );
+          void sendEmail(userEmail, subject, html);
+        } else if (challenge.phase === "phase2") {
+          const { subject, html } = fundedEmail(
+            userName,
+            challenge.tier.name,
+            challenge.tier.fundedBankroll,
+            challenge.tier.profitSplitPct,
+          );
+          void sendEmail(userEmail, subject, html);
+        }
+      }
 
       report.push({
         pickId: pick.id,

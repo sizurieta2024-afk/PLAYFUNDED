@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
 import type { PayoutMethod } from "@prisma/client";
+import { sendEmail, payoutRequestedEmail } from "@/lib/email";
 
 async function getAuthenticatedUser() {
   const supabase = createServerClient();
@@ -71,6 +72,13 @@ export async function requestPayout(
       isRollover: false,
     },
   });
+
+  const { subject, html } = payoutRequestedEmail(
+    user.name,
+    payoutAmount,
+    method,
+  );
+  void sendEmail(user.email, subject, html);
 
   return {};
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
+import { sendEmail, welcomeEmail } from "@/lib/email";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
   const isNewUser = !existingUser;
 
   // Sync Supabase user into our Postgres User table
-  await prisma.user.upsert({
+  const upsertedUser = await prisma.user.upsert({
     where: { supabaseId: user.id },
     create: {
       supabaseId: user.id,
@@ -60,6 +61,12 @@ export async function GET(request: NextRequest) {
       ...(isNewUser && refCode ? { referredByCode: refCode } : {}),
     },
   });
+
+  // Send welcome email to new users
+  if (isNewUser && user.email) {
+    const { subject, html } = welcomeEmail(upsertedUser.name);
+    void sendEmail(user.email, subject, html);
+  }
 
   // Respect x-forwarded-host in production (e.g. Vercel)
   const forwardedHost = request.headers.get("x-forwarded-host");

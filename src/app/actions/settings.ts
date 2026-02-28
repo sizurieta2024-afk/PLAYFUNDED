@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
+import { sendEmail, selfExclusionEmail } from "@/lib/email";
 
 async function getAuthUser() {
   const supabase = createServerClient();
@@ -56,12 +57,23 @@ export async function updateWeeklyLimit(limitUsd: number | null) {
   return { success: true };
 }
 
-export async function selfExclude(period: "30d" | "90d" | "180d" | "permanent") {
+export async function selfExclude(
+  period: "30d" | "90d" | "180d" | "permanent",
+) {
   const user = await getAuthUser();
 
   if (user.isPermExcluded) {
     return { error: "Account is permanently excluded" };
   }
+
+  const periodLabel =
+    period === "permanent"
+      ? "permanent"
+      : period === "30d"
+        ? "30 days"
+        : period === "90d"
+          ? "90 days"
+          : "6 months";
 
   if (period === "permanent") {
     await prisma.user.update({
@@ -77,6 +89,9 @@ export async function selfExclude(period: "30d" | "90d" | "180d" | "permanent") 
       data: { selfExcludedUntil: until, isPermExcluded: false },
     });
   }
+
+  const { subject, html } = selfExclusionEmail(user.name, periodLabel);
+  void sendEmail(user.email, subject, html);
 
   revalidatePath("/dashboard/settings");
   return { success: true };

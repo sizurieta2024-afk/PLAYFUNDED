@@ -261,7 +261,7 @@ export default async function HomePage({
 
                   {/* Rules */}
                   <ul className="space-y-1 mb-4 text-[11px] text-muted-foreground">
-                    {["Phase 1: +20%", "Phase 2: +10%", "−10% daily limit"].map(
+                    {["Phase 1: +20%", "Phase 2: +20%", "−10% daily limit"].map(
                       (r) => (
                         <li key={r} className="flex items-center gap-1">
                           <Check className="w-3 h-3 text-pf-brand shrink-0" />

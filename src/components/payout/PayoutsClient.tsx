@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle, CheckCircle, Clock, RotateCcw } from "lucide-react";
+import { AlertCircle, CheckCircle, Clock, RotateCcw, Info } from "lucide-react";
 import { requestPayout, rolloverProfits } from "@/app/actions/payouts";
 import { KycForm } from "@/components/kyc/KycForm";
 import type { PayoutMethod } from "@prisma/client";
@@ -72,21 +72,52 @@ export function PayoutsClient({
   const grossProfit = selectedChallenge
     ? Math.max(0, selectedChallenge.balance - selectedChallenge.startBalance)
     : 0;
-  const payoutAmount = selectedChallenge
-    ? Math.floor((grossProfit * selectedChallenge.tier.profitSplitPct) / 100)
-    : 0;
+
+  // requestedAmount state in cents, default to full gross profit
+  const [requestedAmountInput, setRequestedAmountInput] = useState<string>(
+    grossProfit > 0 ? (grossProfit / 100).toFixed(2) : "0.00",
+  );
+
+  const requestedAmountCents = Math.floor(
+    parseFloat(requestedAmountInput || "0") * 100,
+  );
+  const isValidAmount =
+    requestedAmountCents >= 1000 &&
+    requestedAmountCents <= grossProfit;
+
+  const payoutAmount =
+    isValidAmount && selectedChallenge
+      ? Math.floor(
+          (requestedAmountCents * selectedChallenge.tier.profitSplitPct) / 100,
+        )
+      : 0;
+
+  // Update requestedAmountInput when selected challenge changes
+  function handleChallengeSelect(c: FundedChallenge) {
+    setSelectedChallenge(c);
+    const gp = Math.max(0, c.balance - c.startBalance);
+    setRequestedAmountInput(gp > 0 ? (gp / 100).toFixed(2) : "0.00");
+    setMessage(null);
+  }
 
   async function handlePayout() {
-    if (!selectedChallenge) return;
+    if (!selectedChallenge || !isValidAmount) return;
     setLoading(true);
     setMessage(null);
-    const result = await requestPayout(selectedChallenge.id, method);
+    const result = await requestPayout(
+      selectedChallenge.id,
+      method,
+      requestedAmountCents,
+    );
     setLoading(false);
     if (result.error) {
       const errMap: Record<string, string> = {
         kyc_required: t.kycRequired,
         profit_zero: t.profitZero,
         pending_exists: t.pendingExists,
+        window_closed: t.windowClosed ?? "Payouts are only available on the 1st–3rd of each month.",
+        below_minimum: t.belowMinimum ?? "Minimum payout is $10.",
+        exceeds_profit: t.exceedsProfit ?? "Amount exceeds available profit.",
       };
       setMessage({
         type: "error",
@@ -112,7 +143,6 @@ export function PayoutsClient({
 
   // KYC gate
   if (kycStatus === null || kycStatus === "not_required") {
-    // no submission yet — show form
     return (
       <div className="space-y-6">
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-5">
@@ -183,6 +213,14 @@ export function PayoutsClient({
 
   return (
     <div className="space-y-8">
+      {/* Payout window notice */}
+      <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 flex items-start gap-3">
+        <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+        <p className="text-sm text-muted-foreground">
+          {t.windowNotice ?? "Payouts are available on the 1st–3rd of each month."}
+        </p>
+      </div>
+
       {/* Challenge selector */}
       {fundedChallenges.length > 1 && (
         <div>
@@ -193,7 +231,7 @@ export function PayoutsClient({
             {fundedChallenges.map((c) => (
               <button
                 key={c.id}
-                onClick={() => setSelectedChallenge(c)}
+                onClick={() => handleChallengeSelect(c)}
                 className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
                   selectedChallenge?.id === c.id
                     ? "border-pf-brand bg-pf-brand/10 text-pf-brand"
@@ -210,7 +248,7 @@ export function PayoutsClient({
       {selectedChallenge && (
         <>
           {/* Profit summary */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="rounded-xl border border-border bg-card p-4">
               <p className="text-xs text-muted-foreground mb-1">
                 {t.availableProfit}
@@ -230,18 +268,57 @@ export function PayoutsClient({
                 {formatUSD(payoutAmount)}
               </p>
             </div>
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="text-xs text-muted-foreground mb-1">
-                {t.payoutAmount}
-              </p>
-              <p className="text-xl font-bold tabular-nums">
-                {formatUSD(payoutAmount)}
-              </p>
-            </div>
           </div>
 
-          {payoutAmount > 0 ? (
+          {grossProfit > 0 ? (
             <>
+              {/* Partial amount input */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  {t.requestAmountLabel ?? "Amount to request (USD)"}
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-sm">$</span>
+                  <input
+                    type="number"
+                    min="10"
+                    max={(grossProfit / 100).toFixed(2)}
+                    step="0.01"
+                    value={requestedAmountInput}
+                    onChange={(e) => setRequestedAmountInput(e.target.value)}
+                    className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-pf-brand/40"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setRequestedAmountInput((grossProfit / 100).toFixed(2))
+                    }
+                    className="text-xs text-pf-brand hover:underline whitespace-nowrap"
+                  >
+                    Max
+                  </button>
+                </div>
+                {requestedAmountCents > 0 && requestedAmountCents < 1000 && (
+                  <p className="text-xs text-red-400 mt-1">
+                    {t.belowMinimum ?? "Minimum payout is $10."}
+                  </p>
+                )}
+                {requestedAmountCents > grossProfit && (
+                  <p className="text-xs text-red-400 mt-1">
+                    {t.exceedsProfit ?? "Amount exceeds available profit."}
+                  </p>
+                )}
+                {isValidAmount && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    You receive{" "}
+                    <span className="text-pf-brand font-semibold">
+                      {formatUSD(payoutAmount)}
+                    </span>{" "}
+                    ({selectedChallenge.tier.profitSplitPct}% of your requested amount)
+                  </p>
+                )}
+              </div>
+
               {/* Payment method */}
               <div>
                 <p className="text-sm font-medium text-foreground mb-3">
@@ -268,7 +345,7 @@ export function PayoutsClient({
               <div className="flex gap-3 flex-wrap">
                 <button
                   onClick={handlePayout}
-                  disabled={loading}
+                  disabled={loading || !isValidAmount}
                   className="flex-1 rounded-xl bg-pf-brand hover:bg-pf-brand/90 disabled:opacity-60 text-white font-semibold py-3 text-sm transition-colors"
                 >
                   {loading ? t.submitting : t.requestPayout}

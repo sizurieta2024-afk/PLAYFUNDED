@@ -41,6 +41,9 @@ interface SettleReport {
   reason?: string;
 }
 
+// Vercel Cron sends GET — alias so both work
+export { POST as GET };
+
 export async function POST(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json(

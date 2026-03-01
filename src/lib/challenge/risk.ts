@@ -8,7 +8,11 @@ import type { Challenge } from "@prisma/client";
 
 export interface RiskViolation {
   rule: "drawdown" | "daily_loss" | "stake_cap";
-  code: "DRAWDOWN_BREACH" | "DAILY_LOSS_BREACH" | "STAKE_CAP_EXCEEDED";
+  code:
+    | "DRAWDOWN_BREACH"
+    | "DAILY_LOSS_BREACH"
+    | "STAKE_CAP_EXCEEDED"
+    | "STAKE_MIN_VIOLATED";
   error: string;
 }
 
@@ -61,8 +65,27 @@ export function checkStakeCap(
   return null;
 }
 
+// ── 4. Stake Minimum ─────────────────────────────────────────
+// Min stake = max($1, 1% of CURRENT balance)
+export function checkMinStake(
+  challenge: Challenge,
+  proposedStakeCents: number,
+): RiskViolation | null {
+  const minStake = Math.max(100, Math.floor((challenge.balance * 1) / 100));
+  if (proposedStakeCents < minStake) {
+    return {
+      rule: "stake_cap",
+      code: "STAKE_MIN_VIOLATED",
+      error: `Stake is below the 1% minimum. Min allowed: $${(minStake / 100).toFixed(2)}`,
+    };
+  }
+  return null;
+}
+
 // Convenience: run all post-settlement checks (drawdown + daily loss)
 // Returns the first violation found, or null if all clear.
-export function checkPostSettlement(challenge: Challenge): RiskViolation | null {
+export function checkPostSettlement(
+  challenge: Challenge,
+): RiskViolation | null {
   return checkDrawdown(challenge) ?? checkDailyLoss(challenge);
 }

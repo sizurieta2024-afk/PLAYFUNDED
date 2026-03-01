@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
-import { checkStakeCap, isEventLocked } from "@/lib/challenge";
+import { checkStakeCap, checkMinStake, isEventLocked } from "@/lib/challenge";
 
 // ── POST — place a pick ──────────────────────────────────────────────────────
 
@@ -142,6 +142,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: stakeViolation.error, code: stakeViolation.code },
       { status: 400 },
+    );
+  }
+
+  // Stake minimum: 1% of current balance
+  const minStakeViolation = checkMinStake(challenge, stake);
+  if (minStakeViolation) {
+    return NextResponse.json(
+      { error: minStakeViolation.error, code: minStakeViolation.code },
+      { status: 422 },
     );
   }
 

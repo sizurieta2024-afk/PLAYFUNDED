@@ -1,7 +1,7 @@
 // ============================================================
 // PHASES — phase advancement and profit targets
 // Phase 1: +20% from phase1StartBalance, min 15 picks
-// Phase 2: +10% from phase2StartBalance, min 15 picks
+// Phase 2: +20% from phase2StartBalance (reset to fundedBankroll), min 15 picks
 // Funded: no profit target — drawdown rules apply
 // All amounts in integer cents. Use Math.floor for percentage math.
 // ============================================================
@@ -18,7 +18,7 @@ export function getProfitTarget(challenge: Challenge): number {
     }
     case "phase2": {
       const base = challenge.phase2StartBalance ?? challenge.startBalance;
-      return base + Math.floor((base * 10) / 100);
+      return base + Math.floor((base * 20) / 100);
     }
     case "funded":
       return Infinity;
@@ -41,11 +41,15 @@ export function checkPhaseComplete(
 }
 
 // Builds the Prisma update payload to advance to the next phase.
-// Phase 1 → Phase 2: drawdown and daily loss limits reset to new balance.
-// Phase 2 → Funded: marks challenge as funded.
-export function buildPhaseAdvance(challenge: Challenge): {
+// Phase 1 → Phase 2: balance resets to fundedBankroll; drawdown/daily limits reset.
+// Phase 2 → Funded: balance resets to fundedBankroll; marks challenge as funded.
+export function buildPhaseAdvance(
+  challenge: Challenge,
+  fundedBankroll: number,
+): {
   phase: "phase2" | "funded";
   status: "active" | "funded";
+  balance: number;
   startBalance: number;
   phase2StartBalance?: number;
   dailyStartBalance: number;
@@ -58,11 +62,12 @@ export function buildPhaseAdvance(challenge: Challenge): {
     return {
       phase: "phase2",
       status: "active",
-      startBalance: challenge.balance, // Phase 2 daily loss uses this as fixed base
-      phase2StartBalance: challenge.balance,
-      dailyStartBalance: challenge.balance,
-      highestBalance: challenge.balance, // drawdown resets from new phase peak
-      peakBalance: challenge.balance,
+      balance: fundedBankroll,
+      startBalance: fundedBankroll,
+      phase2StartBalance: fundedBankroll,
+      dailyStartBalance: fundedBankroll,
+      highestBalance: fundedBankroll,
+      peakBalance: fundedBankroll,
     };
   }
 
@@ -70,10 +75,11 @@ export function buildPhaseAdvance(challenge: Challenge): {
   return {
     phase: "funded",
     status: "funded",
-    startBalance: challenge.balance,
-    dailyStartBalance: challenge.balance,
-    highestBalance: challenge.balance,
-    peakBalance: challenge.balance,
+    balance: fundedBankroll,
+    startBalance: fundedBankroll,
+    dailyStartBalance: fundedBankroll,
+    highestBalance: fundedBankroll,
+    peakBalance: fundedBankroll,
     completedAt: new Date(),
     fundedAt: new Date(),
   };

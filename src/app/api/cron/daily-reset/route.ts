@@ -8,6 +8,9 @@ import { prisma } from "@/lib/prisma";
 // Note: raw SQL is used here because Prisma's updateMany does not support
 // setting a column equal to another column in the same row.
 
+// Vercel Cron sends GET — alias so both work
+export { POST as GET };
+
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {

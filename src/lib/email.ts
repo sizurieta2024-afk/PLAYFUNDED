@@ -70,7 +70,7 @@ export function welcomeEmail(name: string | null): {
         <p>Here's how to get started:</p>
         <p>1️⃣ Browse our challenge tiers<br/>
            2️⃣ Purchase a challenge (entry fees start at $59)<br/>
-           3️⃣ Hit the profit target in Phase 1 (+20%), then Phase 2 (+10%)<br/>
+           3️⃣ Hit the profit target in Phase 1 (+20%), then Phase 2 (+20%)<br/>
            4️⃣ Get funded and start earning real payouts</p>
         <a href="${APP_URL}/challenges" class="btn">Browse Challenges →</a>
         <hr/>
@@ -96,7 +96,7 @@ export function challengePurchasedEmail(
         <p>Your <strong>${tierName}</strong> challenge has been activated with a <strong>${bal}</strong> simulated bankroll.</p>
         <div>
           <div class="stat"><div class="val">+20%</div><div class="lbl">Phase 1 target</div></div>
-          <div class="stat"><div class="val">+10%</div><div class="lbl">Phase 2 target</div></div>
+          <div class="stat"><div class="val">+20%</div><div class="lbl">Phase 2 target</div></div>
           <div class="stat"><div class="val">15</div><div class="lbl">Min picks</div></div>
           <div class="stat"><div class="val">−10%</div><div class="lbl">Daily loss limit</div></div>
         </div>
@@ -119,7 +119,7 @@ export function phase1PassedEmail(
       <div class="body">
         <h2>Incredible work, ${n}!</h2>
         <p>You've passed <strong>Phase 1</strong> of your <strong>${tierName}</strong> challenge. Phase 2 has now started automatically.</p>
-        <p><strong>Phase 2 target:</strong> reach +10% profit from your Phase 2 starting balance in a minimum of 15 picks.</p>
+        <p><strong>Phase 2 target:</strong> reach +20% profit from your Phase 2 starting balance in a minimum of 15 picks.</p>
         <p>Keep the same discipline — watch your daily loss limit and drawdown. You're almost there.</p>
         <a href="${APP_URL}/dashboard" class="btn">Continue Trading →</a>
       </div>`),

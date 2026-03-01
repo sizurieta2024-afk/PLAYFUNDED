@@ -52,10 +52,8 @@ export function gradeSpread(
 ): SettleStatus {
   const { homeTeam, homeScore, awayScore } = scores;
 
-  const selectionScore =
-    selection === homeTeam ? homeScore : awayScore;
-  const opponentScore =
-    selection === homeTeam ? awayScore : homeScore;
+  const selectionScore = selection === homeTeam ? homeScore : awayScore;
+  const opponentScore = selection === homeTeam ? awayScore : homeScore;
 
   const margin = selectionScore - opponentScore + linePoint;
 
@@ -90,7 +88,13 @@ export function gradeTotal(
 
 // ── Grade a single pick against a score result ────────────────────────────────
 export function gradePick(
-  pick: { marketType: string; selection: string; linePoint: number | null; stake: number; potentialPayout: number },
+  pick: {
+    marketType: string;
+    selection: string;
+    linePoint: number | null;
+    stake: number;
+    potentialPayout: number;
+  },
   scores: GameScores,
 ): SettlementResult {
   let status: SettleStatus;
@@ -132,7 +136,11 @@ export function buildPostSettlementUpdate(
   tier: Tier,
   settledPickCount: number, // non-pending picks AFTER this one settles
 ): {
-  balanceUpdate: { balance: number; highestBalance: number; peakBalance: number };
+  balanceUpdate: {
+    balance: number;
+    highestBalance: number;
+    peakBalance: number;
+  };
   autoFail: boolean;
   phaseAdvance: boolean;
   challengeUpdate: Record<string, unknown>;
@@ -171,7 +179,10 @@ export function buildPostSettlementUpdate(
   );
 
   if (phaseComplete) {
-    const phaseAdvanceData = buildPhaseAdvance(updatedChallenge);
+    const phaseAdvanceData = buildPhaseAdvance(
+      updatedChallenge,
+      tier.fundedBankroll,
+    );
     return {
       balanceUpdate,
       autoFail: false,

@@ -26,12 +26,27 @@ async function getAuthenticatedUser() {
 export async function requestPayout(
   challengeId: string,
   method: PayoutMethod,
-): Promise<{ error?: string }> {
+  requestedProfitAmount: number, // in cents — the portion of gross profit to pay out
+): Promise<{ error?: string; code?: string }> {
   const user = await getAuthenticatedUser();
 
   // KYC gate
   if (!user.kycSubmission || user.kycSubmission.status !== "approved") {
-    return { error: "kyc_required" };
+    return { error: "kyc_required", code: "KYC_REQUIRED" };
+  }
+
+  // Monthly window: payouts only on 1st–3rd of each month
+  const utcDay = new Date().getUTCDate();
+  if (utcDay > 3) {
+    return { error: "window_closed", code: "PAYOUT_WINDOW_CLOSED" };
+  }
+
+  // Minimum payout: $10
+  if (
+    !Number.isInteger(requestedProfitAmount) ||
+    requestedProfitAmount < 1000
+  ) {
+    return { error: "below_minimum", code: "BELOW_MINIMUM" };
   }
 
   const challenge = await prisma.challenge.findFirst({
@@ -39,16 +54,19 @@ export async function requestPayout(
     include: { tier: true },
   });
 
-  if (!challenge) return { error: "challenge_not_found" };
+  if (!challenge) return { error: "challenge_not_found", code: "NOT_FOUND" };
 
-  // Profit must be positive
+  // Profit must be positive and cover the requested amount
   const grossProfit = challenge.balance - challenge.startBalance;
-  if (grossProfit <= 0) return { error: "profit_zero" };
+  if (grossProfit <= 0) return { error: "profit_zero", code: "PROFIT_ZERO" };
+  if (requestedProfitAmount > grossProfit) {
+    return { error: "exceeds_profit", code: "EXCEEDS_PROFIT" };
+  }
 
   const payoutAmount = Math.floor(
-    (grossProfit * challenge.tier.profitSplitPct) / 100,
+    (requestedProfitAmount * challenge.tier.profitSplitPct) / 100,
   );
-  if (payoutAmount <= 0) return { error: "profit_zero" };
+  if (payoutAmount <= 0) return { error: "profit_zero", code: "PROFIT_ZERO" };
 
   // No duplicate pending payout
   const existing = await prisma.payout.findFirst({
@@ -59,19 +77,28 @@ export async function requestPayout(
       isRollover: false,
     },
   });
-  if (existing) return { error: "pending_exists" };
+  if (existing) return { error: "pending_exists", code: "PENDING_EXISTS" };
 
-  await prisma.payout.create({
-    data: {
-      userId: user.id,
-      challengeId,
-      amount: payoutAmount,
-      splitPct: challenge.tier.profitSplitPct,
-      method,
-      status: "pending",
-      isRollover: false,
-    },
-  });
+  // Atomic: create payout + update challenge balance
+  const newBalance =
+    challenge.startBalance + (grossProfit - requestedProfitAmount);
+  await prisma.$transaction([
+    prisma.payout.create({
+      data: {
+        userId: user.id,
+        challengeId,
+        amount: payoutAmount,
+        splitPct: challenge.tier.profitSplitPct,
+        method,
+        status: "pending",
+        isRollover: false,
+      },
+    }),
+    prisma.challenge.update({
+      where: { id: challengeId },
+      data: { balance: newBalance },
+    }),
+  ]);
 
   const { subject, html } = payoutRequestedEmail(
     user.name,

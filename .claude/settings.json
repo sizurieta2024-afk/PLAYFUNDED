@@ -1,0 +1,31 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"\nimport json, sys, subprocess\ndata = json.load(sys.stdin)\nfp = data.get('tool_input', {}).get('file_path', '')\nif fp.endswith(('.ts', '.tsx')) and 'node_modules' not in fp and '.d.ts' not in fp:\n    r = subprocess.run(['npx', 'next', 'lint', '--file', fp, '--quiet'], capture_output=True, text=True, cwd='/Users/sebastianizurieta/playfunded')\n    out = (r.stdout + r.stderr).strip()\n    if out:\n        print('[lint]', out[:800])\n\"",
+            "blocking": false
+          },
+          {
+            "type": "command",
+            "command": "python3 -c \"\nimport json, sys, subprocess\ndata = json.load(sys.stdin)\nfp = data.get('tool_input', {}).get('file_path', '')\nif 'schema.prisma' in fp:\n    print('[hook] schema.prisma changed — regenerating Prisma client...')\n    r = subprocess.run(['npx', 'prisma', 'generate'], capture_output=True, text=True, cwd='/Users/sebastianizurieta/playfunded')\n    lines = (r.stdout + r.stderr).strip().split('\\\\n')\n    print('\\\\n'.join(lines[-5:]))\n\"",
+            "blocking": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/sebastianizurieta/playfunded && git status --short 2>/dev/null | head -20 | { read -r first; if [ -n \"$first\" ]; then echo \"[git] Uncommitted changes in playfunded:\"; echo \"$first\"; cat; fi; }"
+          }
+        ]
+      }
+    ]
+  }
+}

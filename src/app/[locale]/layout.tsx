@@ -3,10 +3,6 @@ import { getMessages } from "next-intl/server";
 import { hasLocale } from "next-intl";
 import { routing } from "@/i18n/routing";
 import { Providers } from "@/providers/providers";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
-import { ChatWidget } from "@/components/chat/ChatWidget";
-import { createServerClient } from "@/lib/supabase";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -35,19 +31,9 @@ export default async function LocaleLayout({
 
   const messages = await getMessages();
 
-  const supabase = createServerClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
   return (
     <Providers locale={locale} messages={messages}>
-      <div className="flex min-h-screen flex-col">
-        <Navbar isAuthenticated={!!session} />
-        <main className="flex-1">{children}</main>
-        <Footer />
-        <ChatWidget />
-      </div>
+      {children}
     </Providers>
   );
 }

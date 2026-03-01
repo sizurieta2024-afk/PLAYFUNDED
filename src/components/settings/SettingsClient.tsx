@@ -1,8 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateWeeklyLimit, selfExclude, cancelTempExclusion } from "@/app/actions/settings";
-import { useTranslations } from "next-intl";
+import {
+  updateWeeklyLimit,
+  selfExclude,
+  cancelTempExclusion,
+} from "@/app/actions/settings";
+import { useTranslations, useLocale } from "next-intl";
+import { createBrowserClient } from "@supabase/ssr";
 
 interface Props {
   email: string;
@@ -20,19 +25,37 @@ export function SettingsClient({
   isPermExcluded,
 }: Props) {
   const t = useTranslations("settings");
+  const locale = useLocale();
   const [pending, startTransition] = useTransition();
+
+  async function handleSignOut() {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+    await supabase.auth.signOut();
+    window.location.href = `/${locale}/auth/login`;
+  }
 
   // Weekly limit state
   const [limitInput, setLimitInput] = useState(
     weeklyDepositLimitUsd !== null ? String(weeklyDepositLimitUsd) : "",
   );
-  const [limitMsg, setLimitMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [limitMsg, setLimitMsg] = useState<{
+    ok: boolean;
+    text: string;
+  } | null>(null);
 
   // Exclusion UI state
   const [showExclude, setShowExclude] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState<"30d" | "90d" | "180d" | "permanent" | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<
+    "30d" | "90d" | "180d" | "permanent" | null
+  >(null);
   const [confirmText, setConfirmText] = useState("");
-  const [excludeMsg, setExcludeMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [excludeMsg, setExcludeMsg] = useState<{
+    ok: boolean;
+    text: string;
+  } | null>(null);
 
   function handleSaveLimit() {
     const val = limitInput.trim() === "" ? null : parseFloat(limitInput);
@@ -97,12 +120,16 @@ export function SettingsClient({
       <section className="rounded-xl border border-border bg-card p-6 space-y-4">
         <div>
           <h2 className="text-sm font-semibold">{t("weeklyLimitSection")}</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">{t("weeklyLimitDesc")}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {t("weeklyLimitDesc")}
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+              $
+            </span>
             <input
               type="number"
               min={10}
@@ -142,17 +169,37 @@ export function SettingsClient({
           )}
         </div>
         {limitMsg && (
-          <p className={`text-xs ${limitMsg.ok ? "text-pf-brand" : "text-red-400"}`}>
+          <p
+            className={`text-xs ${limitMsg.ok ? "text-pf-brand" : "text-red-400"}`}
+          >
             {limitMsg.text}
           </p>
         )}
+      </section>
+
+      {/* ── Sign out ───────────────────────────────────────────────── */}
+      <section className="rounded-xl border border-border bg-card p-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold">Sign out</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Sign out of your account on this device
+          </p>
+        </div>
+        <button
+          onClick={handleSignOut}
+          className="px-4 py-2 text-sm font-medium rounded-lg border border-border hover:border-red-500/50 hover:text-red-400 text-muted-foreground transition-colors"
+        >
+          Sign out
+        </button>
       </section>
 
       {/* ── Account Safety (exclusion — buried at bottom) ─────────── */}
       <section className="pt-2">
         <details className="group">
           <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors list-none flex items-center gap-1.5 select-none w-fit">
-            <span className="group-open:rotate-90 transition-transform inline-block text-muted-foreground/60">›</span>
+            <span className="group-open:rotate-90 transition-transform inline-block text-muted-foreground/60">
+              ›
+            </span>
             {t("safetySection")}
           </summary>
 
@@ -184,7 +231,9 @@ export function SettingsClient({
             )}
 
             {excludeMsg && (
-              <p className={`text-xs ${excludeMsg.ok ? "text-pf-brand" : "text-red-400"}`}>
+              <p
+                className={`text-xs ${excludeMsg.ok ? "text-pf-brand" : "text-red-400"}`}
+              >
                 {excludeMsg.text}
               </p>
             )}
@@ -228,7 +277,9 @@ export function SettingsClient({
                     <input
                       type="text"
                       value={confirmText}
-                      onChange={(e) => setConfirmText(e.target.value.toUpperCase())}
+                      onChange={(e) =>
+                        setConfirmText(e.target.value.toUpperCase())
+                      }
                       placeholder='Type "CONFIRM"'
                       className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-red-500/40"
                     />
@@ -241,7 +292,8 @@ export function SettingsClient({
                     disabled={
                       pending ||
                       !selectedPeriod ||
-                      (selectedPeriod === "permanent" && confirmText !== "CONFIRM")
+                      (selectedPeriod === "permanent" &&
+                        confirmText !== "CONFIRM")
                     }
                     className="px-4 py-2 text-xs font-medium rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors disabled:opacity-40"
                   >

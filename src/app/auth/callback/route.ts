@@ -6,7 +6,7 @@ import { sendEmail, welcomeEmail } from "@/lib/email";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
+  const next = searchParams.get("next") ?? "/en/dashboard";
 
   if (!code) {
     return NextResponse.redirect(`${origin}/auth/login?error=missing_code`);

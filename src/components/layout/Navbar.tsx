@@ -1,12 +1,13 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { ThemeToggle } from "./ThemeToggle";
 import { LanguageToggle } from "./LanguageToggle";
-import { Menu, X, TrendingUp } from "lucide-react";
+import { Menu, X, TrendingUp, LogOut } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { createBrowserClient } from "@supabase/ssr";
 
 interface NavbarProps {
   isAuthenticated?: boolean;
@@ -14,7 +15,17 @@ interface NavbarProps {
 
 export function Navbar({ isAuthenticated = false }: NavbarProps) {
   const t = useTranslations("nav");
+  const locale = useLocale();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  async function handleSignOut() {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+    await supabase.auth.signOut();
+    window.location.href = `/${locale}/auth/login`;
+  }
 
   const navLinks = [
     { key: "challenges", href: "/challenges" as const },
@@ -56,12 +67,21 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
             <ThemeToggle />
 
             {isAuthenticated ? (
-              <Link
-                href="/dashboard"
-                className="ml-1 flex items-center gap-2 px-4 h-9 rounded-md bg-pf-brand hover:bg-pf-brand-dark text-white text-sm font-semibold transition-colors"
-              >
-                {t("dashboard")}
-              </Link>
+              <>
+                <Link
+                  href="/dashboard"
+                  className="ml-1 flex items-center gap-2 px-4 h-9 rounded-md bg-pf-brand hover:bg-pf-brand-dark text-white text-sm font-semibold transition-colors"
+                >
+                  {t("dashboard")}
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center justify-center w-9 h-9 rounded-md border border-border text-muted-foreground hover:text-red-400 hover:border-red-500/50 transition-colors"
+                  aria-label="Sign out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </>
             ) : (
               <Link
                 href="/auth/login"
@@ -143,13 +163,25 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
                 className="pt-2 pb-1 border-t border-border"
               >
                 {isAuthenticated ? (
-                  <Link
-                    href="/dashboard"
-                    onClick={() => setMobileOpen(false)}
-                    className="flex px-3 py-2.5 rounded-md text-sm font-semibold text-pf-brand hover:bg-secondary transition-colors"
-                  >
-                    {t("dashboard")}
-                  </Link>
+                  <>
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex px-3 py-2.5 rounded-md text-sm font-semibold text-pf-brand hover:bg-secondary transition-colors"
+                    >
+                      {t("dashboard")}
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setMobileOpen(false);
+                        handleSignOut();
+                      }}
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium text-muted-foreground hover:text-red-400 hover:bg-secondary transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign out
+                    </button>
+                  </>
                 ) : (
                   <Link
                     href="/auth/login"

@@ -38,6 +38,10 @@ interface TierTranslations {
   usdc: string;
   btc: string;
   payWith: string;
+  // gift
+  sendAsGift: string;
+  giftRecipientEmailPlaceholder: string;
+  giftStripeOnly: string;
 }
 
 interface TierCardProps {
@@ -121,6 +125,8 @@ export function TierCard({
   const [showMethodSelector, setShowMethodSelector] = useState(false);
   const [selectedCrypto, setSelectedCrypto] =
     useState<CryptoCurrency>("usdttrc20");
+  const [isGift, setIsGift] = useState(false);
+  const [giftEmail, setGiftEmail] = useState("");
   const router = useRouter();
   const config = TIER_CONFIG[tier.name] ?? DEFAULT_CONFIG;
 
@@ -134,6 +140,10 @@ export function TierCard({
   }
 
   async function handlePayment(method: PaymentMethod) {
+    if (isGift && !giftEmail.trim()) {
+      setError("Please enter the recipient's email address.");
+      return;
+    }
     setShowMethodSelector(false);
     setLoading(true);
     setError(null);
@@ -146,6 +156,10 @@ export function TierCard({
 
       const body: Record<string, string> = { tierId: tier.id, locale };
       if (method === "crypto") body.currency = selectedCrypto;
+      if (isGift) {
+        body.isGift = "true";
+        body.giftRecipientEmail = giftEmail.trim();
+      }
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -301,6 +315,38 @@ export function TierCard({
               {tier.name} — {formatUSD(tier.fee)} USD
             </p>
 
+            {/* Gift toggle */}
+            <div className="mb-4">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isGift}
+                  onChange={(e) => {
+                    setIsGift(e.target.checked);
+                    if (!e.target.checked) setGiftEmail("");
+                  }}
+                  className="w-4 h-4 rounded accent-pf-brand"
+                />
+                <span className="text-sm font-medium text-foreground">
+                  {t.sendAsGift} 🎁
+                </span>
+              </label>
+              {isGift && (
+                <div className="mt-3 space-y-2">
+                  <input
+                    type="email"
+                    value={giftEmail}
+                    onChange={(e) => setGiftEmail(e.target.value)}
+                    placeholder={t.giftRecipientEmailPlaceholder}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-pf-brand"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t.giftStripeOnly}
+                  </p>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-3">
               {/* Card / Stripe */}
               <button
@@ -320,52 +366,54 @@ export function TierCard({
                 </div>
               </button>
 
-              {/* Crypto */}
-              <div className="rounded-xl border border-border p-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 shrink-0 text-xs font-bold">
-                    ₿
+              {/* Crypto — hidden when gift mode is on */}
+              {!isGift && (
+                <div className="rounded-xl border border-border p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 shrink-0 text-xs font-bold">
+                      ₿
+                    </div>
+                    <p className="font-semibold text-foreground text-sm">
+                      {t.crypto}
+                    </p>
                   </div>
-                  <p className="font-semibold text-foreground text-sm">
-                    {t.crypto}
-                  </p>
-                </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  {(
-                    [
-                      { id: "usdttrc20", label: "USDT", sub: "TRC-20" },
-                      { id: "usdcerc20", label: "USDC", sub: "ERC-20" },
-                      { id: "btc", label: "BTC", sub: "Bitcoin" },
-                    ] as const
-                  ).map(({ id, label, sub }) => (
-                    <button
-                      key={id}
-                      onClick={() => setSelectedCrypto(id)}
-                      className={`p-2 rounded-lg border text-center transition-all ${
-                        selectedCrypto === id
-                          ? "border-pf-brand bg-pf-brand/10 text-pf-brand"
-                          : "border-border text-muted-foreground hover:border-pf-brand/40"
-                      }`}
-                    >
-                      <p className="text-xs font-bold">{label}</p>
-                      <p className="text-[10px]">{sub}</p>
-                    </button>
-                  ))}
-                </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(
+                      [
+                        { id: "usdttrc20", label: "USDT", sub: "TRC-20" },
+                        { id: "usdcerc20", label: "USDC", sub: "ERC-20" },
+                        { id: "btc", label: "BTC", sub: "Bitcoin" },
+                      ] as const
+                    ).map(({ id, label, sub }) => (
+                      <button
+                        key={id}
+                        onClick={() => setSelectedCrypto(id)}
+                        className={`p-2 rounded-lg border text-center transition-all ${
+                          selectedCrypto === id
+                            ? "border-pf-brand bg-pf-brand/10 text-pf-brand"
+                            : "border-border text-muted-foreground hover:border-pf-brand/40"
+                        }`}
+                      >
+                        <p className="text-xs font-bold">{label}</p>
+                        <p className="text-[10px]">{sub}</p>
+                      </button>
+                    ))}
+                  </div>
 
-                <button
-                  onClick={() => handlePayment("crypto")}
-                  className="w-full rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 font-semibold py-2 text-sm transition-colors"
-                >
-                  {t.payWith}{" "}
-                  {selectedCrypto === "btc"
-                    ? "BTC"
-                    : selectedCrypto.startsWith("usdt")
-                      ? "USDT"
-                      : "USDC"}
-                </button>
-              </div>
+                  <button
+                    onClick={() => handlePayment("crypto")}
+                    className="w-full rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 font-semibold py-2 text-sm transition-colors"
+                  >
+                    {t.payWith}{" "}
+                    {selectedCrypto === "btc"
+                      ? "BTC"
+                      : selectedCrypto.startsWith("usdt")
+                        ? "USDT"
+                        : "USDC"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

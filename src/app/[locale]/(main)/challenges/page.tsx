@@ -93,6 +93,11 @@ export default async function ChallengesPage({
                 usdc: t("usdc"),
                 btc: t("btc"),
                 payWith: t("payWith"),
+                sendAsGift: t("sendAsGift"),
+                giftRecipientEmailPlaceholder: t(
+                  "giftRecipientEmailPlaceholder",
+                ),
+                giftStripeOnly: t("giftStripeOnly"),
               }}
             />
           </div>

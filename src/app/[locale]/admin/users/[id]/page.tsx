@@ -59,12 +59,11 @@ export default async function AdminUserDetailPage({
         where: { isRollover: false },
         orderBy: { requestedAt: "desc" },
         take: 20,
-        include: { challenge: { include: { tier: { select: { name: true } } } } },
+        include: {
+          challenge: { include: { tier: { select: { name: true } } } },
+        },
       },
-      kycSubmissions: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-      },
+      kycSubmission: true,
     },
   });
 
@@ -96,7 +95,7 @@ export default async function AdminUserDetailPage({
   const winRate =
     settledPicks > 0 ? Math.round((wonPicks / settledPicks) * 100) : null;
 
-  const latestKyc = user.kycSubmissions[0] ?? null;
+  const latestKyc = user.kycSubmission ?? null;
 
   return (
     <div className="space-y-8 max-w-5xl">
@@ -270,16 +269,23 @@ export default async function AdminUserDetailPage({
             <table className="w-full text-sm min-w-[700px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
-                  {["Event", "Market", "Selection", "Odds", "Stake", "Status", "P&L", "Date"].map(
-                    (h) => (
-                      <th
-                        key={h}
-                        className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground"
-                      >
-                        {h}
-                      </th>
-                    ),
-                  )}
+                  {[
+                    "Event",
+                    "Market",
+                    "Selection",
+                    "Odds",
+                    "Stake",
+                    "Status",
+                    "P&L",
+                    "Date",
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      className="text-left px-3 py-2.5 text-xs font-medium text-muted-foreground"
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -356,7 +362,10 @@ export default async function AdminUserDetailPage({
               </thead>
               <tbody>
                 {user.payments.map((p) => (
-                  <tr key={p.id} className="border-b border-border last:border-0">
+                  <tr
+                    key={p.id}
+                    className="border-b border-border last:border-0"
+                  >
                     <td className="px-4 py-3 text-xs text-foreground">
                       {p.tier.name}
                     </td>
@@ -407,7 +416,10 @@ export default async function AdminUserDetailPage({
               </thead>
               <tbody>
                 {user.payouts.map((p) => (
-                  <tr key={p.id} className="border-b border-border last:border-0">
+                  <tr
+                    key={p.id}
+                    className="border-b border-border last:border-0"
+                  >
                     <td className="px-4 py-3 tabular-nums text-xs font-semibold text-pf-brand">
                       {fmt(p.amount)}
                     </td>

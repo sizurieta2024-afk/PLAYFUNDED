@@ -69,7 +69,7 @@ export function welcomeEmail(name: string | null): {
         <p>PlayFunded is Latin America's sports trading platform. Prove your skill across two phases and earn a funded account — we put up the capital, you keep up to 80% of the profits.</p>
         <p>Here's how to get started:</p>
         <p>1️⃣ Browse our challenge tiers<br/>
-           2️⃣ Purchase a challenge (entry fees start at $59)<br/>
+           2️⃣ Purchase a challenge (entry fees start at $19.99)<br/>
            3️⃣ Hit the profit target in Phase 1 (+20%), then Phase 2 (+20%)<br/>
            4️⃣ Get funded and start earning real payouts</p>
         <a href="${APP_URL}/challenges" class="btn">Browse Challenges →</a>

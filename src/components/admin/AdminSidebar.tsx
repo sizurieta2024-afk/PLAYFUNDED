@@ -13,6 +13,8 @@ import {
   Radio,
   TrendingUp,
   Crosshair,
+  CreditCard,
+  ShieldAlert,
   LogOut,
 } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
@@ -20,9 +22,11 @@ import { createBrowserClient } from "@supabase/ssr";
 const NAV = [
   { label: "Overview", href: "/admin", icon: LayoutDashboard, exact: true },
   { label: "Revenue", href: "/admin/revenue", icon: TrendingUp },
+  { label: "Risk", href: "/admin/risk", icon: ShieldAlert },
   { label: "Users", href: "/admin/users", icon: Users },
   { label: "Challenges", href: "/admin/challenges", icon: Trophy },
   { label: "Picks", href: "/admin/picks", icon: Crosshair },
+  { label: "Payments", href: "/admin/payments", icon: CreditCard },
   { label: "Payouts", href: "/admin/payouts", icon: DollarSign },
   { label: "KYC", href: "/admin/kyc", icon: ShieldCheck },
   { label: "Affiliates", href: "/admin/affiliates", icon: UsersRound },
@@ -56,7 +60,7 @@ export function AdminSidebar() {
         <p className="text-sm font-bold text-foreground mt-0.5">PlayFunded</p>
       </div>
 
-      <nav className="p-3 space-y-0.5 flex-1">
+      <nav className="p-3 space-y-0.5 flex-1 overflow-y-auto">
         {NAV.map(({ label, href, icon: Icon, exact }) => {
           const active = isActive(href, exact);
           return (
@@ -76,7 +80,7 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      <div className="px-3 py-3 border-t border-border space-y-1">
+      <div className="px-3 py-3 border-t border-border">
         <button
           onClick={handleSignOut}
           className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-red-400 hover:bg-secondary transition-colors"

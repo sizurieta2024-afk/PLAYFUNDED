@@ -62,7 +62,10 @@
     "usdt": "USDT",
     "usdc": "USDC",
     "btc": "BTC",
-    "payWith": "Pagar con"
+    "payWith": "Pagar con",
+    "sendAsGift": "Enviar como regalo",
+    "giftRecipientEmailPlaceholder": "Correo del destinatario",
+    "giftStripeOnly": "Los regalos solo se pueden pagar con tarjeta"
   },
   "checkout": {
     "successTitle": "¡Pago exitoso!",
@@ -451,7 +454,7 @@
     "step1_title": "Compra un desafío",
     "step1_desc": "Elige tu nivel desde $1K hasta $25K de bankroll simulado. Paga una tarifa única de entrada para desbloquear la Fase 1.",
     "step2_title": "Supera dos fases",
-    "step2_desc": "Alcanza +20% de ganancia en Fase 1, luego +10% en Fase 2. Mínimo 15 picks cada una. Respeta las reglas de riesgo.",
+    "step2_desc": "Alcanza +20% de ganancia en Fase 1, luego +20% en Fase 2. Mínimo 15 picks cada una. Respeta las reglas de riesgo.",
     "step3_title": "Obtén financiamiento",
     "step3_desc": "Supera ambas fases y recibe una cuenta financiada. Opera con nuestro capital y gana hasta el 80% de todas las ganancias.",
     "steps_learn_more": "Ver el proceso completo",

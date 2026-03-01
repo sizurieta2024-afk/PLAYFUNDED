@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { banUser, unbanUser } from "@/app/actions/admin";
 
 interface UserRow {
@@ -38,25 +39,34 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
       <table className="w-full text-sm min-w-[800px]">
         <thead>
           <tr className="border-b border-border bg-muted/30">
-            {["User", "Country", "Role", "Challenges", "Payouts", "Joined", "Actions"].map(
-              (h) => (
-                <th
-                  key={h}
-                  className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground whitespace-nowrap"
-                >
-                  {h}
-                </th>
-              ),
-            )}
+            {[
+              "User",
+              "Country",
+              "Role",
+              "Challenges",
+              "Payouts",
+              "Joined",
+              "Actions",
+            ].map((h) => (
+              <th
+                key={h}
+                className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground whitespace-nowrap"
+              >
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {users.map((u) => (
             <tr key={u.id} className="border-b border-border last:border-0">
               <td className="px-4 py-3">
-                <p className="font-medium text-foreground">
-                  {u.name ?? "—"}
-                </p>
+                <Link
+                  href={`/admin/users/${u.id}`}
+                  className="font-medium text-foreground hover:text-pf-brand transition-colors"
+                >
+                  {u.name ?? u.email.split("@")[0]}
+                </Link>
                 <p className="text-xs text-muted-foreground">{u.email}</p>
                 {u.isBanned && (
                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-500/15 text-red-400 mt-1">
@@ -64,7 +74,9 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
                   </span>
                 )}
               </td>
-              <td className="px-4 py-3 text-muted-foreground">{u.country ?? "—"}</td>
+              <td className="px-4 py-3 text-muted-foreground">
+                {u.country ?? "—"}
+              </td>
               <td className="px-4 py-3">
                 <span
                   className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${

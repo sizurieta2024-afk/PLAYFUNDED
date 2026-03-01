@@ -62,7 +62,10 @@
     "usdt": "USDT",
     "usdc": "USDC",
     "btc": "BTC",
-    "payWith": "Pay with"
+    "payWith": "Pay with",
+    "sendAsGift": "Send as a gift",
+    "giftRecipientEmailPlaceholder": "Recipient's email address",
+    "giftStripeOnly": "Gifts can only be paid by card"
   },
   "checkout": {
     "successTitle": "Payment successful!",
@@ -451,7 +454,7 @@
     "step1_title": "Buy a challenge",
     "step1_desc": "Choose your tier from $1K to $25K simulated bankroll. Pay a one-time entry fee to unlock Phase 1.",
     "step2_title": "Pass two phases",
-    "step2_desc": "Hit +20% profit in Phase 1, then +10% in Phase 2. Minimum 15 picks each. Stay within the risk rules.",
+    "step2_desc": "Hit +20% profit in Phase 1, then +20% in Phase 2. Minimum 15 picks each. Stay within the risk rules.",
     "step3_title": "Get funded",
     "step3_desc": "Pass both phases and receive a funded account. Trade with our capital and earn up to 80% of all profits.",
     "steps_learn_more": "Learn the full process",

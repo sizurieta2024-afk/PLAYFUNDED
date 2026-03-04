@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { createCheckoutSession } from "@/lib/stripe";
+import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const bodySchema = z.object({
@@ -9,16 +10,29 @@ const bodySchema = z.object({
   locale: z.string().min(2).max(10),
   isGift: z.boolean().optional(),
   giftRecipientEmail: z.string().email().optional(),
+  country: z.string().length(2).optional(), // ISO 3166-1 alpha-2 country code
 });
 
 export async function POST(req: NextRequest) {
+  const limit = enforceRateLimit(req, "api:checkout:stripe", {
+    windowMs: 60_000,
+    max: 12,
+  });
+  if (!limit.allowed) {
+    return rateLimitExceededResponse(
+      "Too many checkout attempts. Please wait and try again.",
+      limit,
+    );
+  }
+
   // Auth required — must be logged in to purchase
   const supabase = createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (authError || !authUser) {
     return NextResponse.json(
       { error: "Unauthorized", code: "AUTH_REQUIRED" },
       { status: 401 },
@@ -35,7 +49,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { tierId, locale, isGift, giftRecipientEmail } = body;
+  const { tierId, locale, isGift, giftRecipientEmail, country } = body;
+  const headerCountry =
+    req.headers.get("x-vercel-ip-country") ??
+    req.headers.get("cf-ipcountry") ??
+    undefined;
 
   const tier = await prisma.tier.findUnique({ where: { id: tierId } });
   if (!tier || !tier.isActive) {
@@ -46,10 +64,11 @@ export async function POST(req: NextRequest) {
   }
 
   const user = await prisma.user.findUnique({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
     select: {
       id: true,
       email: true,
+      country: true,
       selfExcludedUntil: true,
       isPermExcluded: true,
       weeklyDepositLimit: true,
@@ -97,6 +116,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const checkoutCountry = (
+      country ??
+      headerCountry ??
+      user.country ??
+      ""
+    ).toUpperCase();
     const checkoutUrl = await createCheckoutSession({
       tierId: tier.id,
       tierName: tier.name,
@@ -106,6 +131,7 @@ export async function POST(req: NextRequest) {
       locale,
       isGift,
       giftRecipientEmail,
+      enablePix: checkoutCountry === "BR",
     });
     return NextResponse.json({ url: checkoutUrl });
   } catch (err) {

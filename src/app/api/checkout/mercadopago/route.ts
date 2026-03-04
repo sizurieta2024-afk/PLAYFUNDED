@@ -2,14 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { createMpPreference } from "@/lib/mercadopago";
+import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
+  const limit = enforceRateLimit(request, "api:checkout:mercadopago", {
+    windowMs: 60_000,
+    max: 12,
+  });
+  if (!limit.allowed) {
+    return rateLimitExceededResponse(
+      "Too many checkout attempts. Please wait and try again.",
+      limit,
+    );
+  }
+
   const supabase = createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (authError || !authUser) {
     return NextResponse.json(
       { error: "Unauthorized", code: "UNAUTHORIZED" },
       { status: 401 },
@@ -29,7 +42,7 @@ export async function POST(request: NextRequest) {
   const [tier, user] = await Promise.all([
     prisma.tier.findUnique({ where: { id: tierId } }),
     prisma.user.findUnique({
-      where: { supabaseId: session.user.id },
+      where: { supabaseId: authUser.id },
       select: {
         id: true,
         email: true,

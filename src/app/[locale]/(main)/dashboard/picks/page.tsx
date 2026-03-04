@@ -4,6 +4,7 @@ import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { PicksClient } from "@/components/challenge/PicksClient";
 import type { Metadata } from "next";
+import { Link } from "@/i18n/navigation";
 
 export async function generateMetadata({
   params,
@@ -24,10 +25,11 @@ export default async function PicksPage({
 
   const supabase = createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (authError || !authUser) {
     redirect("/auth/login");
   }
 
@@ -35,7 +37,7 @@ export default async function PicksPage({
 
   // Resolve the Prisma user
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
   });
 
   if (!user) {
@@ -57,12 +59,12 @@ export default async function PicksPage({
     return (
       <div className="mx-auto max-w-2xl px-4 py-16 text-center space-y-4">
         <p className="text-muted-foreground">{t("noChallenge")}</p>
-        <a
+        <Link
           href="/challenges"
           className="inline-block px-6 py-2.5 rounded-lg bg-pf-brand text-white text-sm font-semibold hover:bg-pf-brand/90 transition-colors"
         >
           {t("buyChallenge")}
-        </a>
+        </Link>
       </div>
     );
   }
@@ -105,6 +107,9 @@ export default async function PicksPage({
     pickPlaced: t("pickPlaced"),
     recentPicks: t("recentPicks"),
     noPicks: t("noPicks"),
+    currentBets: t("currentBets"),
+    noPendingBets: t("noPendingBets"),
+    pastBets: t("pastBets"),
     pending: t("pending"),
     won: t("won"),
     lost: t("lost"),

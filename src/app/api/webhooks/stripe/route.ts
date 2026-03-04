@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import type Stripe from "stripe";
+import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 import {
   sendEmail,
   challengePurchasedEmail,
@@ -165,6 +166,14 @@ async function handleCheckoutCompleted(
 }
 
 export async function POST(req: NextRequest) {
+  const limit = enforceRateLimit(req, "api:webhooks:stripe", {
+    windowMs: 60_000,
+    max: 240,
+  });
+  if (!limit.allowed) {
+    return rateLimitExceededResponse("Too many webhook calls", limit);
+  }
+
   if (!process.env.STRIPE_WEBHOOK_SECRET) {
     return NextResponse.json(
       { error: "Webhook secret not configured" },

@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyNowPaymentsSignature } from "@/lib/nowpayments";
+import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 
 // NOWPayments IPN: fires on every status change.
 // We only act on "finished" (fully confirmed) payments.
 
 export async function POST(request: NextRequest) {
+  const limit = enforceRateLimit(request, "api:webhooks:nowpayments", {
+    windowMs: 60_000,
+    max: 240,
+  });
+  if (!limit.allowed) {
+    return rateLimitExceededResponse("Too many webhook calls", limit);
+  }
+
   const body = await request.text();
   const signature = request.headers.get("x-nowpayments-sig") ?? "";
 

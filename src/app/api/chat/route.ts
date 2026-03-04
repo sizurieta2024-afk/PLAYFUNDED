@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -32,7 +33,7 @@ PAYOUTS:
 - Processing: 3-5 business days
 
 KEY RULES:
-- Max stake per pick: 5% of current balance
+- Max stake per pick: 5% of phase starting balance
 - Daily loss resets every day at 00:00 UTC
 - Drawdown is calculated from highest balance ever reached
 - If drawdown or daily loss limits are breached, challenge fails
@@ -42,7 +43,7 @@ AFFILIATE PROGRAM:
 - Share a unique PF-XXXXXX referral link
 - 30-day cookie tracking
 
-Be helpful, concise, and friendly. Respond in the same language the user writes in (Spanish or English). If you don't know something specific, say so honestly and suggest contacting support. Don't make up rules or numbers not listed above.`;
+Be helpful, concise, and friendly. Respond in the same language the user writes in (Spanish, Portuguese, or English). If you don't know something specific, say so honestly and suggest contacting support. Don't make up rules or numbers not listed above.`;
 
 interface Message {
   role: "user" | "assistant";
@@ -50,6 +51,17 @@ interface Message {
 }
 
 export async function POST(req: NextRequest) {
+  const limit = enforceRateLimit(req, "api:chat", {
+    windowMs: 60_000,
+    max: 20,
+  });
+  if (!limit.allowed) {
+    return rateLimitExceededResponse(
+      "Too many chat requests. Please wait and try again.",
+      limit,
+    );
+  }
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: "Chat not configured" }, { status: 500 });
   }

@@ -24,7 +24,15 @@ export function createClient() {
 // Respects Row Level Security — acts as the logged-in user
 // ------------------------------------------------------------
 export function createServerClient() {
-  const cookieStore = cookies()
+  const cookieStore = cookies() as unknown as {
+    get(name: string): { value: string } | undefined
+    set(
+      cookie: {
+        name: string
+        value: string
+      } & CookieOptions
+    ): void
+  }
 
   return createSsrServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {

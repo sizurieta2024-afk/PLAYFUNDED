@@ -10,15 +10,25 @@ import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
 import { buildPostSettlementUpdate } from "@/lib/settlement/settle";
 import type { SettleStatus } from "@/lib/settlement/settle";
+import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const limit = enforceRateLimit(req, "api:admin:picks:settle", {
+    windowMs: 60_000,
+    max: 60,
+  });
+  if (!limit.allowed) {
+    return rateLimitExceededResponse("Too many settlement requests", limit);
+  }
+
   // Auth: must be logged-in admin
   const supabase = createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (authError || !authUser) {
     return NextResponse.json(
       { error: "Unauthorized", code: "UNAUTHORIZED" },
       { status: 401 },
@@ -27,7 +37,7 @@ export async function POST(req: NextRequest) {
 
   // Admin role check — server-side only
   const admin = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id, role: "admin" },
+    where: { supabaseId: authUser.id, role: "admin" },
   });
   if (!admin) {
     return NextResponse.json(

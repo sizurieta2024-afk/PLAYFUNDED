@@ -61,13 +61,13 @@ function LoginForm() {
         )}
 
         {/* Google sign-in */}
-        <a
+        <Link
           href="/api/auth/google"
           className="flex items-center justify-center gap-3 w-full px-4 py-2.5 rounded-md border border-border bg-secondary text-foreground text-sm font-medium hover:bg-secondary/80 transition-colors"
         >
           <GoogleIcon />
           {t('googleButton')}
-        </a>
+        </Link>
 
         {/* Divider */}
         <div className="relative flex items-center gap-3">

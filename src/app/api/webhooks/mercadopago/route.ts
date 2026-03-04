@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 
 // Mercado Pago sends IPN notifications. We verify by fetching the payment
 // directly from the MP API using our access token — no shared secret needed
@@ -32,6 +33,22 @@ async function fetchMpPayment(paymentId: string): Promise<{
 }
 
 export async function POST(request: NextRequest) {
+  const limit = enforceRateLimit(request, "api:webhooks:mercadopago", {
+    windowMs: 60_000,
+    max: 240,
+  });
+  if (!limit.allowed) {
+    return rateLimitExceededResponse("Too many webhook calls", limit);
+  }
+
+  const expectedToken = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+  if (expectedToken) {
+    const token = request.nextUrl.searchParams.get("token");
+    if (token !== expectedToken) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
   const body = await request.text();
   const params = request.nextUrl.searchParams;
 

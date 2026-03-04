@@ -27,7 +27,11 @@ export async function createMpPreference({
   const preference = new Preference(client);
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
+  const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
   const localePath = locale === "es-419" ? "" : `/${locale}`;
+  const notificationUrl = webhookSecret
+    ? `${baseUrl}/api/webhooks/mercadopago?token=${encodeURIComponent(webhookSecret)}`
+    : `${baseUrl}/api/webhooks/mercadopago`;
 
   const result = await preference.create({
     body: {
@@ -49,7 +53,7 @@ export async function createMpPreference({
         pending: `${baseUrl}${localePath}/checkout/pending`,
       },
       auto_return: "approved",
-      notification_url: `${baseUrl}/api/webhooks/mercadopago`,
+      notification_url: notificationUrl,
     },
   });
 

@@ -5,6 +5,7 @@ import { AlertCircle, CheckCircle, Clock, RotateCcw, Info } from "lucide-react";
 import { requestPayout, rolloverProfits } from "@/app/actions/payouts";
 import { KycForm } from "@/components/kyc/KycForm";
 import type { PayoutMethod } from "@prisma/client";
+import { Link } from "@/i18n/navigation";
 
 type KycStatus = "not_required" | "pending" | "approved" | "rejected" | null;
 
@@ -201,12 +202,12 @@ export function PayoutsClient({
     return (
       <div className="text-center py-12 space-y-4">
         <p className="text-muted-foreground">{t.noPayout}</p>
-        <a
+        <Link
           href="/challenges"
           className="inline-block px-6 py-2.5 rounded-lg bg-pf-brand text-white text-sm font-semibold hover:bg-pf-brand/90 transition-colors"
         >
           {t.buyChallenge}
-        </a>
+        </Link>
       </div>
     );
   }

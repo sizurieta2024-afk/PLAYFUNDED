@@ -45,9 +45,7 @@ async function audit(
 }
 
 const CHECKOUT_METHODS = ["card", "crypto", "pix", "mercadopago"] as const;
-type CheckoutMethod = (typeof CHECKOUT_METHODS)[number];
 const PAYOUT_METHODS = ["bank_wire", "usdt", "usdc", "btc", "paypal"] as const;
-type PayoutMethod = (typeof PAYOUT_METHODS)[number];
 const COUNTRY_MARKET_STATUSES = ["blocked", "review", "enabled"] as const;
 type CountryPolicyStatus = (typeof COUNTRY_MARKET_STATUSES)[number];
 type MarketRequestStatus = "pending" | "reviewed" | "approved" | "rejected";

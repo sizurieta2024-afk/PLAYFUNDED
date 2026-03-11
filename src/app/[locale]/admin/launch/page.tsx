@@ -11,6 +11,7 @@ import {
 import {
   listRecentOpsEvents,
   listResolvedCountryPolicies,
+  type ResolvedCountryPolicy,
 } from "@/lib/country-policy-store";
 import { PLATFORM_POLICY, getPayoutWindowLabel } from "@/lib/platform-policy";
 
@@ -95,7 +96,7 @@ export default async function AdminLaunchPage() {
             </tr>
           </thead>
           <tbody>
-            {policies.map((policy) => (
+            {policies.map((policy: ResolvedCountryPolicy) => (
               <tr
                 key={policy.country ?? "unknown"}
                 className="border-b border-border last:border-0"
@@ -105,11 +106,15 @@ export default async function AdminLaunchPage() {
                 </td>
                 <td className="px-4 py-3 capitalize">{policy.marketStatus}</td>
                 <td className="px-4 py-3">{renderCheck(policy.hasOverride)}</td>
-                <td className="px-4 py-3">{renderCheck(policy.publicAccess)}</td>
+                <td className="px-4 py-3">
+                  {renderCheck(policy.publicAccess)}
+                </td>
                 <td className="px-4 py-3">
                   {renderCheck(policy.challengePurchasesEnabled)}
                 </td>
-                <td className="px-4 py-3">{renderCheck(policy.payoutsEnabled)}</td>
+                <td className="px-4 py-3">
+                  {renderCheck(policy.payoutsEnabled)}
+                </td>
                 <td className="px-4 py-3">
                   {policy.checkoutMethods.length > 0
                     ? policy.checkoutMethods.join(", ")
@@ -163,11 +168,16 @@ export default async function AdminLaunchPage() {
               action={adminSaveCountryPolicyOverride}
               className="rounded-xl border border-border bg-card p-4 space-y-4"
             >
-              <input type="hidden" name="country" value={policy.country ?? ""} />
+              <input
+                type="hidden"
+                name="country"
+                value={policy.country ?? ""}
+              />
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-semibold">
-                    {policy.displayName} {policy.country ? `(${policy.country})` : ""}
+                    {policy.displayName}{" "}
+                    {policy.country ? `(${policy.country})` : ""}
                   </h3>
                   <p className="text-xs text-muted-foreground">
                     {policy.hasOverride
@@ -267,7 +277,11 @@ export default async function AdminLaunchPage() {
                     "Copy approved",
                     policy.launchChecklist.copyApproved,
                   ],
-                  ["kycEnabled", "KYC enabled", policy.launchChecklist.kycEnabled],
+                  [
+                    "kycEnabled",
+                    "KYC enabled",
+                    policy.launchChecklist.kycEnabled,
+                  ],
                 ].map(([name, label, checked]) => (
                   <label
                     key={String(name)}
@@ -347,21 +361,30 @@ export default async function AdminLaunchPage() {
           <table className="w-full min-w-[960px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                {["Time", "Level", "Type", "Source", "Subject", "Country", "Details"].map(
-                  (label) => (
-                    <th
-                      key={label}
-                      className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap"
-                    >
-                      {label}
-                    </th>
-                  ),
-                )}
+                {[
+                  "Time",
+                  "Level",
+                  "Type",
+                  "Source",
+                  "Subject",
+                  "Country",
+                  "Details",
+                ].map((label) => (
+                  <th
+                    key={label}
+                    className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap"
+                  >
+                    {label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {recentOpsEvents.map((event) => (
-                <tr key={event.id} className="border-b border-border last:border-0 align-top">
+                <tr
+                  key={event.id}
+                  className="border-b border-border last:border-0 align-top"
+                >
                   <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
                     {event.createdAt.toISOString()}
                   </td>

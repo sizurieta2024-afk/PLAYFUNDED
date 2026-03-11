@@ -56,6 +56,13 @@ enum PaymentMethod {
   mercadopago
 }
 
+enum CheckoutMethod {
+  card
+  crypto
+  pix
+  mercadopago
+}
+
 enum PaymentStatus {
   pending
   processing
@@ -104,6 +111,18 @@ enum AffiliateCommissionRate {
   ten
 }
 
+enum CountryPolicyStatus {
+  blocked
+  review
+  enabled
+}
+
+enum OpsLevel {
+  info
+  warn
+  error
+}
+
 // ============================================================
 // USER
 // ============================================================
@@ -139,6 +158,7 @@ model User {
   affiliate        Affiliate?
   marketRequests   MarketRequest[]
   kycSubmission    KycSubmission?
+  payoutProfile    PayoutProfile?
   followedTraders  Follow[]          @relation("follower")
   followers        Follow[]          @relation("following")
   auditLogs        AuditLog[]
@@ -345,6 +365,7 @@ model Payout {
   // Admin
   adminNote   String?
   txRef       String?      // payment reference / transaction ID
+  providerData Json?       // provider-specific metadata (e.g. dLocal recipient snapshot)
 
   // Rollover
   isRollover  Boolean      @default(false) // true if user chose to rollover profits
@@ -365,6 +386,35 @@ model Payout {
   @@index([userId])
   @@index([status])
   @@index([challengeId])
+}
+
+// ============================================================
+// PAYOUT PROFILE (required to automate dLocal bank payouts)
+// ============================================================
+
+model PayoutProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+
+  legalFirstName    String
+  legalLastName     String
+  documentType      String   // Country-specific (e.g. CI, CPF, DNI)
+  documentNumber    String
+
+  bankCode          String?
+  bankBranch        String?
+  bankAccountNumber String?
+  bankAccountType   String?  // CHECKING | SAVINGS (provider-specific string)
+  bankCity          String?
+  bankStreet        String?
+
+  pixKeyType        String?  // For Brazil instant payouts
+  pixKeyValue       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 // ============================================================
@@ -443,6 +493,61 @@ model AffiliateClick {
 }
 
 // ============================================================
+// COUNTRY POLICY OVERRIDE
+// ============================================================
+
+model CountryPolicyOverride {
+  id                        String              @id @default(uuid())
+  country                   String              @unique
+  displayName               String?
+  marketStatus              CountryPolicyStatus?
+  publicAccess              Boolean?
+  challengePurchasesEnabled Boolean?
+  payoutsEnabled            Boolean?
+  requiresReviewNotice      Boolean?
+  reviewNote                String?
+
+  overrideCheckoutMethods   Boolean             @default(false)
+  checkoutMethods           CheckoutMethod[]    @default([])
+  overridePayoutMethods     Boolean             @default(false)
+  payoutMethods             PayoutMethod[]      @default([])
+
+  showExactCommercialTerms  Boolean?
+  affiliateProgramEnabled   Boolean?
+  giftsEnabled              Boolean?
+  showProcessorNames        Boolean?
+
+  legalApproved             Boolean?
+  pspApproved               Boolean?
+  copyApproved              Boolean?
+  kycEnabled                Boolean?
+
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+
+  @@index([marketStatus])
+  @@index([updatedAt])
+}
+
+// ============================================================
+// RATE LIMIT BUCKET (shared limiter state)
+// ============================================================
+
+model RateLimitBucket {
+  key       String   @id
+  routeKey  String
+  clientKey String
+  count     Int
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([routeKey, clientKey])
+  @@index([resetAt])
+  @@index([updatedAt])
+}
+
+// ============================================================
 // MARKET REQUEST
 // ============================================================
 
@@ -504,6 +609,32 @@ model AuditLog {
 
   @@index([adminId])
   @@index([targetType, targetId])
+  @@index([createdAt])
+}
+
+// ============================================================
+// OPS EVENT LOG (operational events)
+// ============================================================
+
+model OpsEventLog {
+  id            String    @id @default(uuid())
+  type          String
+  level         OpsLevel  @default(info)
+  source        String?
+  actorUserId   String?
+  subjectType   String?
+  subjectId     String?
+  country       String?
+  policyVersion String?
+  details       Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([level])
+  @@index([source])
+  @@index([subjectType, subjectId])
+  @@index([country])
   @@index([createdAt])
 }
 

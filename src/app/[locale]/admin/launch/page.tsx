@@ -13,7 +13,8 @@ import {
   listResolvedCountryPolicies,
   type ResolvedCountryPolicy,
 } from "@/lib/country-policy-store";
-import type { OpsEventLog } from "@prisma/client";
+
+type OpsEventRow = Awaited<ReturnType<typeof listRecentOpsEvents>>[number];
 import { PLATFORM_POLICY, getPayoutWindowLabel } from "@/lib/platform-policy";
 
 function renderCheck(value: boolean) {
@@ -381,7 +382,7 @@ export default async function AdminLaunchPage() {
               </tr>
             </thead>
             <tbody>
-              {recentOpsEvents.map((event: OpsEventLog) => (
+              {recentOpsEvents.map((event: OpsEventRow) => (
                 <tr
                   key={event.id}
                   className="border-b border-border last:border-0 align-top"

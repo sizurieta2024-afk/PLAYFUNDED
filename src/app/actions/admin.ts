@@ -4,13 +4,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
-import type {
-  CheckoutMethod,
-  CountryPolicyStatus,
-  MarketRequestStatus,
-  AffiliateCommissionRate,
-  PayoutMethod,
-} from "@prisma/client";
 import {
   sendEmail,
   payoutPaidEmail,
@@ -19,7 +12,10 @@ import {
   kycRejectedEmail,
 } from "@/lib/email";
 import { recordOpsEvent } from "@/lib/ops-events";
-import { reviewKycByAdmin, reviewPayoutByAdmin } from "@/lib/admin/review-service";
+import {
+  reviewKycByAdmin,
+  reviewPayoutByAdmin,
+} from "@/lib/admin/review-service";
 
 async function requireAdmin() {
   const supabase = await createServerClient();
@@ -48,24 +44,14 @@ async function audit(
   });
 }
 
-const CHECKOUT_METHODS: CheckoutMethod[] = [
-  "card",
-  "crypto",
-  "pix",
-  "mercadopago",
-];
-const PAYOUT_METHODS: PayoutMethod[] = [
-  "bank_wire",
-  "usdt",
-  "usdc",
-  "btc",
-  "paypal",
-];
-const COUNTRY_MARKET_STATUSES: CountryPolicyStatus[] = [
-  "blocked",
-  "review",
-  "enabled",
-];
+const CHECKOUT_METHODS = ["card", "crypto", "pix", "mercadopago"] as const;
+type CheckoutMethod = (typeof CHECKOUT_METHODS)[number];
+const PAYOUT_METHODS = ["bank_wire", "usdt", "usdc", "btc", "paypal"] as const;
+type PayoutMethod = (typeof PAYOUT_METHODS)[number];
+const COUNTRY_MARKET_STATUSES = ["blocked", "review", "enabled"] as const;
+type CountryPolicyStatus = (typeof COUNTRY_MARKET_STATUSES)[number];
+type MarketRequestStatus = "pending" | "reviewed" | "approved" | "rejected";
+type AffiliateCommissionRate = "five" | "ten";
 
 function parseBooleanInput(value: FormDataEntryValue | null): boolean {
   return value === "true" || value === "on";
@@ -268,7 +254,9 @@ export async function adminUpdateMarketRequest(
 
 export async function adminSaveCountryPolicyOverride(formData: FormData) {
   const admin = await requireAdmin();
-  const country = String(formData.get("country") ?? "").trim().toUpperCase();
+  const country = String(formData.get("country") ?? "")
+    .trim()
+    .toUpperCase();
   if (!country) return;
 
   const displayName = String(formData.get("displayName") ?? "").trim();

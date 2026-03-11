@@ -162,7 +162,7 @@ export default async function AdminLaunchPage() {
           </p>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
-          {policies.map((policy) => (
+          {policies.map((policy: ResolvedCountryPolicy) => (
             <form
               key={`${policy.country ?? "unknown"}-form`}
               action={adminSaveCountryPolicyOverride}

@@ -8,16 +8,17 @@ const BUCKET = "kyc-documents";
 
 export async function POST(req: NextRequest) {
   // Auth check
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) {
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !authUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
   });
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });

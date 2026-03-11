@@ -43,18 +43,19 @@ export default async function TraderProfilePage({
 
   if (!challenge) notFound();
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
 
   let currentUserId: string | null = null;
   let isFollowing = false;
   let isSelf = false;
 
-  if (session) {
+  if (!authError && authUser) {
     const me = await prisma.user.findFirst({
-      where: { supabaseId: session.user.id },
+      where: { supabaseId: authUser.id },
       select: { id: true },
     });
     currentUserId = me?.id ?? null;

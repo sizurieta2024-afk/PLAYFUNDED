@@ -3,6 +3,10 @@ import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { createCryptoInvoice, type CryptoCurrency } from "@/lib/nowpayments";
 import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
+import { resolveCountry } from "@/lib/country-policy";
+import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
+import { recordOpsEvent } from "@/lib/ops-events";
+import { PLATFORM_POLICY } from "@/lib/platform-policy";
 
 const VALID_CURRENCIES: CryptoCurrency[] = ["usdttrc20", "usdcerc20", "btc"];
 
@@ -18,7 +22,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
     data: { user: authUser },
     error: authError,
@@ -35,8 +39,9 @@ export async function POST(request: NextRequest) {
     tierId?: string;
     currency?: string;
     locale?: string;
+    country?: string;
   };
-  const { tierId, currency = "usdttrc20", locale = "es-419" } = body;
+  const { tierId, currency = "usdttrc20", locale = "es-419", country } = body;
 
   if (!tierId) {
     return NextResponse.json(
@@ -59,8 +64,10 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         email: true,
+        country: true,
         isBanned: true,
         isPermExcluded: true,
+        selfExcludedUntil: true,
         weeklyDepositLimit: true,
       },
     }),
@@ -87,6 +94,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (user.selfExcludedUntil && user.selfExcludedUntil > new Date()) {
+    return NextResponse.json(
+      { error: "Account is self-excluded", code: "SELF_EXCLUDED" },
+      { status: 403 },
+    );
+  }
+
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const weeklySpend = await prisma.payment.aggregate({
     where: {
@@ -108,6 +122,33 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const checkoutCountry = resolveCountry(
+      country,
+      request.headers.get("x-vercel-ip-country"),
+      request.headers.get("cf-ipcountry"),
+      user.country,
+    );
+    const policy = await getResolvedCountryPolicy(checkoutCountry);
+    if (!policy.challengePurchasesEnabled) {
+      return NextResponse.json(
+        {
+          error: "Challenge purchases are not available in your country right now.",
+          code: "COUNTRY_NOT_AVAILABLE",
+        },
+        { status: 403 },
+      );
+    }
+
+    if (!policy.checkoutMethods.includes("crypto")) {
+      return NextResponse.json(
+        {
+          error: "Crypto checkout is not available in your country right now.",
+          code: "PAYMENT_METHOD_UNAVAILABLE",
+        },
+        { status: 403 },
+      );
+    }
+
     const invoice = await createCryptoInvoice({
       tierId: tier.id,
       tierName: tier.name,
@@ -137,7 +178,28 @@ export async function POST(request: NextRequest) {
         cryptoAmount: invoice.amount,
         cryptoNetwork: invoice.network,
         cryptoExpiry: invoice.expiresAt,
-        metadata: { currency, network: invoice.network },
+        metadata: {
+          currency,
+          network: invoice.network,
+          checkoutCountry,
+          policyVersion: PLATFORM_POLICY.policyVersion,
+        },
+      },
+    });
+
+    await recordOpsEvent({
+      type: "checkout_created",
+      source: "api:checkout:nowpayments",
+      actorUserId: user.id,
+      subjectType: "tier",
+      subjectId: tier.id,
+      country: checkoutCountry,
+      details: {
+        provider: "nowpayments",
+        userId: user.id,
+        tierId: tier.id,
+        paymentMethod: currency,
+        checkoutCountry,
       },
     });
 
@@ -151,6 +213,20 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("[NOWPayments checkout]", err);
+    await recordOpsEvent({
+      type: "checkout_create_failed",
+      level: "error",
+      source: "api:checkout:nowpayments",
+      actorUserId: user.id,
+      subjectType: "tier",
+      subjectId: tierId,
+      details: {
+        provider: "nowpayments",
+        tierId,
+        currency,
+        error: err instanceof Error ? err.message : String(err),
+      },
+    });
     return NextResponse.json(
       {
         error: "Failed to create crypto invoice",

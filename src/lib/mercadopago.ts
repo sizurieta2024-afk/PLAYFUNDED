@@ -13,6 +13,8 @@ interface CreateMpPreferenceParams {
   userId: string;
   userEmail: string;
   locale: string;
+  country?: string;
+  policyVersion?: string;
 }
 
 export async function createMpPreference({
@@ -22,6 +24,8 @@ export async function createMpPreference({
   userId,
   userEmail,
   locale,
+  country,
+  policyVersion,
 }: CreateMpPreferenceParams): Promise<string> {
   const client = getMpClient();
   const preference = new Preference(client);
@@ -46,7 +50,12 @@ export async function createMpPreference({
         },
       ],
       payer: { email: userEmail },
-      metadata: { tierId, userId },
+      metadata: {
+        tier_id: tierId,
+        user_id: userId,
+        country: country ?? "",
+        policyVersion: policyVersion ?? "",
+      },
       back_urls: {
         success: `${baseUrl}${localePath}/checkout/success`,
         failure: `${baseUrl}${localePath}/checkout/cancel`,

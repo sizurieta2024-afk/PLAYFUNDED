@@ -4,16 +4,27 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
 import type { PayoutMethod } from "@prisma/client";
+import { recordOpsEvent } from "@/lib/ops-events";
+import { resolvePayoutCountry } from "@/lib/payout-options";
+import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
 
 async function getAuthenticatedUser() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) redirect("/auth/login");
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !authUser) redirect("/auth/login");
 
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
+    include: {
+      kycSubmission: {
+        select: {
+          country: true,
+        },
+      },
+    },
   });
   if (!user) redirect("/auth/login");
   return user;
@@ -30,6 +41,14 @@ function generateCode(): string {
 
 export async function becomeAffiliate(): Promise<{ error?: string; code?: string }> {
   const user = await getAuthenticatedUser();
+  const affiliateCountry = resolvePayoutCountry(
+    user.kycSubmission?.country,
+    user.country,
+  );
+  const policy = await getResolvedCountryPolicy(affiliateCountry);
+  if (!policy.marketing.affiliateProgramEnabled) {
+    return { error: "country_review" };
+  }
 
   const existing = await prisma.affiliate.findUnique({
     where: { userId: user.id },
@@ -48,6 +67,20 @@ export async function becomeAffiliate(): Promise<{ error?: string; code?: string
     data: { userId: user.id, code },
   });
 
+  await recordOpsEvent({
+    type: "affiliate_enrolled",
+    source: "action:affiliate",
+    actorUserId: user.id,
+    subjectType: "affiliate",
+    subjectId: affiliate.id,
+    country: affiliateCountry,
+    details: {
+      userId: user.id,
+      code: affiliate.code,
+      affiliateCountry,
+    },
+  });
+
   return { code: affiliate.code };
 }
 
@@ -55,6 +88,17 @@ export async function requestAffiliatePayout(
   method: PayoutMethod,
 ): Promise<{ error?: string }> {
   const user = await getAuthenticatedUser();
+  const payoutCountry = resolvePayoutCountry(
+    user.kycSubmission?.country,
+    user.country,
+  );
+  const policy = await getResolvedCountryPolicy(payoutCountry);
+  if (!policy.marketing.affiliateProgramEnabled) {
+    return { error: "country_review" };
+  }
+  if (!policy.payoutMethods.includes(method)) {
+    return { error: "method_unavailable" };
+  }
 
   const affiliate = await prisma.affiliate.findUnique({
     where: { userId: user.id },
@@ -89,6 +133,21 @@ export async function requestAffiliatePayout(
       data: { pendingPayout: 0 },
     }),
   ]);
+
+  await recordOpsEvent({
+    type: "affiliate_payout_requested",
+    source: "action:affiliate",
+    actorUserId: user.id,
+    subjectType: "affiliate",
+    subjectId: affiliate.id,
+    country: payoutCountry,
+    details: {
+      userId: user.id,
+      method,
+      payoutCountry,
+      amount: affiliate.pendingPayout,
+    },
+  });
 
   return {};
 }

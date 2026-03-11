@@ -23,7 +23,7 @@ export default async function PicksPage({
 }) {
   const { locale } = await params;
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
     data: { user: authUser },
     error: authError,

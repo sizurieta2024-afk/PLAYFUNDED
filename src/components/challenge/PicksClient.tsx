@@ -84,7 +84,7 @@ function getProfitTargetCents(challenge: ChallengeData): number {
   }
   if (challenge.phase === "phase2") {
     const base = challenge.phase2StartBalance ?? challenge.startBalance;
-    return base + Math.floor((base * 10) / 100);
+    return base + Math.floor((base * 20) / 100);
   }
   return Infinity;
 }
@@ -148,9 +148,36 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
     void fetchEvents();
   }, []);
 
+  // Keep picks in sync so settled picks move from "Current Bets" to "Past Bets"
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshPicks() {
+      try {
+        const res = await fetch(`/api/picks?challengeId=${challenge.id}`, {
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { picks?: PickRecord[] };
+        if (!cancelled && Array.isArray(data.picks)) {
+          setPicks(data.picks);
+        }
+      } catch {
+        // silent
+      }
+    }
+
+    void refreshPicks();
+    const timer = setInterval(() => void refreshPicks(), 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [challenge.id]);
+
   // ── Derived ───────────────────────────────────────────────────────────────
 
-  const maxStakeCents = Math.floor((balance * 5) / 100);
+  const maxStakeCents = Math.floor((challenge.startBalance * 5) / 100);
   const targetCents = getProfitTargetCents(challenge);
   const progressPct =
     targetCents === Infinity
@@ -568,56 +595,108 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
             )}
           </AnimatePresence>
 
-          {/* Recent Picks */}
+          {/* Current Bets (pending) */}
           <div className="space-y-2">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
-              {t.recentPicks}
+              {t.currentBets}
             </h2>
-            {picks.length === 0 ? (
-              <p className="text-sm text-muted-foreground px-1">{t.noPicks}</p>
+            {picks.filter((p) => p.status === "pending").length === 0 ? (
+              <p className="text-sm text-muted-foreground px-1">
+                {t.noPendingBets}
+              </p>
             ) : (
               <div className="rounded-xl border border-border bg-card overflow-hidden">
-                {picks.slice(0, 10).map((pick, i) => (
-                  <motion.div
-                    key={pick.id}
-                    initial={{ opacity: 0, x: 8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.04, duration: 0.2 }}
-                    className={`flex items-center justify-between px-4 py-3 gap-3 ${
-                      i < Math.min(picks.length, 10) - 1
-                        ? "border-b border-border"
-                        : ""
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium truncate">
-                        {pick.selection}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {pick.eventName ?? pick.league} ·{" "}
-                        <span className="tabular-nums">
-                          {pick.odds.toFixed(2)}
+                {picks
+                  .filter((p) => p.status === "pending")
+                  .map((pick, i, arr) => (
+                    <motion.div
+                      key={pick.id}
+                      initial={{ opacity: 0, x: 8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.04, duration: 0.2 }}
+                      className={`flex items-center justify-between px-4 py-3 gap-3 ${
+                        i < arr.length - 1 ? "border-b border-border" : ""
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium truncate">
+                          {pick.selection}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {pick.eventName ?? pick.league} ·{" "}
+                          <span className="tabular-nums">
+                            {pick.odds.toFixed(2)}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 space-y-1">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                            STATUS_STYLES[pick.status] ??
+                            "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {t[pick.status] ?? pick.status}
                         </span>
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0 space-y-1">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                          STATUS_STYLES[pick.status] ??
-                          "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {t[pick.status] ?? pick.status}
-                      </span>
-                      <p className="text-xs text-muted-foreground tabular-nums">
-                        {formatCents(pick.stake)}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
+                        <p className="text-xs text-muted-foreground tabular-nums">
+                          {formatCents(pick.stake)}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
               </div>
             )}
           </div>
+
+          {/* Past Bets (settled) */}
+          {picks.filter((p) => p.status !== "pending").length > 0 && (
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
+                {t.pastBets}
+              </h2>
+              <div className="rounded-xl border border-border bg-card overflow-hidden">
+                {picks
+                  .filter((p) => p.status !== "pending")
+                  .slice(0, 10)
+                  .map((pick, i, arr) => (
+                    <motion.div
+                      key={pick.id}
+                      initial={{ opacity: 0, x: 8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.04, duration: 0.2 }}
+                      className={`flex items-center justify-between px-4 py-3 gap-3 ${
+                        i < arr.length - 1 ? "border-b border-border" : ""
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium truncate">
+                          {pick.selection}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {pick.eventName ?? pick.league} ·{" "}
+                          <span className="tabular-nums">
+                            {pick.odds.toFixed(2)}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 space-y-1">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                            STATUS_STYLES[pick.status] ??
+                            "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {t[pick.status] ?? pick.status}
+                        </span>
+                        <p className="text-xs text-muted-foreground tabular-nums">
+                          {formatCents(pick.stake)}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

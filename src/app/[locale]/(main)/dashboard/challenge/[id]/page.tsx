@@ -121,15 +121,16 @@ export default async function ChallengeDetailPage({
 }) {
   const { locale, id } = await params;
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  if (!session) redirect("/auth/login");
+  if (authError || !authUser) redirect("/auth/login");
 
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
   });
   if (!user) redirect("/auth/login");
 
@@ -156,6 +157,10 @@ export default async function ChallengeDetailPage({
   const countLost = settledPicks.filter((p) => p.status === "lost").length;
   const countPush = settledPicks.filter((p) => p.status === "push").length;
   const countPending = picks.filter((p) => p.status === "pending").length;
+  const pendingStakeCents = picks
+    .filter((p) => p.status === "pending")
+    .reduce((sum, p) => sum + p.stake, 0);
+  const effectiveBalance = challenge.balance + pendingStakeCents;
   const countSettledForMin = countWon + countLost + countPush; // void excluded from minimum
 
   const winRate =
@@ -186,7 +191,7 @@ export default async function ChallengeDetailPage({
       ? (challenge.phase1StartBalance ?? challenge.startBalance)
       : (challenge.phase2StartBalance ?? challenge.startBalance);
   const targetPct =
-    challenge.phase === "funded" ? 0 : challenge.phase === "phase2" ? 10 : 20;
+    challenge.phase === "funded" ? 0 : 20;
   const profitTargetBalance = Math.floor(
     phaseStartBalance * (1 + targetPct / 100),
   );
@@ -206,13 +211,13 @@ export default async function ChallengeDetailPage({
 
   // ── Drawdown ──────────────────────────────────────────────────────────────
   const peak = challenge.peakBalance || challenge.startBalance;
-  const drawdownCents = Math.max(0, peak - challenge.balance);
+  const drawdownCents = Math.max(0, peak - effectiveBalance);
   const drawdownPct = (drawdownCents / peak) * 100;
   const drawdownBarPct = Math.min(100, Math.round((drawdownPct / 15) * 100));
 
   // ── Daily loss ────────────────────────────────────────────────────────────
   const daily = challenge.dailyStartBalance || challenge.startBalance;
-  const dailyLossCents = Math.max(0, daily - challenge.balance);
+  const dailyLossCents = Math.max(0, daily - effectiveBalance);
   const dailyLossPct = daily > 0 ? (dailyLossCents / daily) * 100 : 0;
   const dailyBarPct = Math.min(100, Math.round((dailyLossPct / 10) * 100));
 

@@ -2,7 +2,7 @@
 // ADMIN MANUAL SETTLEMENT
 // POST /api/admin/picks/settle
 // Admin provides pickId + result → settles the pick
-// Used for API-Football events and any manual override.
+// Used for manual overrides, disputed grading, and edge cases.
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Auth: must be logged-in admin
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
     data: { user: authUser },
     error: authError,
@@ -60,76 +60,145 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Load pick with challenge + tier
-  const pick = await prisma.pick.findUnique({
-    where: { id: pickId },
-    include: {
-      challenge: {
-        include: { tier: true },
-      },
-    },
-  });
-
-  if (!pick) {
-    return NextResponse.json(
-      { error: "Pick not found", code: "PICK_NOT_FOUND" },
-      { status: 404 },
-    );
-  }
-
-  if (pick.status !== "pending") {
-    return NextResponse.json(
-      { error: "Pick is already settled", code: "ALREADY_SETTLED" },
-      { status: 400 },
-    );
-  }
-
   const now = new Date();
-  const { challenge } = pick;
+  let updatedPick:
+    | {
+        id: string;
+        status: string;
+        actualPayout: number;
+      }
+    | undefined;
+  let updatedChallenge:
+    | {
+        id: string;
+        balance: number;
+        status: string;
+        phase: string;
+      }
+    | undefined;
 
-  // Calculate actualPayout based on result
-  const actualPayout = status === "won" ? pick.potentialPayout : 0;
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const pick = await tx.pick.findUnique({
+        where: { id: pickId },
+        include: {
+          challenge: {
+            include: { tier: true },
+          },
+        },
+      });
 
-  // Count settled picks for phase check
-  const settledCount = await prisma.pick.count({
-    where: {
-      challengeId: challenge.id,
-      status: { in: ["won", "lost", "push"] },
-    },
-  });
+      if (!pick) {
+        throw new Error("PICK_NOT_FOUND");
+      }
 
-  const settledPickCount =
-    status === "void" ? settledCount : settledCount + 1;
+      if (pick.status !== "pending") {
+        throw new Error("ALREADY_SETTLED");
+      }
 
-  // Build settled pick object for post-settlement calculations
-  const settledPick = {
-    ...pick,
-    status,
-    actualPayout,
-  };
+      const actualPayout = status === "won" ? pick.potentialPayout : 0;
+      const settledCount = await tx.pick.count({
+        where: {
+          challengeId: pick.challenge.id,
+          status: { in: ["won", "lost", "push"] },
+        },
+      });
 
-  const { challengeUpdate } = buildPostSettlementUpdate(
-    settledPick,
-    challenge,
-    challenge.tier,
-    settledPickCount,
-  );
+      const settledPickCount =
+        status === "void" ? settledCount : settledCount + 1;
 
-  // Atomic transaction
-  const [updatedPick, updatedChallenge] = await prisma.$transaction([
-    prisma.pick.update({
-      where: { id: pickId },
-      data: {
+      const settledPick = {
+        ...pick,
         status,
         actualPayout,
-        settledAt: now,
-      },
-    }),
-    prisma.challenge.update({
-      where: { id: challenge.id },
-      data: challengeUpdate,
-    }),
-  ]);
+      };
+
+      const { challengeUpdate } = buildPostSettlementUpdate(
+        settledPick,
+        pick.challenge,
+        pick.challenge.tier,
+        settledPickCount,
+      );
+
+      const challengeWrite = await tx.challenge.updateMany({
+        where: {
+          id: pick.challenge.id,
+          updatedAt: pick.challenge.updatedAt,
+        },
+        data: challengeUpdate,
+      });
+      if (challengeWrite.count !== 1) {
+        throw new Error("CHALLENGE_CONFLICT");
+      }
+
+      const pickWrite = await tx.pick.updateMany({
+        where: {
+          id: pickId,
+          status: "pending",
+          settledAt: null,
+        },
+        data: {
+          status,
+          actualPayout,
+          settledAt: now,
+        },
+      });
+      if (pickWrite.count !== 1) {
+        throw new Error("PICK_CONFLICT");
+      }
+
+      const updatedPick = await tx.pick.findUnique({
+        where: { id: pickId },
+        select: { id: true, status: true, actualPayout: true },
+      });
+      const updatedChallenge = await tx.challenge.findUnique({
+        where: { id: pick.challenge.id },
+        select: { id: true, balance: true, status: true, phase: true },
+      });
+
+      if (!updatedPick || !updatedChallenge) {
+        throw new Error("SETTLEMENT_READBACK_FAILED");
+      }
+
+      return { updatedPick, updatedChallenge };
+    });
+
+    updatedPick = result.updatedPick;
+    updatedChallenge = result.updatedChallenge;
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "SETTLEMENT_FAILED";
+    if (code === "PICK_NOT_FOUND") {
+      return NextResponse.json(
+        { error: "Pick not found", code },
+        { status: 404 },
+      );
+    }
+    if (code === "ALREADY_SETTLED") {
+      return NextResponse.json(
+        { error: "Pick is already settled", code },
+        { status: 400 },
+      );
+    }
+    if (code === "CHALLENGE_CONFLICT" || code === "PICK_CONFLICT") {
+      return NextResponse.json(
+        { error: "Pick changed during settlement. Retry the action.", code },
+        { status: 409 },
+      );
+    }
+
+    console.error("[api/admin/picks/settle] Failed to settle pick:", error);
+    return NextResponse.json(
+      { error: "Failed to settle pick", code: "SETTLEMENT_FAILED" },
+      { status: 500 },
+    );
+  }
+
+  if (!updatedPick || !updatedChallenge) {
+    return NextResponse.json(
+      { error: "Failed to settle pick", code: "SETTLEMENT_READBACK_FAILED" },
+      { status: 500 },
+    );
+  }
 
   return NextResponse.json({
     ok: true,

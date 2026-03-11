@@ -1,12 +1,46 @@
 // Exchange rates cache — refreshed once per hour
-// Maps LATAM locale/country hints to their primary currency
-export const LATAM_CURRENCIES: Record<string, { code: string; symbol: string; name: string }> = {
+// Maps supported currencies and country → currency defaults.
+export const LATAM_CURRENCIES: Record<
+  string,
+  { code: string; symbol: string; name: string }
+> = {
   ARS: { code: "ARS", symbol: "$", name: "Argentine peso" },
   BRL: { code: "BRL", symbol: "R$", name: "Brazilian real" },
   MXN: { code: "MXN", symbol: "$", name: "Mexican peso" },
   COP: { code: "COP", symbol: "$", name: "Colombian peso" },
   CLP: { code: "CLP", symbol: "$", name: "Chilean peso" },
   PEN: { code: "PEN", symbol: "S/", name: "Peruvian sol" },
+  EUR: { code: "EUR", symbol: "€", name: "Euro" },
+  GBP: { code: "GBP", symbol: "£", name: "British pound" },
+};
+
+export const COUNTRY_TO_CURRENCY: Record<string, string> = {
+  AR: "ARS",
+  BR: "BRL",
+  MX: "MXN",
+  CO: "COP",
+  CL: "CLP",
+  PE: "PEN",
+  ES: "EUR",
+  GB: "GBP",
+  UK: "GBP",
+};
+
+const FALLBACK_USD_RATES: Record<string, number> = {
+  ARS: 1060,
+  BRL: 5.0,
+  MXN: 17.0,
+  COP: 4000,
+  CLP: 950,
+  PEN: 3.75,
+  EUR: 0.92,
+  GBP: 0.79,
+};
+
+const CURRENCY_TO_LOCALE: Record<string, string> = {
+  EUR: "es-ES",
+  GBP: "en-GB",
+  BRL: "pt-BR",
 };
 
 interface RateCache {
@@ -33,11 +67,12 @@ export async function getUsdRates(): Promise<Record<string, number>> {
     if (!res.ok) throw new Error("Exchange rate fetch failed");
 
     const data = (await res.json()) as { rates: Record<string, number> };
-    _cache = { rates: data.rates, fetchedAt: Date.now() };
-    return data.rates;
+    const mergedRates = { ...FALLBACK_USD_RATES, ...data.rates };
+    _cache = { rates: mergedRates, fetchedAt: Date.now() };
+    return mergedRates;
   } catch {
     // Return stale cache or empty on failure — don't crash the page
-    return _cache?.rates ?? {};
+    return _cache?.rates ?? FALLBACK_USD_RATES;
   }
 }
 
@@ -47,7 +82,7 @@ export async function getUsdRates(): Promise<Record<string, number>> {
  */
 export async function formatLocalPrice(
   usdCents: number,
-  currencyCode: string
+  currencyCode: string,
 ): Promise<string | null> {
   const rates = await getUsdRates();
   const rate = rates[currencyCode];
@@ -55,10 +90,18 @@ export async function formatLocalPrice(
 
   const localAmount = (usdCents / 100) * rate;
   const meta = LATAM_CURRENCIES[currencyCode];
+  const locale = CURRENCY_TO_LOCALE[currencyCode] ?? "es-419";
+  const showDecimals = currencyCode === "EUR" || currencyCode === "GBP";
 
-  return new Intl.NumberFormat("es-419", {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: currencyCode,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: showDecimals ? 2 : 0,
+    maximumFractionDigits: showDecimals ? 2 : 0,
   }).format(localAmount) + (meta ? ` ${meta.code}` : "");
+}
+
+export function getCurrencyForCountry(country?: string): string | null {
+  if (!country) return null;
+  return COUNTRY_TO_CURRENCY[country.toUpperCase()] ?? null;
 }

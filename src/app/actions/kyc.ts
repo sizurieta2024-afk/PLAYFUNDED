@@ -13,14 +13,15 @@ export async function submitKyc(formData: {
   idFrontPath: string;
   idBackPath?: string;
 }): Promise<{ error?: string }> {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) redirect("/auth/login");
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !authUser) redirect("/auth/login");
 
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
     include: { kycSubmission: true },
   });
   if (!user) redirect("/auth/login");

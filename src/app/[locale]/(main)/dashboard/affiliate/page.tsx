@@ -1,23 +1,47 @@
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
 import { AffiliateClient } from "@/components/affiliate/AffiliateClient";
+import { resolvePayoutCountry } from "@/lib/payout-options";
+import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
 
 export default async function AffiliatePage() {
   const t = await getTranslations("affiliate");
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) redirect("/auth/login");
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !authUser) redirect("/auth/login");
 
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
-    select: { id: true },
+    where: { supabaseId: authUser.id },
+    select: {
+      id: true,
+      country: true,
+      kycSubmission: {
+        select: {
+          country: true,
+        },
+      },
+    },
   });
   if (!user) redirect("/auth/login");
+  const headersList = await headers();
+  const headerCountry =
+    headersList.get("x-vercel-ip-country") ??
+    headersList.get("cf-ipcountry") ??
+    null;
+  const payoutCountry = resolvePayoutCountry(
+    user.kycSubmission?.country,
+    user.country,
+    headerCountry,
+  );
+  const countryPolicy = await getResolvedCountryPolicy(payoutCountry);
+  const availableMethods = countryPolicy.payoutMethods;
 
   const affiliate = await prisma.affiliate.findUnique({
     where: { userId: user.id },
@@ -63,7 +87,14 @@ export default async function AffiliatePage() {
         <p className="text-sm text-muted-foreground mt-1">{t("pageSubtitle")}</p>
       </div>
 
-      <AffiliateClient affiliate={serialized} appUrl={appUrl} />
+      <AffiliateClient
+        affiliate={serialized}
+        appUrl={appUrl}
+        payoutCountry={payoutCountry}
+        availableMethods={availableMethods}
+        affiliateEnabled={countryPolicy.marketing.affiliateProgramEnabled}
+        reviewNote={countryPolicy.requiresReviewNotice ? countryPolicy.reviewNote : null}
+      />
     </div>
   );
 }

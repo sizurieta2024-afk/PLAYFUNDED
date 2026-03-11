@@ -1,16 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
+import {
+  sendEmail,
+  payoutPaidEmail,
+  payoutRejectedEmail,
+} from "@/lib/email";
+import { reviewPayoutByAdmin } from "@/lib/admin/review-service";
 
 async function requireAdmin() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) return null;
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !authUser) return null;
 
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
   });
   if (!user || user.role !== "admin") return null;
   return user;
@@ -58,21 +65,34 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
-  const payout = await prisma.payout.findUnique({ where: { id: payoutId } });
-  if (!payout || payout.status !== "pending") {
+  const updated = await reviewPayoutByAdmin({
+    db: prisma,
+    adminId: admin.id,
+    payoutId,
+    action,
+    txRef,
+    adminNote,
+  });
+  if (!updated) {
     return NextResponse.json({ error: "Payout not found or not pending" }, { status: 404 });
   }
 
-  const updated = await prisma.payout.update({
-    where: { id: payoutId },
-    data: {
-      status: action === "approve" ? "paid" : "failed",
-      txRef: txRef ?? null,
-      adminNote: adminNote ?? null,
-      approvedAt: action === "approve" ? new Date() : null,
-      paidAt: action === "approve" ? new Date() : null,
-    },
-  });
+  if (action === "approve") {
+    const { subject, html } = payoutPaidEmail(
+      updated.user.name,
+      updated.amount,
+      updated.method,
+      txRef,
+    );
+    void sendEmail(updated.user.email, subject, html);
+  } else {
+    const { subject, html } = payoutRejectedEmail(
+      updated.user.name,
+      updated.amount,
+      adminNote,
+    );
+    void sendEmail(updated.user.email, subject, html);
+  }
 
   return NextResponse.json({ payout: updated });
 }

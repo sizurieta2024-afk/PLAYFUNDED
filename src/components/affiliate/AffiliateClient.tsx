@@ -21,13 +21,13 @@ interface AffiliateData {
   }[];
 }
 
-const PAYOUT_METHODS: { value: PayoutMethod; labelKey: string }[] = [
-  { value: "bank_wire", labelKey: "bankWire" },
-  { value: "usdt", labelKey: "usdt" },
-  { value: "usdc", labelKey: "usdc" },
-  { value: "btc", labelKey: "btc" },
-  { value: "paypal", labelKey: "paypal" },
-];
+const FALLBACK_LABEL_KEYS: Record<PayoutMethod, string> = {
+  bank_wire: "bankDlocal",
+  usdt: "usdt",
+  usdc: "usdc",
+  btc: "btc",
+  paypal: "paypal",
+};
 
 function formatUSD(cents: number) {
   return `$${(cents / 100).toLocaleString("en-US", {
@@ -48,13 +48,23 @@ function StatCard({ label, value }: { label: string; value: string }) {
 export function AffiliateClient({
   affiliate: initial,
   appUrl,
+  payoutCountry,
+  availableMethods,
+  affiliateEnabled,
+  reviewNote,
 }: {
   affiliate: AffiliateData | null;
   appUrl: string;
+  payoutCountry: string | null;
+  availableMethods: PayoutMethod[];
+  affiliateEnabled: boolean;
+  reviewNote?: string | null;
 }) {
   const t = useTranslations("affiliate");
-  const [affiliate, setAffiliate] = useState(initial);
-  const [method, setMethod] = useState<PayoutMethod>("usdt");
+  const [affiliate] = useState(initial);
+  const [method, setMethod] = useState<PayoutMethod>(
+    availableMethods[0] ?? "usdt",
+  );
   const [copied, setCopied] = useState(false);
   const [payoutSubmitted, setPayoutSubmitted] = useState(false);
   const [payoutError, setPayoutError] = useState<string | null>(null);
@@ -63,6 +73,13 @@ export function AffiliateClient({
   const refLink = affiliate
     ? `${appUrl}/ref/${affiliate.code}`
     : "";
+
+  function getMethodLabelKey(m: PayoutMethod): string {
+    if (m === "bank_wire" && payoutCountry === "BR") {
+      return "bankPixDlocal";
+    }
+    return FALLBACK_LABEL_KEYS[m];
+  }
 
   function copyLink() {
     navigator.clipboard.writeText(refLink).then(() => {
@@ -74,6 +91,10 @@ export function AffiliateClient({
   function handleBecomeAffiliate() {
     startTransition(async () => {
       const result = await becomeAffiliate();
+      if (result.error) {
+        setPayoutError(result.error);
+        return;
+      }
       if (result.code) {
         // Refresh page to get full affiliate data
         window.location.reload();
@@ -107,20 +128,27 @@ export function AffiliateClient({
               {t("becomeAffiliate")}
             </h2>
             <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-              {t("becomeAffiliateDesc")}
+              {affiliateEnabled
+                ? t("becomeAffiliateDesc")
+                : reviewNote ?? t("countryReview")}
             </p>
           </div>
-          <button
-            onClick={handleBecomeAffiliate}
-            disabled={pending}
-            className="px-6 py-2.5 rounded-xl bg-pf-brand text-white font-semibold text-sm hover:bg-pf-brand/90 transition-colors disabled:opacity-50"
-          >
-            {pending ? t("submitting") : t("becomeAffiliate")}
-          </button>
+          {affiliateEnabled ? (
+            <button
+              onClick={handleBecomeAffiliate}
+              disabled={pending}
+              className="px-6 py-2.5 rounded-xl bg-pf-brand text-white font-semibold text-sm hover:bg-pf-brand/90 transition-colors disabled:opacity-50"
+            >
+              {pending ? t("submitting") : t("becomeAffiliate")}
+            </button>
+          ) : null}
+          {payoutError === "country_review" && (
+            <p className="text-xs text-amber-500">{reviewNote ?? t("countryReview")}</p>
+          )}
         </div>
 
         {/* How it works */}
-        <HowItWorks />
+        {affiliateEnabled ? <HowItWorks /> : null}
       </div>
     );
   }
@@ -180,9 +208,9 @@ export function AffiliateClient({
               onChange={(e) => setMethod(e.target.value as PayoutMethod)}
               className="text-sm px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-pf-brand/40"
             >
-              {PAYOUT_METHODS.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {t(m.labelKey as Parameters<typeof t>[0])}
+              {availableMethods.map((m) => (
+                <option key={m} value={m}>
+                  {t(getMethodLabelKey(m) as Parameters<typeof t>[0])}
                 </option>
               ))}
             </select>
@@ -196,7 +224,13 @@ export function AffiliateClient({
           </div>
           {payoutError && (
             <p className="text-xs text-red-400">
-              {payoutError === "pending_exists" ? t("pendingExists") : payoutError}
+              {payoutError === "pending_exists"
+                ? t("pendingExists")
+                : payoutError === "country_review"
+                  ? reviewNote ?? t("countryReview")
+                : payoutError === "method_unavailable"
+                  ? t("methodUnavailable")
+                  : payoutError}
             </p>
           )}
         </div>

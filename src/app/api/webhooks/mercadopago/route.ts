@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
+import { recordOpsEvent } from "@/lib/ops-events";
+import { fetchWithTimeout } from "@/lib/net/fetch-with-timeout";
+import { withWebhookLock } from "@/lib/payments/webhook-lock";
 
 // Mercado Pago sends IPN notifications. We verify by fetching the payment
 // directly from the MP API using our access token — no shared secret needed
@@ -8,7 +11,14 @@ import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 
 async function fetchMpPayment(paymentId: string): Promise<{
   status: string;
-  metadata: { tier_id?: string; user_id?: string };
+  metadata: {
+    tier_id?: string;
+    user_id?: string;
+    tierId?: string;
+    userId?: string;
+    country?: string;
+    policyVersion?: string;
+  };
   transaction_amount: number;
   currency_id: string;
   payer: { email: string };
@@ -17,14 +27,21 @@ async function fetchMpPayment(paymentId: string): Promise<{
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
   if (!token) return null;
 
-  const res = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+  const res = await fetchWithTimeout(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }, 10_000);
 
   if (!res.ok) return null;
   return res.json() as Promise<{
     status: string;
-    metadata: { tier_id?: string; user_id?: string };
+    metadata: {
+      tier_id?: string;
+      user_id?: string;
+      tierId?: string;
+      userId?: string;
+      country?: string;
+      policyVersion?: string;
+    };
     transaction_amount: number;
     currency_id: string;
     payer: { email: string };
@@ -49,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const body = await request.text();
+  await request.text();
   const params = request.nextUrl.searchParams;
 
   // MP sends the payment ID as a query param or in the body
@@ -76,54 +93,96 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const tierId = mpPayment.metadata?.tier_id;
-  const userId = mpPayment.metadata?.user_id;
+  const tierId = mpPayment.metadata?.tier_id ?? mpPayment.metadata?.tierId;
+  const userId = mpPayment.metadata?.user_id ?? mpPayment.metadata?.userId;
   const providerRef = String(mpPayment.id);
 
   if (!tierId || !userId) {
-    console.error("[MP webhook] Missing metadata", { tierId, userId, body });
+    console.error("[MP webhook] Missing metadata", { tierId, userId, paymentId: id });
     return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
   }
-
-  // Idempotency check
-  const existing = await prisma.payment.findFirst({ where: { providerRef } });
-  if (existing) return NextResponse.json({ ok: true });
 
   const tier = await prisma.tier.findUnique({ where: { id: tierId } });
   if (!tier) {
     return NextResponse.json({ error: "Tier not found" }, { status: 404 });
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.payment.create({
-      data: {
-        userId,
-        tierId,
-        amount: Math.round(mpPayment.transaction_amount * 100), // convert to cents
-        currency: mpPayment.currency_id ?? "USD",
-        method: "mercadopago",
-        status: "completed",
-        providerRef,
-        metadata: {
-          mpPaymentId: mpPayment.id,
-          payerEmail: mpPayment.payer?.email,
-        },
-      },
-    });
+  const outcome = await withWebhookLock(
+    prisma,
+    "mercadopago",
+    providerRef,
+    async (tx) => {
+      const existing = await tx.payment.findFirst({ where: { providerRef } });
+      if (existing) {
+        return { status: "duplicate" as const };
+      }
 
-    await tx.challenge.create({
-      data: {
-        userId,
-        tierId,
-        status: "active",
-        phase: "phase1",
-        balance: tier.fundedBankroll,
-        startBalance: tier.fundedBankroll,
-        highestBalance: tier.fundedBankroll,
-        peakBalance: tier.fundedBankroll,
-        phase1StartBalance: tier.fundedBankroll,
+      await tx.payment.create({
+        data: {
+          userId,
+          tierId,
+          amount: Math.round(mpPayment.transaction_amount * 100), // convert to cents
+          currency: mpPayment.currency_id ?? "USD",
+          method: "mercadopago",
+          status: "completed",
+          providerRef,
+          metadata: {
+            mpPaymentId: mpPayment.id,
+            payerEmail: mpPayment.payer?.email,
+            checkoutCountry: mpPayment.metadata?.country ?? null,
+            policyVersion: mpPayment.metadata?.policyVersion ?? null,
+          },
+        },
+      });
+
+      await tx.challenge.create({
+        data: {
+          userId,
+          tierId,
+          status: "active",
+          phase: "phase1",
+          balance: tier.fundedBankroll,
+          startBalance: tier.fundedBankroll,
+          dailyStartBalance: tier.fundedBankroll,
+          highestBalance: tier.fundedBankroll,
+          peakBalance: tier.fundedBankroll,
+          phase1StartBalance: tier.fundedBankroll,
+        },
+      });
+
+      return { status: "created" as const };
+    },
+  );
+
+  if (outcome.status === "duplicate") {
+    await recordOpsEvent({
+      type: "webhook_duplicate",
+      source: "api:webhooks:mercadopago",
+      actorUserId: userId,
+      subjectType: "payment",
+      subjectId: providerRef,
+      country: mpPayment.metadata?.country ?? null,
+      details: {
+        provider: "mercadopago",
+        providerRef,
       },
     });
+    return NextResponse.json({ ok: true });
+  }
+
+  await recordOpsEvent({
+    type: "webhook_payment_completed",
+    source: "api:webhooks:mercadopago",
+    actorUserId: userId,
+    subjectType: "payment",
+    subjectId: providerRef,
+    country: mpPayment.metadata?.country ?? null,
+    details: {
+      provider: "mercadopago",
+      providerRef,
+      userId,
+      tierId,
+    },
   });
 
   return NextResponse.json({ ok: true });

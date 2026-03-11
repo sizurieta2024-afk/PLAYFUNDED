@@ -1,15 +1,18 @@
 // ============================================================
-// SETTLE — cron endpoint: auto-settle picks via Odds API scores
+// SETTLE — cron endpoint: auto-settle picks via provider scores
 // POST /api/settle  (Bearer CRON_SECRET required)
-// Runs every 5 minutes via Vercel Cron.
-// Only auto-settles picks for Odds API events.
-// API-Football events (LATAM leagues) require manual settlement.
+// Runs every 5 minutes via the production scheduler.
+// Supports both The Odds API leagues and API-Football leagues.
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { LEAGUE_CONFIG } from "@/lib/odds/types";
-import { fetchScores, type GameResult } from "@/lib/odds/scores";
+import { LEAGUE_CONFIG, type LeagueConfig } from "@/lib/odds/types";
+import {
+  fetchApiFootballScores,
+  fetchOddsApiScores,
+  type GameResult,
+} from "@/lib/odds/scores";
 import { gradePick, buildPostSettlementUpdate } from "@/lib/settlement/settle";
 import {
   sendEmail,
@@ -24,13 +27,11 @@ function isAuthorized(req: NextRequest): boolean {
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
 
-// Map sport+league → Odds API sport key (for the scores endpoint)
-function getOddsApiSportKey(sport: string, league: string): string | null {
-  const config = LEAGUE_CONFIG.find(
-    (l) =>
-      l.sport === sport && l.league === league && l.provider === "odds_api",
+function getLeagueConfig(sport: string, league: string): LeagueConfig | null {
+  return (
+    LEAGUE_CONFIG.find((entry) => entry.sport === sport && entry.league === league) ??
+    null
   );
-  return config?.providerKey ?? null;
 }
 
 interface SettleReport {
@@ -41,7 +42,7 @@ interface SettleReport {
   reason?: string;
 }
 
-// Vercel Cron sends GET — alias so both work
+// The scheduler sends GET — alias so both work
 export { POST as GET };
 
 export async function POST(req: NextRequest) {
@@ -65,39 +66,53 @@ export async function POST(req: NextRequest) {
       eventStart: { lte: now },
       isParlay: false, // parlays handled separately (not yet in UI)
     },
-    include: {
-      challenge: {
-        include: {
-          tier: true,
-          user: { select: { email: true, name: true } },
-        },
-      },
-    },
   });
 
   if (pendingPicks.length === 0) {
     return NextResponse.json({ ok: true, settled: 0, skipped: 0, report: [] });
   }
 
-  // Fetch scores for each unique sport key (batch)
-  const sportKeys = Array.from(
-    new Set(
-      pendingPicks
-        .map((p) => getOddsApiSportKey(p.sport, p.league))
-        .filter((k): k is string => k !== null),
-    ),
-  );
+  const scoreGroups = new Map<
+    string,
+    {
+      config: LeagueConfig;
+      eventIds: Set<string>;
+    }
+  >();
+
+  for (const pick of pendingPicks) {
+    const config = getLeagueConfig(pick.sport, pick.league);
+    if (!config) continue;
+
+    const key = `${config.provider}:${config.sport}:${config.league}`;
+    const existing = scoreGroups.get(key);
+    if (existing) {
+      existing.eventIds.add(pick.event);
+      continue;
+    }
+
+    scoreGroups.set(key, {
+      config,
+      eventIds: new Set([pick.event]),
+    });
+  }
 
   const scoresByEventId = new Map<string, GameResult>();
-  for (const sportKey of sportKeys) {
+  for (const { config, eventIds } of scoreGroups.values()) {
     try {
-      const results = await fetchScores(sportKey);
+      const results =
+        config.provider === "odds_api"
+          ? await fetchOddsApiScores(config.providerKey)
+          : await fetchApiFootballScores(eventIds);
       for (const result of results) {
         scoresByEventId.set(result.eventId, result);
       }
     } catch (err) {
-      console.error(`[settle] Failed to fetch scores for ${sportKey}:`, err);
-      // Continue — skip picks for this sport key rather than crashing
+      console.error(
+        `[settle] Failed to fetch scores for ${config.leagueDisplay} (${config.provider}):`,
+        err,
+      );
+      // Continue — skip picks for this league rather than crashing
     }
   }
 
@@ -106,18 +121,15 @@ export async function POST(req: NextRequest) {
   let skipped = 0;
 
   for (const pick of pendingPicks) {
-    const { challenge } = pick;
-
     try {
-      // Is this an Odds API event?
-      const sportKey = getOddsApiSportKey(pick.sport, pick.league);
-      if (!sportKey) {
+      const config = getLeagueConfig(pick.sport, pick.league);
+      if (!config) {
         report.push({
           pickId: pick.id,
           eventName: pick.eventName,
           status: "pending",
           outcome: "skipped",
-          reason: "API-Football event — requires manual settlement",
+          reason: "Unsupported league configuration",
         });
         skipped++;
         continue;
@@ -131,7 +143,10 @@ export async function POST(req: NextRequest) {
           eventName: pick.eventName,
           status: "pending",
           outcome: "skipped",
-          reason: "Score not yet available",
+          reason:
+            config.provider === "api_football"
+              ? "Final score not yet available from API-Football"
+              : "Score not yet available",
         });
         skipped++;
         continue;
@@ -154,74 +169,125 @@ export async function POST(req: NextRequest) {
         },
       );
 
-      // Count settled picks for phase check (non-pending, non-void)
-      const settledCount = await prisma.pick.count({
-        where: {
-          challengeId: challenge.id,
-          status: { in: ["won", "lost", "push"] },
-        },
-      });
-
-      // The new pick is about to join settled count if won/lost/push
-      const settledPickCount =
-        settlement.status === "void" ? settledCount : settledCount + 1;
-
-      // Build challenge update
-      const settlePick = {
-        ...pick,
-        status: settlement.status as "won" | "lost" | "void" | "push",
-        actualPayout: settlement.actualPayout,
-      };
-
-      const { challengeUpdate, autoFail, phaseAdvance } =
-        buildPostSettlementUpdate(
-          settlePick,
-          challenge,
-          challenge.tier,
-          settledPickCount,
-        );
-
-      // Atomic transaction: update pick + challenge
-      await prisma.$transaction([
-        prisma.pick.update({
+      const txResult = await prisma.$transaction(async (tx) => {
+        const currentPick = await tx.pick.findUnique({
           where: { id: pick.id },
+          include: {
+            challenge: {
+              include: {
+                tier: true,
+                user: { select: { email: true, name: true } },
+              },
+            },
+          },
+        });
+
+        if (!currentPick || currentPick.status !== "pending" || currentPick.settledAt) {
+          return {
+            skipped: true,
+            reason: "Pick already settled",
+          } as const;
+        }
+
+        const settledCount = await tx.pick.count({
+          where: {
+            challengeId: currentPick.challenge.id,
+            status: { in: ["won", "lost", "push"] },
+          },
+        });
+
+        const settledPickCount =
+          settlement.status === "void" ? settledCount : settledCount + 1;
+
+        const settlePick = {
+          ...currentPick,
+          status: settlement.status as "won" | "lost" | "void" | "push",
+          actualPayout: settlement.actualPayout,
+        };
+
+        const { challengeUpdate, autoFail, phaseAdvance } =
+          buildPostSettlementUpdate(
+            settlePick,
+            currentPick.challenge,
+            currentPick.challenge.tier,
+            settledPickCount,
+          );
+
+        const challengeWrite = await tx.challenge.updateMany({
+          where: {
+            id: currentPick.challenge.id,
+            updatedAt: currentPick.challenge.updatedAt,
+          },
+          data: challengeUpdate,
+        });
+        if (challengeWrite.count !== 1) {
+          throw new Error("Challenge changed during settlement");
+        }
+
+        const pickWrite = await tx.pick.updateMany({
+          where: {
+            id: currentPick.id,
+            status: "pending",
+            settledAt: null,
+          },
           data: {
             status: settlement.status,
             actualPayout: settlement.actualPayout,
             settledAt: now,
           },
-        }),
-        prisma.challenge.update({
-          where: { id: challenge.id },
-          data: challengeUpdate,
-        }),
-      ]);
+        });
+        if (pickWrite.count !== 1) {
+          throw new Error("Pick changed during settlement");
+        }
+
+        return {
+          skipped: false,
+          autoFail,
+          phaseAdvance,
+          priorPhase: currentPick.challenge.phase,
+          tierName: currentPick.challenge.tier.name,
+          fundedBankroll: currentPick.challenge.tier.fundedBankroll,
+          profitSplitPct: currentPick.challenge.tier.profitSplitPct,
+          userEmail: currentPick.challenge.user.email,
+          userName: currentPick.challenge.user.name,
+        } as const;
+      });
+
+      if (txResult.skipped) {
+        report.push({
+          pickId: pick.id,
+          eventName: pick.eventName,
+          status: "pending",
+          outcome: "skipped",
+          reason: txResult.reason,
+        });
+        skipped++;
+        continue;
+      }
 
       // Fire transactional emails for significant challenge state changes
-      const userEmail = challenge.user.email;
-      const userName = challenge.user.name;
-      if (autoFail) {
+      if (txResult.autoFail) {
         const { subject, html } = challengeFailedEmail(
-          userName,
-          challenge.tier.name,
+          txResult.userName,
+          txResult.tierName,
           "drawdown or daily loss limit exceeded",
         );
-        void sendEmail(userEmail, subject, html);
-      } else if (phaseAdvance) {
-        if (challenge.phase === "phase1") {
+        void sendEmail(txResult.userEmail, subject, html);
+      } else if (txResult.phaseAdvance) {
+        if (txResult.priorPhase === "phase1") {
           const { subject, html } = phase1PassedEmail(
-            userName,
-            challenge.tier.name,
+            txResult.userName,
+            txResult.tierName,
           );
-          void sendEmail(userEmail, subject, html);
-        } else if (challenge.phase === "phase2") {
+          void sendEmail(txResult.userEmail, subject, html);
+        } else if (txResult.priorPhase === "phase2") {
           const { subject, html } = fundedEmail(
-            userName,
-            challenge.tier.name,
-            challenge.tier.fundedBankroll,
-            challenge.tier.profitSplitPct,
+            txResult.userName,
+            txResult.tierName,
+            txResult.fundedBankroll,
+            txResult.profitSplitPct,
           );
-          void sendEmail(userEmail, subject, html);
+          void sendEmail(txResult.userEmail, subject, html);
         }
       }
 

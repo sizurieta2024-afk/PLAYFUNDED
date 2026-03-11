@@ -1,6 +1,6 @@
 // ============================================================
 // ODDS SYNC — cron endpoint
-// Called by Vercel Cron every 10 minutes (pre-game)
+// Called by the production scheduler every 10 minutes (pre-game)
 // Protected by CRON_SECRET header
 // Fetches from both providers and upserts into OddsCache
 // ============================================================
@@ -27,7 +27,10 @@ interface SyncResult {
   error?: string;
 }
 
-async function upsertEvents(events: OddsEvent[], provider: string): Promise<number> {
+async function upsertEvents(
+  events: OddsEvent[],
+  provider: string,
+): Promise<number> {
   let count = 0;
   for (const event of events) {
     await prisma.oddsCache.upsert({
@@ -63,7 +66,7 @@ async function upsertEvents(events: OddsEvent[], provider: string): Promise<numb
   return count;
 }
 
-export async function POST(req: NextRequest) {
+async function runSync(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -109,8 +112,7 @@ export async function POST(req: NextRequest) {
   });
 }
 
-// Allow GET for manual health check (still requires auth)
-export async function GET(req: NextRequest) {
+async function getSyncStatus(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -135,4 +137,18 @@ export async function GET(req: NextRequest) {
       count: r._count.id,
     })),
   });
+}
+
+export async function POST(req: NextRequest) {
+  return runSync(req);
+}
+
+// The scheduler calls GET. Default GET behavior is to run sync.
+// For manual health diagnostics, call: /api/odds/sync?mode=status
+export async function GET(req: NextRequest) {
+  const mode = req.nextUrl.searchParams.get("mode");
+  if (mode === "status") {
+    return getSyncStatus(req);
+  }
+  return runSync(req);
 }

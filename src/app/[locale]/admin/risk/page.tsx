@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { Link } from "@/i18n/navigation";
+import { PLATFORM_POLICY } from "@/lib/platform-policy";
 
-// Risk rules constants (mirror of src/lib/challenge/risk.ts)
-const DRAWDOWN_LIMIT_PCT = 15; // balance can't drop >15% from peak
-const DAILY_LOSS_LIMIT_PCT = 10; // daily loss can't exceed 10% of phase start balance
+const DRAWDOWN_LIMIT_PCT = PLATFORM_POLICY.risk.drawdownLimitPct;
+const DAILY_LOSS_LIMIT_PCT = PLATFORM_POLICY.risk.dailyLossLimitPct;
 
 function fmt(cents: number) {
   return new Intl.NumberFormat("en-US", {
@@ -18,12 +18,6 @@ function riskColor(pctUsed: number) {
   if (pctUsed >= 90) return "text-red-400";
   if (pctUsed >= 70) return "text-amber-400";
   return "text-pf-brand";
-}
-
-function riskBg(pctUsed: number) {
-  if (pctUsed >= 90) return "bg-red-500/10 border-red-500/30";
-  if (pctUsed >= 70) return "bg-amber-500/10 border-amber-500/30";
-  return "border-border";
 }
 
 function RiskBar({ pct }: { pct: number }) {

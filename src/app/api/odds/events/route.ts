@@ -6,24 +6,28 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { EVENT_LOCK_MINUTES } from "@/lib/challenge";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const sport = searchParams.get("sport");
   const league = searchParams.get("league");
-  const live = searchParams.get("live") === "true";
 
-  // Only return events starting within the next 7 days (or live)
+  // Only return events starting today or tomorrow and still open for picks.
   const now = new Date();
-  const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const openWindowStart = new Date(
+    now.getTime() + EVENT_LOCK_MINUTES * 60 * 1000,
+  );
+  const endOfTomorrow = new Date(now);
+  endOfTomorrow.setDate(endOfTomorrow.getDate() + 1);
+  endOfTomorrow.setHours(23, 59, 59, 999);
 
   const events = await prisma.oddsCache.findMany({
     where: {
       ...(sport ? { sport } : {}),
       ...(league ? { league } : {}),
-      ...(live
-        ? { isLive: true }
-        : { startTime: { gte: now, lte: sevenDaysFromNow } }),
+      isLive: false,
+      startTime: { gt: openWindowStart, lte: endOfTomorrow },
     },
     orderBy: { startTime: "asc" },
     take: 100,

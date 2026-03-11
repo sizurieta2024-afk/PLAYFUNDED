@@ -1,39 +1,24 @@
-"use client";
-
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { headers } from "next/headers";
+import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
+import { resolveCountry } from "@/lib/country-policy";
+import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
+import { PLATFORM_POLICY, getPayoutWindowLabel } from "@/lib/platform-policy";
 
-interface FaqItemProps {
-  question: string;
-  answer: string;
-}
-
-function FaqItem({ question, answer }: FaqItemProps) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="border-b border-border last:border-0">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between gap-4 py-4 text-left"
-      >
-        <span className="font-medium text-sm text-foreground">{question}</span>
-        <ChevronDown
-          className={`w-4 h-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-      {open && (
-        <p className="pb-4 text-sm text-muted-foreground leading-relaxed">
-          {answer}
-        </p>
-      )}
-    </div>
+export default async function FaqPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "faq" });
+  const headersList = await headers();
+  const country = resolveCountry(
+    headersList.get("x-vercel-ip-country"),
+    headersList.get("cf-ipcountry"),
   );
-}
-
-export default function FaqPage() {
-  const t = useTranslations("faq");
+  const policy = await getResolvedCountryPolicy(country);
+  const hasExactCommercialTerms = policy.marketing.showExactCommercialTerms;
 
   const categories = [
     {
@@ -58,11 +43,74 @@ export default function FaqPage() {
     },
   ];
 
+  function getAnswer(key: string): string {
+    switch (key) {
+      case "q_what":
+        return t(
+          hasExactCommercialTerms ? "q_what_a" : "q_what_a_review",
+          {
+            payoutWindow: getPayoutWindowLabel(),
+          },
+        );
+      case "q_latam":
+        return t("q_latam_a_review");
+      case "q_real_money":
+        return t(
+          hasExactCommercialTerms ? "q_real_money_a" : "q_real_money_a_review",
+        );
+      case "q_retry":
+        return t("q_retry_a", {
+          refundable: PLATFORM_POLICY.commercial.entryFeesRefundable
+            ? t("refundLabel")
+            : t("nonRefundableLabel"),
+        });
+      case "q_payout_when":
+        return t(
+          hasExactCommercialTerms
+            ? "q_payout_when_a"
+            : "q_payout_when_a_review",
+          {
+            payoutWindow: getPayoutWindowLabel(),
+          },
+        );
+      case "q_methods":
+        return t(
+          policy.marketing.showProcessorNames
+            ? "q_methods_a"
+            : "q_methods_a_review",
+        );
+      case "q_time":
+        return t(
+          hasExactCommercialTerms ? "q_time_a" : "q_time_a_review",
+          { payoutWindow: getPayoutWindowLabel() },
+        );
+      case "q_affiliate":
+        return t(
+          policy.marketing.affiliateProgramEnabled
+            ? "q_affiliate_a"
+            : "q_affiliate_a_review",
+          {
+            basePct: PLATFORM_POLICY.commercial.affiliateBaseRatePct,
+            topPct: PLATFORM_POLICY.commercial.affiliateTopRatePct,
+          },
+        );
+      case "q_gift":
+        return t(
+          policy.marketing.giftsEnabled ? "q_gift_a" : "q_gift_a_review",
+        );
+      default:
+        return t(`${key}_a` as Parameters<typeof t>[0]);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-12 space-y-12">
       <div className="text-center space-y-2">
         <h1 className="text-4xl font-bold">{t("pageTitle")}</h1>
         <p className="text-muted-foreground">{t("pageSubtitle")}</p>
+        {policy.requiresReviewNotice && (
+          <p className="text-sm text-amber-500">{t("countryPolicyReview")}</p>
+        )}
       </div>
 
       <div className="space-y-8">
@@ -73,11 +121,19 @@ export default function FaqPage() {
             </h2>
             <div className="rounded-xl border border-border bg-card px-5 divide-y divide-border">
               {items.map((key) => (
-                <FaqItem
-                  key={key}
-                  question={t(`${key}_q` as Parameters<typeof t>[0])}
-                  answer={t(`${key}_a` as Parameters<typeof t>[0])}
-                />
+                <details key={key} className="group py-4">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left">
+                    <span className="font-medium text-sm text-foreground">
+                      {t(`${key}_q` as Parameters<typeof t>[0])}
+                    </span>
+                    <span className="text-muted-foreground transition-transform group-open:rotate-180">
+                      v
+                    </span>
+                  </summary>
+                  <p className="pt-4 text-sm text-muted-foreground leading-relaxed">
+                    {getAnswer(key)}
+                  </p>
+                </details>
               ))}
             </div>
           </section>

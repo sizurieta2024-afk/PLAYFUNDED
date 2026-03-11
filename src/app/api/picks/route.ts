@@ -8,16 +8,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
 import { checkStakeCap, checkMinStake, isEventLocked } from "@/lib/challenge";
+import { findMarketOutcome, parseMarkets } from "@/lib/odds/markets";
+
+class PickRequestError extends Error {
+  status: number;
+  code: string;
+
+  constructor(status: number, code: string, message: string) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
+}
 
 // ── POST — place a pick ──────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (authError || !authUser) {
     return NextResponse.json(
       { error: "Unauthorized", code: "UNAUTHORIZED" },
       { status: 401 },
@@ -35,7 +48,6 @@ export async function POST(req: NextRequest) {
     odds: number;
     linePoint?: number; // spread or total line (null for moneyline)
     stake: number; // integer cents
-    eventStart?: string;
   };
 
   const {
@@ -49,7 +61,6 @@ export async function POST(req: NextRequest) {
     odds,
     linePoint,
     stake,
-    eventStart,
   } = body;
 
   // Field presence
@@ -83,9 +94,53 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const oddsEvent = await prisma.oddsCache.findFirst({
+    where: { sport, league, event },
+    orderBy: { fetchedAt: "desc" },
+    select: {
+      eventName: true,
+      startTime: true,
+      isLive: true,
+      markets: true,
+    },
+  });
+  if (!oddsEvent) {
+    return NextResponse.json(
+      { error: "Event is no longer available", code: "EVENT_NOT_FOUND" },
+      { status: 404 },
+    );
+  }
+
+  const markets = parseMarkets(oddsEvent.markets);
+  const matchedOutcome = findMarketOutcome(
+    markets,
+    marketType,
+    selection,
+    linePoint ?? null,
+  );
+  if (!matchedOutcome) {
+    return NextResponse.json(
+      {
+        error: "Market is no longer available. Refresh the odds and try again.",
+        code: "MARKET_NOT_AVAILABLE",
+      },
+      { status: 409 },
+    );
+  }
+
+  if (Math.abs(matchedOutcome.odds - odds) > 0.000001) {
+    return NextResponse.json(
+      {
+        error: "Odds changed. Refresh the board and place the pick again.",
+        code: "ODDS_CHANGED",
+      },
+      { status: 409 },
+    );
+  }
+
   // Resolve Prisma user
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
   });
   if (!user) {
     return NextResponse.json(
@@ -122,21 +177,33 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Funded phase: enforce 30-minute pre-event lock
-  if (challenge.phase === "funded" && eventStart) {
-    if (isEventLocked(new Date(eventStart))) {
-      return NextResponse.json(
-        {
-          error:
-            "Event starts in less than 30 minutes — pick window closed for funded accounts",
-          code: "EVENT_LOCKED",
-        },
-        { status: 400 },
-      );
-    }
+  // Event window guard: always trust server-cached event timing, never client input.
+  const parsedEventStart = oddsEvent.startTime;
+  const now = new Date();
+  const endOfTomorrow = new Date(now);
+  endOfTomorrow.setDate(endOfTomorrow.getDate() + 1);
+  endOfTomorrow.setHours(23, 59, 59, 999);
+  if (oddsEvent.isLive || parsedEventStart <= now || isEventLocked(parsedEventStart)) {
+    return NextResponse.json(
+      {
+        error:
+          "Event is locked before kickoff. Live betting is not allowed.",
+        code: "EVENT_LOCKED",
+      },
+      { status: 409 },
+    );
+  }
+  if (parsedEventStart > endOfTomorrow) {
+    return NextResponse.json(
+      {
+        error: "Event is outside the allowed betting window",
+        code: "EVENT_OUT_OF_WINDOW",
+      },
+      { status: 400 },
+    );
   }
 
-  // Stake cap: max 5% of current balance
+  // Stake cap: max 5% of phase starting balance
   const stakeViolation = checkStakeCap(challenge, stake);
   if (stakeViolation) {
     return NextResponse.json(
@@ -155,51 +222,129 @@ export async function POST(req: NextRequest) {
   }
 
   // potentialPayout = stake × odds, rounded to nearest cent
-  const potentialPayout = Math.round(stake * odds);
+  const potentialPayout = Math.round(stake * matchedOutcome.odds);
 
-  // Create pick + deduct stake atomically
-  const pick = await prisma.$transaction(async (tx) => {
-    const newPick = await tx.pick.create({
-      data: {
-        challengeId,
-        userId: user.id,
-        sport,
-        league,
-        event,
-        eventName: eventName ?? null,
-        marketType,
-        selection,
-        odds,
-        linePoint: linePoint ?? null,
-        stake,
-        potentialPayout,
-        eventStart: eventStart ? new Date(eventStart) : null,
-      },
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const freshChallenge = await tx.challenge.findFirst({
+        where: { id: challengeId, userId: user.id },
+        include: { tier: true },
+      });
+
+      if (!freshChallenge) {
+        throw new PickRequestError(404, "CHALLENGE_NOT_FOUND", "Challenge not found");
+      }
+
+      if (freshChallenge.status !== "active" && freshChallenge.status !== "funded") {
+        throw new PickRequestError(
+          400,
+          "CHALLENGE_NOT_ACTIVE",
+          "Challenge is not active",
+        );
+      }
+
+      if (freshChallenge.pausedUntil && new Date() < freshChallenge.pausedUntil) {
+        throw new PickRequestError(
+          400,
+          "CHALLENGE_PAUSED",
+          "Challenge is currently paused",
+        );
+      }
+
+      if (stake > freshChallenge.balance) {
+        throw new PickRequestError(
+          422,
+          "INSUFFICIENT_BALANCE",
+          "Insufficient balance for this pick",
+        );
+      }
+
+      const currentStakeViolation = checkStakeCap(freshChallenge, stake);
+      if (currentStakeViolation) {
+        throw new PickRequestError(
+          400,
+          currentStakeViolation.code,
+          currentStakeViolation.error,
+        );
+      }
+
+      const currentMinStakeViolation = checkMinStake(freshChallenge, stake);
+      if (currentMinStakeViolation) {
+        throw new PickRequestError(
+          422,
+          currentMinStakeViolation.code,
+          currentMinStakeViolation.error,
+        );
+      }
+
+      const updated = await tx.challenge.updateMany({
+        where: {
+          id: challengeId,
+          userId: user.id,
+          balance: freshChallenge.balance,
+        },
+        data: { balance: { decrement: stake } },
+      });
+
+      if (updated.count !== 1) {
+        throw new PickRequestError(
+          409,
+          "CHALLENGE_BALANCE_CHANGED",
+          "Balance changed while placing the pick. Try again.",
+        );
+      }
+
+      const pick = await tx.pick.create({
+        data: {
+          challengeId,
+          userId: user.id,
+          sport,
+          league,
+          event,
+          eventName: oddsEvent.eventName ?? eventName ?? null,
+          marketType,
+          selection: matchedOutcome.name,
+          odds: matchedOutcome.odds,
+          linePoint: matchedOutcome.point ?? null,
+          stake,
+          potentialPayout,
+          eventStart: parsedEventStart,
+        },
+      });
+
+      return {
+        pick,
+        newBalance: freshChallenge.balance - stake,
+      };
     });
 
-    await tx.challenge.update({
-      where: { id: challengeId },
-      data: { balance: { decrement: stake } },
-    });
+    return NextResponse.json(result, { status: 201 });
+  } catch (error) {
+    if (error instanceof PickRequestError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.status },
+      );
+    }
 
-    return newPick;
-  });
-
-  return NextResponse.json(
-    { pick, newBalance: challenge.balance - stake },
-    { status: 201 },
-  );
+    console.error("[api/picks] Failed to place pick:", error);
+    return NextResponse.json(
+      { error: "Failed to place pick", code: "PICK_CREATE_FAILED" },
+      { status: 500 },
+    );
+  }
 }
 
 // ── GET — list picks for a challenge ────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (authError || !authUser) {
     return NextResponse.json(
       { error: "Unauthorized", code: "UNAUTHORIZED" },
       { status: 401 },
@@ -217,7 +362,7 @@ export async function GET(req: NextRequest) {
   }
 
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
   });
   if (!user) {
     return NextResponse.json(

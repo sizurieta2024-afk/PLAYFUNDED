@@ -1,13 +1,15 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
 import type {
-  PayoutStatus,
-  KycStatus,
+  CheckoutMethod,
+  CountryPolicyStatus,
   MarketRequestStatus,
   AffiliateCommissionRate,
+  PayoutMethod,
 } from "@prisma/client";
 import {
   sendEmail,
@@ -16,16 +18,19 @@ import {
   kycApprovedEmail,
   kycRejectedEmail,
 } from "@/lib/email";
+import { recordOpsEvent } from "@/lib/ops-events";
+import { reviewKycByAdmin, reviewPayoutByAdmin } from "@/lib/admin/review-service";
 
 async function requireAdmin() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) redirect("/auth/login");
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !authUser) redirect("/auth/login");
 
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
   });
   if (!user || user.role !== "admin") redirect("/dashboard");
   return user;
@@ -41,6 +46,38 @@ async function audit(
   await prisma.auditLog.create({
     data: { adminId, action, targetType, targetId, note },
   });
+}
+
+const CHECKOUT_METHODS: CheckoutMethod[] = [
+  "card",
+  "crypto",
+  "pix",
+  "mercadopago",
+];
+const PAYOUT_METHODS: PayoutMethod[] = [
+  "bank_wire",
+  "usdt",
+  "usdc",
+  "btc",
+  "paypal",
+];
+const COUNTRY_MARKET_STATUSES: CountryPolicyStatus[] = [
+  "blocked",
+  "review",
+  "enabled",
+];
+
+function parseBooleanInput(value: FormDataEntryValue | null): boolean {
+  return value === "true" || value === "on";
+}
+
+function parseEnumList<T extends string>(
+  values: FormDataEntryValue[],
+  allowed: readonly T[],
+): T[] {
+  return values
+    .map((value) => String(value))
+    .filter((value): value is T => allowed.includes(value as T));
 }
 
 // ── Users ─────────────────────────────────────────────────────────────
@@ -93,25 +130,28 @@ export async function adminUpdatePayout(
   adminNote?: string,
 ) {
   const admin = await requireAdmin();
-  const newStatus: PayoutStatus = action === "approve" ? "paid" : "failed";
-  const payout = await prisma.payout.update({
-    where: { id: payoutId },
-    data: {
-      status: newStatus,
-      txRef: txRef ?? null,
-      adminNote: adminNote ?? null,
-      approvedAt: action === "approve" ? new Date() : null,
-      paidAt: action === "approve" ? new Date() : null,
-    },
-    include: { user: { select: { email: true, name: true } } },
-  });
-  await audit(
-    admin.id,
-    `${action}_payout`,
-    "payout",
+  const payout = await reviewPayoutByAdmin({
+    db: prisma,
+    adminId: admin.id,
     payoutId,
-    adminNote ?? txRef,
-  );
+    action,
+    txRef,
+    adminNote,
+  });
+  if (!payout) return;
+  await recordOpsEvent({
+    type: "admin_payout_reviewed",
+    source: "action:admin",
+    actorUserId: admin.id,
+    subjectType: "payout",
+    subjectId: payoutId,
+    details: {
+      adminId: admin.id,
+      payoutId,
+      action,
+      txRef: txRef ?? null,
+    },
+  });
   if (action === "approve") {
     const { subject, html } = payoutPaidEmail(
       payout.user.name,
@@ -138,17 +178,26 @@ export async function adminUpdateKyc(
   reviewNote?: string,
 ) {
   const admin = await requireAdmin();
-  const newStatus: KycStatus = action === "approve" ? "approved" : "rejected";
-  const kyc = await prisma.kycSubmission.update({
-    where: { id: submissionId },
-    data: {
-      status: newStatus,
-      reviewedAt: new Date(),
-      reviewNote: reviewNote ?? null,
-    },
-    include: { user: { select: { email: true, name: true } } },
+  const kyc = await reviewKycByAdmin({
+    db: prisma,
+    adminId: admin.id,
+    submissionId,
+    action,
+    reviewNote,
   });
-  await audit(admin.id, `${action}_kyc`, "kyc", submissionId, reviewNote);
+  if (!kyc) return;
+  await recordOpsEvent({
+    type: "admin_kyc_reviewed",
+    source: "action:admin",
+    actorUserId: admin.id,
+    subjectType: "kyc",
+    subjectId: submissionId,
+    details: {
+      adminId: admin.id,
+      submissionId,
+      action,
+    },
+  });
   if (action === "approve") {
     const { subject, html } = kycApprovedEmail(kyc.user.name);
     void sendEmail(kyc.user.email, subject, html);
@@ -215,4 +264,142 @@ export async function adminUpdateMarketRequest(
     requestId,
     adminNote,
   );
+}
+
+export async function adminSaveCountryPolicyOverride(formData: FormData) {
+  const admin = await requireAdmin();
+  const country = String(formData.get("country") ?? "").trim().toUpperCase();
+  if (!country) return;
+
+  const displayName = String(formData.get("displayName") ?? "").trim();
+  const marketStatusValue = String(formData.get("marketStatus") ?? "").trim();
+  const marketStatus = COUNTRY_MARKET_STATUSES.includes(
+    marketStatusValue as CountryPolicyStatus,
+  )
+    ? (marketStatusValue as CountryPolicyStatus)
+    : "review";
+  const reviewNote = String(formData.get("reviewNote") ?? "").trim();
+  const checkoutMethods = parseEnumList(
+    formData.getAll("checkoutMethods"),
+    CHECKOUT_METHODS,
+  );
+  const payoutMethods = parseEnumList(
+    formData.getAll("payoutMethods"),
+    PAYOUT_METHODS,
+  );
+
+  await prisma.countryPolicyOverride.upsert({
+    where: { country },
+    create: {
+      country,
+      displayName: displayName || null,
+      marketStatus,
+      publicAccess: parseBooleanInput(formData.get("publicAccess")),
+      challengePurchasesEnabled: parseBooleanInput(
+        formData.get("challengePurchasesEnabled"),
+      ),
+      payoutsEnabled: parseBooleanInput(formData.get("payoutsEnabled")),
+      requiresReviewNotice: parseBooleanInput(
+        formData.get("requiresReviewNotice"),
+      ),
+      reviewNote: reviewNote || null,
+      overrideCheckoutMethods: true,
+      checkoutMethods,
+      overridePayoutMethods: true,
+      payoutMethods,
+      showExactCommercialTerms: parseBooleanInput(
+        formData.get("showExactCommercialTerms"),
+      ),
+      affiliateProgramEnabled: parseBooleanInput(
+        formData.get("affiliateProgramEnabled"),
+      ),
+      giftsEnabled: parseBooleanInput(formData.get("giftsEnabled")),
+      showProcessorNames: parseBooleanInput(formData.get("showProcessorNames")),
+      legalApproved: parseBooleanInput(formData.get("legalApproved")),
+      pspApproved: parseBooleanInput(formData.get("pspApproved")),
+      copyApproved: parseBooleanInput(formData.get("copyApproved")),
+      kycEnabled: parseBooleanInput(formData.get("kycEnabled")),
+    },
+    update: {
+      displayName: displayName || null,
+      marketStatus,
+      publicAccess: parseBooleanInput(formData.get("publicAccess")),
+      challengePurchasesEnabled: parseBooleanInput(
+        formData.get("challengePurchasesEnabled"),
+      ),
+      payoutsEnabled: parseBooleanInput(formData.get("payoutsEnabled")),
+      requiresReviewNotice: parseBooleanInput(
+        formData.get("requiresReviewNotice"),
+      ),
+      reviewNote: reviewNote || null,
+      overrideCheckoutMethods: true,
+      checkoutMethods,
+      overridePayoutMethods: true,
+      payoutMethods,
+      showExactCommercialTerms: parseBooleanInput(
+        formData.get("showExactCommercialTerms"),
+      ),
+      affiliateProgramEnabled: parseBooleanInput(
+        formData.get("affiliateProgramEnabled"),
+      ),
+      giftsEnabled: parseBooleanInput(formData.get("giftsEnabled")),
+      showProcessorNames: parseBooleanInput(formData.get("showProcessorNames")),
+      legalApproved: parseBooleanInput(formData.get("legalApproved")),
+      pspApproved: parseBooleanInput(formData.get("pspApproved")),
+      copyApproved: parseBooleanInput(formData.get("copyApproved")),
+      kycEnabled: parseBooleanInput(formData.get("kycEnabled")),
+    },
+  });
+
+  await audit(
+    admin.id,
+    "save_country_policy_override",
+    "country_policy",
+    country,
+    `status=${marketStatus}; checkout=${checkoutMethods.join(",")}; payouts=${payoutMethods.join(",")}`,
+  );
+  await recordOpsEvent({
+    type: "country_policy_override_saved",
+    source: "action:admin",
+    actorUserId: admin.id,
+    subjectType: "country_policy",
+    subjectId: country,
+    country,
+    details: {
+      marketStatus,
+      publicAccess: parseBooleanInput(formData.get("publicAccess")),
+      challengePurchasesEnabled: parseBooleanInput(
+        formData.get("challengePurchasesEnabled"),
+      ),
+      payoutsEnabled: parseBooleanInput(formData.get("payoutsEnabled")),
+      checkoutMethods,
+      payoutMethods,
+    },
+  });
+  revalidatePath("/[locale]/admin/launch", "page");
+}
+
+export async function adminDeleteCountryPolicyOverride(country: string) {
+  const admin = await requireAdmin();
+  const normalizedCountry = country.trim().toUpperCase();
+  if (!normalizedCountry) return;
+
+  await prisma.countryPolicyOverride.deleteMany({
+    where: { country: normalizedCountry },
+  });
+  await audit(
+    admin.id,
+    "delete_country_policy_override",
+    "country_policy",
+    normalizedCountry,
+  );
+  await recordOpsEvent({
+    type: "country_policy_override_deleted",
+    source: "action:admin",
+    actorUserId: admin.id,
+    subjectType: "country_policy",
+    subjectId: normalizedCountry,
+    country: normalizedCountry,
+  });
+  revalidatePath("/[locale]/admin/launch", "page");
 }

@@ -35,12 +35,12 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
   ] as const;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/90 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-background/80 backdrop-blur-xl shadow-[0_1px_0_0_rgba(255,255,255,0.04)]">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-4">
           {/* ── Brand ─────────────────────────────────────────────── */}
-          <Link href="/" className="flex items-center gap-2 shrink-0 group">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-pf-brand/15 group-hover:bg-pf-brand/25 transition-colors">
+          <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-pf-brand/15 group-hover:bg-pf-brand/25 transition-all duration-200 shadow-[0_0_12px_rgba(34,197,94,0.15)] group-hover:shadow-[0_0_20px_rgba(34,197,94,0.25)]">
               <TrendingUp className="w-4 h-4 text-pf-brand" strokeWidth={2.5} />
             </div>
             <span className="text-base font-bold tracking-tight text-foreground">
@@ -70,7 +70,7 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
               <>
                 <Link
                   href="/dashboard"
-                  className="ml-1 flex items-center gap-2 px-4 h-9 rounded-md bg-pf-brand hover:bg-pf-brand-dark text-white text-sm font-semibold transition-colors"
+                  className="ml-1 flex items-center gap-2 px-4 h-9 rounded-md bg-pf-brand hover:bg-pf-brand-dark text-white text-sm font-semibold transition-all duration-200 shadow-pf-glow-sm hover:shadow-pf-glow"
                 >
                   {t("dashboard")}
                 </Link>

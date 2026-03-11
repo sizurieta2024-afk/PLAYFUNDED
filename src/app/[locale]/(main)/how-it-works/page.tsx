@@ -1,5 +1,9 @@
 import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
+import { headers } from "next/headers";
+import { resolveCountry } from "@/lib/country-policy";
+import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
+import { PLATFORM_POLICY, getPayoutWindowLabel } from "@/lib/platform-policy";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -19,6 +23,13 @@ export default async function HowItWorksPage({
 }) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "howItWorks" });
+  const headersList = await headers();
+  const country = resolveCountry(
+    headersList.get("x-vercel-ip-country"),
+    headersList.get("cf-ipcountry"),
+  );
+  const policy = await getResolvedCountryPolicy(country);
+  const hasExactCommercialTerms = policy.marketing.showExactCommercialTerms;
 
   const phases = [
     {
@@ -30,7 +41,7 @@ export default async function HowItWorksPage({
     },
     {
       phase: "Phase 2",
-      target: "+10%",
+      target: "+20%",
       color: "text-purple-400",
       bg: "bg-purple-500/10 border-purple-500/20",
       key: "phase2",
@@ -57,8 +68,15 @@ export default async function HowItWorksPage({
       <div className="text-center space-y-3">
         <h1 className="text-4xl font-bold">{t("pageTitle")}</h1>
         <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-          {t("pageSubtitle")}
+          {hasExactCommercialTerms
+            ? t("pageSubtitle")
+            : t("pageSubtitleReview")}
         </p>
+        {policy.requiresReviewNotice && (
+          <p className="text-sm text-amber-500 max-w-2xl mx-auto">
+            {t("countryPolicyReview")}
+          </p>
+        )}
       </div>
 
       {/* Phase journey */}
@@ -73,7 +91,9 @@ export default async function HowItWorksPage({
               <p className={`font-bold text-lg ${color}`}>{phase}</p>
               <p className={`text-3xl font-extrabold ${color}`}>{target}</p>
               <p className="text-sm text-muted-foreground">
-                {t(`${key}_desc` as Parameters<typeof t>[0])}
+                {key === "funded" && !hasExactCommercialTerms
+                  ? t("funded_desc_review")
+                  : t(`${key}_desc` as Parameters<typeof t>[0])}
               </p>
             </div>
           ))}
@@ -106,12 +126,33 @@ export default async function HowItWorksPage({
       {/* Payouts */}
       <section className="rounded-xl border border-border bg-card p-8 space-y-4">
         <h2 className="text-xl font-semibold">{t("payout_title")}</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">{t("payout_desc")}</p>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          {hasExactCommercialTerms
+            ? t("payout_desc", { payoutWindow: getPayoutWindowLabel() })
+            : t("payout_desc_review")}
+        </p>
         <ul className="space-y-2">
           {["payout_kyc", "payout_methods", "payout_timing", "payout_split"].map((k) => (
             <li key={k} className="flex items-start gap-2 text-sm text-muted-foreground">
               <span className="text-pf-brand mt-0.5">✓</span>
-              {t(k as Parameters<typeof t>[0])}
+              {k === "payout_methods" && !policy.marketing.showProcessorNames
+                ? t("payout_methods_review")
+                : k === "payout_timing"
+                  ? t(
+                      hasExactCommercialTerms
+                        ? "payout_timing"
+                        : "payout_timing_review",
+                      {
+                        payoutWindow: getPayoutWindowLabel(),
+                      },
+                    )
+                  : k === "payout_split" && !hasExactCommercialTerms
+                    ? t("payout_split_review")
+                    : t(k as Parameters<typeof t>[0], {
+                        payoutWindow: getPayoutWindowLabel(),
+                        drawdownPct: PLATFORM_POLICY.risk.drawdownLimitPct,
+                        dailyLossPct: PLATFORM_POLICY.risk.dailyLossLimitPct,
+                      })}
             </li>
           ))}
         </ul>

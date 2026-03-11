@@ -10,7 +10,7 @@ interface Props {
   role: string;
 }
 
-export function AdminUserActions({ userId, isBanned, banReason, role }: Props) {
+export function AdminUserActions({ userId, isBanned, role }: Props) {
   const [pending, startTransition] = useTransition();
   const [reason, setReason] = useState("");
   const [showBanForm, setShowBanForm] = useState(false);

@@ -3,6 +3,10 @@ import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { createMpPreference } from "@/lib/mercadopago";
 import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
+import { resolveCountry } from "@/lib/country-policy";
+import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
+import { recordOpsEvent } from "@/lib/ops-events";
+import { PLATFORM_POLICY } from "@/lib/platform-policy";
 
 export async function POST(request: NextRequest) {
   const limit = enforceRateLimit(request, "api:checkout:mercadopago", {
@@ -16,7 +20,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
     data: { user: authUser },
     error: authError,
@@ -46,8 +50,10 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         email: true,
+        country: true,
         isBanned: true,
         isPermExcluded: true,
+        selfExcludedUntil: true,
         weeklyDepositLimit: true,
       },
     }),
@@ -74,6 +80,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (user.selfExcludedUntil && user.selfExcludedUntil > new Date()) {
+    return NextResponse.json(
+      { error: "Account is self-excluded", code: "SELF_EXCLUDED" },
+      { status: 403 },
+    );
+  }
+
   // Weekly deposit limit check
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const weeklySpend = await prisma.payment.aggregate({
@@ -96,6 +109,31 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const checkoutCountry = resolveCountry(
+      request.headers.get("x-vercel-ip-country"),
+      request.headers.get("cf-ipcountry"),
+      user.country,
+    );
+    const policy = await getResolvedCountryPolicy(checkoutCountry);
+    if (!policy.challengePurchasesEnabled) {
+      return NextResponse.json(
+        {
+          error: "Challenge purchases are not available in your country right now.",
+          code: "COUNTRY_NOT_AVAILABLE",
+        },
+        { status: 403 },
+      );
+    }
+    if (!policy.checkoutMethods.includes("mercadopago")) {
+      return NextResponse.json(
+        {
+          error: "Mercado Pago is not available in your country right now.",
+          code: "PAYMENT_METHOD_UNAVAILABLE",
+        },
+        { status: 403 },
+      );
+    }
+
     const checkoutUrl = await createMpPreference({
       tierId: tier.id,
       tierName: tier.name,
@@ -103,11 +141,41 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       userEmail: user.email,
       locale,
+      country: checkoutCountry ?? undefined,
+      policyVersion: PLATFORM_POLICY.policyVersion,
+    });
+
+    await recordOpsEvent({
+      type: "checkout_created",
+      source: "api:checkout:mercadopago",
+      actorUserId: user.id,
+      subjectType: "tier",
+      subjectId: tier.id,
+      country: checkoutCountry,
+      details: {
+        provider: "mercadopago",
+        userId: user.id,
+        tierId: tier.id,
+        checkoutCountry,
+      },
     });
 
     return NextResponse.json({ url: checkoutUrl });
   } catch (err) {
     console.error("[MP checkout]", err);
+    await recordOpsEvent({
+      type: "checkout_create_failed",
+      level: "error",
+      source: "api:checkout:mercadopago",
+      actorUserId: user.id,
+      subjectType: "tier",
+      subjectId: tierId,
+      details: {
+        provider: "mercadopago",
+        tierId,
+        error: err instanceof Error ? err.message : String(err),
+      },
+    });
     return NextResponse.json(
       {
         error: "Failed to create Mercado Pago checkout",

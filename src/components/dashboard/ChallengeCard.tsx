@@ -26,6 +26,7 @@ interface ChallengeCardProps {
   };
   settledPicksCount: number; // won + lost + push (toward minimum)
   pendingPicksCount: number;
+  pendingStakeCents: number; // sum of stakes for pending picks — used so bars only move on settled losses
   t: Record<string, string>;
 }
 
@@ -52,8 +53,12 @@ export function ChallengeCard({
   challenge,
   settledPicksCount,
   pendingPicksCount,
+  pendingStakeCents,
   t,
 }: ChallengeCardProps) {
+  // Effective balance: add back pending stakes so bars only move on settled losses
+  const effectiveBalance = challenge.balance + pendingStakeCents;
+
   // ── P&L ──────────────────────────────────────────────────────────────────
   const pnlCents = challenge.balance - challenge.startBalance;
   const pnlPct = ((pnlCents / challenge.startBalance) * 100).toFixed(1);
@@ -65,7 +70,7 @@ export function ChallengeCard({
       ? (challenge.phase1StartBalance ?? challenge.startBalance)
       : (challenge.phase2StartBalance ?? challenge.startBalance);
   const targetPct =
-    challenge.phase === "funded" ? 0 : challenge.phase === "phase2" ? 10 : 20;
+    challenge.phase === "funded" ? 0 : 20;
   const profitTargetBalance = Math.floor(
     phaseStartBalance * (1 + targetPct / 100),
   );
@@ -81,16 +86,16 @@ export function ChallengeCard({
         )
       : 100;
 
-  // ── Drawdown bar ─────────────────────────────────────────────────────────
+  // ── Drawdown bar — uses effectiveBalance so pending bets don't move the bar ──
   const peak = challenge.peakBalance || challenge.startBalance;
-  const drawdownCents = Math.max(0, peak - challenge.balance);
+  const drawdownCents = Math.max(0, peak - effectiveBalance);
   const drawdownPct = (drawdownCents / peak) * 100;
   const drawdownBarPct = Math.min(100, Math.round((drawdownPct / 15) * 100));
   const drawdownDisplay = drawdownPct.toFixed(1) + "%";
 
-  // ── Daily loss bar ────────────────────────────────────────────────────────
+  // ── Daily loss bar — uses effectiveBalance so pending bets don't move the bar ──
   const daily = challenge.dailyStartBalance || challenge.startBalance;
-  const dailyLossCents = Math.max(0, daily - challenge.balance);
+  const dailyLossCents = Math.max(0, daily - effectiveBalance);
   const dailyLossPct = daily > 0 ? (dailyLossCents / daily) * 100 : 0;
   const dailyBarPct = Math.min(100, Math.round((dailyLossPct / 10) * 100));
   const dailyDisplay = dailyLossPct.toFixed(1) + "%";

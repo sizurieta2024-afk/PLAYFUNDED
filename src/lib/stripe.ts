@@ -38,6 +38,8 @@ interface CreateCheckoutSessionParams {
   isGift?: boolean;
   giftRecipientEmail?: string;
   enablePix?: boolean; // true for Brazil users — charges in BRL via Pix
+  country?: string;
+  policyVersion?: string;
 }
 
 export async function createCheckoutSession({
@@ -50,6 +52,8 @@ export async function createCheckoutSession({
   isGift = false,
   giftRecipientEmail,
   enablePix = false,
+  country,
+  policyVersion,
 }: CreateCheckoutSessionParams): Promise<string> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
   const localePath =
@@ -119,6 +123,8 @@ export async function createCheckoutSession({
       userId,
       isGift: isGift ? "true" : "false",
       giftRecipientEmail: giftRecipientEmail ?? "",
+      country: country ?? "",
+      policyVersion: policyVersion ?? "",
     },
     success_url: `${baseUrl}${localePath}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${baseUrl}${localePath}/checkout/cancel`,

@@ -8,6 +8,8 @@ import {
   challengePurchasedEmail,
   giftVoucherEmail,
 } from "@/lib/email";
+import { recordOpsEvent } from "@/lib/ops-events";
+import { withWebhookLock } from "@/lib/payments/webhook-lock";
 
 async function attributeAffiliateCommission(
   userId: string,
@@ -61,35 +63,34 @@ async function attributeAffiliateCommission(
 
 async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
-): Promise<void> {
-  const { tierId, userId, isGift, giftRecipientEmail } = session.metadata ?? {};
+): Promise<{ status: "created" | "duplicate" }> {
+  const { tierId, userId, isGift, giftRecipientEmail, country, policyVersion } =
+    session.metadata ?? {};
 
   if (!tierId || !userId) {
     console.error("[webhook/stripe] Missing metadata on session:", session.id);
-    return;
-  }
-
-  // Idempotency — skip if already processed
-  const existing = await prisma.payment.findFirst({
-    where: { providerRef: session.id },
-  });
-  if (existing) {
-    console.log("[webhook/stripe] Duplicate event, skipping:", session.id);
-    return;
+    return { status: "duplicate" };
   }
 
   const tier = await prisma.tier.findUnique({ where: { id: tierId } });
   if (!tier) {
     console.error("[webhook/stripe] Tier not found:", tierId);
-    return;
+    return { status: "duplicate" };
   }
 
-  const giftToken =
-    isGift === "true"
-      ? `GFT-${Math.random().toString(36).slice(2, 10).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
-      : null;
+  const fulfillment = await withWebhookLock(prisma, "stripe", session.id, async (tx) => {
+    const existing = await tx.payment.findFirst({
+      where: { providerRef: session.id },
+    });
+    if (existing) {
+      return { status: "duplicate" as const, giftToken: null as string | null };
+    }
 
-  await prisma.$transaction(async (tx) => {
+    const giftToken =
+      isGift === "true"
+        ? `GFT-${Math.random().toString(36).slice(2, 10).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
+        : null;
+
     await tx.payment.create({
       data: {
         userId,
@@ -108,11 +109,12 @@ async function handleCheckoutCompleted(
               ? session.payment_intent
               : (session.payment_intent?.id ?? null),
           customerEmail: session.customer_email,
+          checkoutCountry: country ?? null,
+          policyVersion: policyVersion ?? null,
         },
       },
     });
 
-    // Gift: don't create Challenge now — recipient claims via /redeem/[token]
     if (isGift !== "true") {
       await tx.challenge.create({
         data: {
@@ -129,6 +131,41 @@ async function handleCheckoutCompleted(
         },
       });
     }
+
+    return { status: "created" as const, giftToken };
+  });
+
+  if (fulfillment.status === "duplicate") {
+    console.log("[webhook/stripe] Duplicate event, skipping:", session.id);
+    await recordOpsEvent({
+      type: "webhook_duplicate",
+      source: "api:webhooks:stripe",
+      actorUserId: userId,
+      subjectType: "payment",
+      subjectId: session.id,
+      country: country ?? null,
+      details: {
+        provider: "stripe",
+        providerRef: session.id,
+      },
+    });
+    return { status: "duplicate" };
+  }
+
+  await recordOpsEvent({
+    type: "webhook_payment_completed",
+    source: "api:webhooks:stripe",
+    actorUserId: userId,
+    subjectType: "payment",
+    subjectId: session.id,
+    country: country ?? null,
+    details: {
+      provider: "stripe",
+      providerRef: session.id,
+      userId,
+      tierId,
+      isGift: isGift === "true",
+    },
   });
 
   // Affiliate commission — fire-and-forget
@@ -142,12 +179,12 @@ async function handleCheckoutCompleted(
     select: { email: true, name: true },
   });
   if (buyer) {
-    if (isGift === "true" && giftRecipientEmail && giftToken) {
+    if (isGift === "true" && giftRecipientEmail && fulfillment.giftToken) {
       const { subject, html } = giftVoucherEmail(
         giftRecipientEmail,
         buyer.name,
         tier.name,
-        giftToken,
+        fulfillment.giftToken,
       );
       void sendEmail(giftRecipientEmail, subject, html);
     } else {
@@ -163,6 +200,7 @@ async function handleCheckoutCompleted(
   console.log(
     `[webhook/stripe] Challenge created — userId: ${userId}, tier: ${tier.name}`,
   );
+  return { status: "created" };
 }
 
 export async function POST(req: NextRequest) {
@@ -218,6 +256,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   } catch (err) {
     console.error("[webhook/stripe] Handler error:", err);
+    await recordOpsEvent({
+      type: "webhook_handler_failed",
+      level: "error",
+      source: "api:webhooks:stripe",
+      subjectType: "payment",
+      details: {
+        provider: "stripe",
+        eventType: event.type,
+        error: err instanceof Error ? err.message : String(err),
+      },
+    });
     return NextResponse.json(
       { error: "Webhook handler error" },
       { status: 500 },

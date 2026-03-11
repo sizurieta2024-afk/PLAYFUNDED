@@ -1,8 +1,13 @@
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { headers } from "next/headers";
 import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { PayoutsClient } from "@/components/payout/PayoutsClient";
+import { resolveCountry } from "@/lib/country-policy";
+import { resolvePayoutCountry } from "@/lib/payout-options";
+import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
+import { PLATFORM_POLICY, getPayoutWindowLabel } from "@/lib/platform-policy";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -22,20 +27,33 @@ export default async function PayoutsPage({
 }) {
   const { locale } = await params;
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) redirect("/auth/login");
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !authUser) redirect("/auth/login");
 
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
     include: { kycSubmission: true },
   });
   if (!user) redirect("/auth/login");
 
   const t = await getTranslations({ locale, namespace: "payouts" });
   const tKyc = await getTranslations({ locale, namespace: "kyc" });
+  const headersList = await headers();
+  const headerCountry = resolveCountry(
+    headersList.get("x-vercel-ip-country"),
+    headersList.get("cf-ipcountry"),
+  );
+  const payoutCountry = resolvePayoutCountry(
+    user.kycSubmission?.country,
+    user.country,
+    headerCountry,
+  );
+  const countryPolicy = await getResolvedCountryPolicy(payoutCountry);
+  const availableMethods = countryPolicy.payoutMethods;
 
   // All funded challenges
   const challenges = await prisma.challenge.findMany({
@@ -109,6 +127,18 @@ export default async function PayoutsPage({
     kycRejectedDesc: t("kycRejectedDesc"),
     profitZero: t("profitZero"),
     pendingExists: t("pendingExists"),
+    methodUnavailable: t("methodUnavailable"),
+    countryPolicyReview: t("countryPolicyReview"),
+    windowNotice: t("windowNotice", { payoutWindow: getPayoutWindowLabel() }),
+    windowClosed: t("windowClosed", { payoutWindow: getPayoutWindowLabel() }),
+    belowMinimum: t("belowMinimum", {
+      amount: PLATFORM_POLICY.payouts.minimumCents / 100,
+    }),
+    bankDlocal: t("bankDlocal"),
+    bankPixDlocal: t("bankPixDlocal"),
+    usdSettlementNote: t("usdSettlementNote", {
+      currency: PLATFORM_POLICY.payouts.settlementCurrency,
+    }),
   };
 
   const tKycObj: Record<string, string> = {
@@ -150,6 +180,11 @@ export default async function PayoutsPage({
         fundedChallenges={fundedChallenges}
         pastPayouts={pastPayouts}
         kycStatus={kycStatus}
+        payoutCountry={payoutCountry}
+        availableMethods={availableMethods}
+        complianceNotice={
+          countryPolicy.requiresReviewNotice ? t("countryPolicyReview") : null
+        }
         t={tObj}
         tKyc={tKycObj}
       />

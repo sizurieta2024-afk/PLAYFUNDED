@@ -73,26 +73,32 @@ export async function PATCH(req: NextRequest) {
     txRef,
     adminNote,
   });
-  if (!updated) {
+  if (!updated.ok) {
+    if (updated.code === "RETRYABLE_CONFLICT") {
+      return NextResponse.json(
+        { error: "Payout changed during review. Retry the action.", code: updated.code },
+        { status: 409 },
+      );
+    }
     return NextResponse.json({ error: "Payout not found or not pending" }, { status: 404 });
   }
 
   if (action === "approve") {
     const { subject, html } = payoutPaidEmail(
-      updated.user.name,
-      updated.amount,
-      updated.method,
+      updated.payout.user.name,
+      updated.payout.amount,
+      updated.payout.method,
       txRef,
     );
-    void sendEmail(updated.user.email, subject, html);
+    void sendEmail(updated.payout.user.email, subject, html);
   } else {
     const { subject, html } = payoutRejectedEmail(
-      updated.user.name,
-      updated.amount,
+      updated.payout.user.name,
+      updated.payout.amount,
       adminNote,
     );
-    void sendEmail(updated.user.email, subject, html);
+    void sendEmail(updated.payout.user.email, subject, html);
   }
 
-  return NextResponse.json({ payout: updated });
+  return NextResponse.json({ payout: updated.payout });
 }

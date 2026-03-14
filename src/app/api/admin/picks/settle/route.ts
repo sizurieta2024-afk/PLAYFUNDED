@@ -8,12 +8,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
-import { buildPostSettlementUpdate } from "@/lib/settlement/settle";
 import type { SettleStatus } from "@/lib/settlement/settle";
+import { settlePendingPick } from "@/lib/settlement/settle-service";
 import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
-  const limit = enforceRateLimit(req, "api:admin:picks:settle", {
+  const limit = await enforceRateLimit(req, "api:admin:picks:settle", {
     windowMs: 60_000,
     max: 60,
   });
@@ -60,111 +60,25 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const now = new Date();
-  let updatedPick:
-    | {
-        id: string;
-        status: string;
-        actualPayout: number;
-      }
-    | undefined;
-  let updatedChallenge:
-    | {
-        id: string;
-        balance: number;
-        status: string;
-        phase: string;
-      }
-    | undefined;
-
   try {
-    const result = await prisma.$transaction(async (tx) => {
-      const pick = await tx.pick.findUnique({
-        where: { id: pickId },
-        include: {
-          challenge: {
-            include: { tier: true },
-          },
-        },
-      });
-
-      if (!pick) {
-        throw new Error("PICK_NOT_FOUND");
-      }
-
-      if (pick.status !== "pending") {
-        throw new Error("ALREADY_SETTLED");
-      }
-
-      const actualPayout = status === "won" ? pick.potentialPayout : 0;
-      const settledCount = await tx.pick.count({
-        where: {
-          challengeId: pick.challenge.id,
-          status: { in: ["won", "lost", "push"] },
-        },
-      });
-
-      const settledPickCount =
-        status === "void" ? settledCount : settledCount + 1;
-
-      const settledPick = {
-        ...pick,
-        status,
-        actualPayout,
-      };
-
-      const { challengeUpdate } = buildPostSettlementUpdate(
-        settledPick,
-        pick.challenge,
-        pick.challenge.tier,
-        settledPickCount,
-      );
-
-      const challengeWrite = await tx.challenge.updateMany({
-        where: {
-          id: pick.challenge.id,
-          updatedAt: pick.challenge.updatedAt,
-        },
-        data: challengeUpdate,
-      });
-      if (challengeWrite.count !== 1) {
-        throw new Error("CHALLENGE_CONFLICT");
-      }
-
-      const pickWrite = await tx.pick.updateMany({
-        where: {
-          id: pickId,
-          status: "pending",
-          settledAt: null,
-        },
-        data: {
-          status,
-          actualPayout,
-          settledAt: now,
-        },
-      });
-      if (pickWrite.count !== 1) {
-        throw new Error("PICK_CONFLICT");
-      }
-
-      const updatedPick = await tx.pick.findUnique({
-        where: { id: pickId },
-        select: { id: true, status: true, actualPayout: true },
-      });
-      const updatedChallenge = await tx.challenge.findUnique({
-        where: { id: pick.challenge.id },
-        select: { id: true, balance: true, status: true, phase: true },
-      });
-
-      if (!updatedPick || !updatedChallenge) {
-        throw new Error("SETTLEMENT_READBACK_FAILED");
-      }
-
-      return { updatedPick, updatedChallenge };
+    const result = await settlePendingPick(prisma, {
+      pickId,
+      status,
+      settledAt: new Date(),
     });
 
-    updatedPick = result.updatedPick;
-    updatedChallenge = result.updatedChallenge;
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: result.error, code: result.code },
+        { status: result.status },
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      pick: result.pick,
+      challenge: result.challenge,
+    });
   } catch (error) {
     const code = error instanceof Error ? error.message : "SETTLEMENT_FAILED";
     if (code === "PICK_NOT_FOUND") {
@@ -192,22 +106,4 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-
-  if (!updatedPick || !updatedChallenge) {
-    return NextResponse.json(
-      { error: "Failed to settle pick", code: "SETTLEMENT_READBACK_FAILED" },
-      { status: 500 },
-    );
-  }
-
-  return NextResponse.json({
-    ok: true,
-    pick: updatedPick,
-    challenge: {
-      id: updatedChallenge.id,
-      balance: updatedChallenge.balance,
-      status: updatedChallenge.status,
-      phase: updatedChallenge.phase,
-    },
-  });
 }

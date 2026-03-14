@@ -16,6 +16,7 @@ import {
   reviewKycByAdmin,
   reviewPayoutByAdmin,
 } from "@/lib/admin/review-service";
+import { setUserBanState } from "@/lib/admin/user-moderation-service";
 
 async function requireAdmin() {
   const supabase = await createServerClient();
@@ -68,20 +69,21 @@ function parseEnumList<T extends string>(
 
 export async function banUser(userId: string, reason: string) {
   const admin = await requireAdmin();
-  await prisma.user.update({
-    where: { id: userId },
-    data: { isBanned: true, banReason: reason },
+  await setUserBanState(prisma, {
+    adminId: admin.id,
+    userId,
+    banned: true,
+    reason,
   });
-  await audit(admin.id, "ban_user", "user", userId, reason);
 }
 
 export async function unbanUser(userId: string) {
   const admin = await requireAdmin();
-  await prisma.user.update({
-    where: { id: userId },
-    data: { isBanned: false, banReason: null },
+  await setUserBanState(prisma, {
+    adminId: admin.id,
+    userId,
+    banned: false,
   });
-  await audit(admin.id, "unban_user", "user", userId);
 }
 
 // ── Challenges ────────────────────────────────────────────────────────
@@ -112,9 +114,9 @@ export async function adminUpdatePayout(
   action: "approve" | "reject",
   txRef?: string,
   adminNote?: string,
-) {
+): Promise<{ error?: string; code?: string }> {
   const admin = await requireAdmin();
-  const payout = await reviewPayoutByAdmin({
+  const result = await reviewPayoutByAdmin({
     db: prisma,
     adminId: admin.id,
     payoutId,
@@ -122,7 +124,16 @@ export async function adminUpdatePayout(
     txRef,
     adminNote,
   });
-  if (!payout) return;
+  if (!result.ok) {
+    return {
+      error:
+        result.code === "RETRYABLE_CONFLICT"
+          ? "payout_review_conflict"
+          : "payout_not_found_or_not_pending",
+      code: result.code,
+    };
+  }
+  const payout = result.payout;
   await recordOpsEvent({
     type: "admin_payout_reviewed",
     source: "action:admin",
@@ -152,6 +163,7 @@ export async function adminUpdatePayout(
     );
     void sendEmail(payout.user.email, subject, html);
   }
+  return {};
 }
 
 // ── KYC ───────────────────────────────────────────────────────────────

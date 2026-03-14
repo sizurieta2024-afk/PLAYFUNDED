@@ -6,12 +6,9 @@
 // ============================================================
 
 import type { Challenge, Pick, Tier } from "@prisma/client";
-import {
-  buildBalanceUpdate,
-  checkPostSettlement,
-  checkPhaseComplete,
-  buildPhaseAdvance,
-} from "@/lib/challenge";
+import { buildBalanceUpdate } from "../challenge/balance";
+import { buildPhaseAdvance, checkPhaseComplete } from "../challenge/phases";
+import { PLATFORM_POLICY } from "../platform-policy";
 import {
   gradePick,
   gradeMoneyline,
@@ -21,6 +18,7 @@ import {
   type SettleStatus,
   type SettlementResult,
 } from "../proof/settlement-rules";
+import { checkPostSettlement as baseCheckPostSettlement } from "../proof/risk-rules";
 
 export {
   gradePick,
@@ -60,7 +58,7 @@ export function buildPostSettlementUpdate(
   };
 
   // 3. Risk checks (drawdown + daily loss) on updated balance
-  const violation = checkPostSettlement(updatedChallenge);
+  const violation = baseCheckPostSettlement(updatedChallenge, PLATFORM_POLICY.risk);
   if (violation) {
     return {
       balanceUpdate,

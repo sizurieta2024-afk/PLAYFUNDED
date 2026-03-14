@@ -20,16 +20,29 @@ function sanitizeDetails(
 ): Record<string, unknown> | undefined {
   if (!details) return undefined;
 
+  function sanitizeValue(value: unknown): unknown {
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+    if (value instanceof Error) {
+      return value.message.replaceAll("\u0000", "");
+    }
+    if (typeof value === "string") {
+      return value.replaceAll("\u0000", "");
+    }
+    if (Array.isArray(value)) {
+      return value.map((entry) => sanitizeValue(entry));
+    }
+    if (value && typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value).map(([key, nestedValue]) => [key, sanitizeValue(nestedValue)]),
+      );
+    }
+    return value;
+  }
+
   return Object.fromEntries(
-    Object.entries(details).map(([key, value]) => {
-      if (value instanceof Date) {
-        return [key, value.toISOString()];
-      }
-      if (value instanceof Error) {
-        return [key, value.message];
-      }
-      return [key, value];
-    }),
+    Object.entries(details).map(([key, value]) => [key, sanitizeValue(value)]),
   );
 }
 

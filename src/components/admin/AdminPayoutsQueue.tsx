@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { adminUpdatePayout } from "@/app/actions/admin";
 
 interface PayoutRow {
@@ -20,13 +21,33 @@ function formatUSD(cents: number) {
 }
 
 export function AdminPayoutsQueue({ payouts }: { payouts: PayoutRow[] }) {
+  const router = useRouter();
   const [txRefs, setTxRefs] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [messages, setMessages] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
 
   function handle(id: string, action: "approve" | "reject") {
     startTransition(async () => {
-      await adminUpdatePayout(id, action, txRefs[id], notes[id]);
+      setMessages((prev) => ({ ...prev, [id]: "" }));
+      const result = await adminUpdatePayout(id, action, txRefs[id], notes[id]);
+      if (result.code === "RETRYABLE_CONFLICT") {
+        setMessages((prev) => ({
+          ...prev,
+          [id]: "Already reviewed by another admin. The queue is refreshing.",
+        }));
+        router.refresh();
+        return;
+      }
+      if (result.error) {
+        setMessages((prev) => ({
+          ...prev,
+          [id]: "Review failed. Refresh the queue and try again.",
+        }));
+        return;
+      }
+
+      router.refresh();
     });
   }
 
@@ -99,6 +120,11 @@ export function AdminPayoutsQueue({ payouts }: { payouts: PayoutRow[] }) {
               Reject
             </button>
           </div>
+          {messages[p.id] ? (
+            <p className="mt-3 text-xs font-medium text-amber-400">
+              {messages[p.id]}
+            </p>
+          ) : null}
         </div>
       ))}
     </div>

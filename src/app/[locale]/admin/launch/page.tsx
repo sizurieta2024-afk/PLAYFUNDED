@@ -13,6 +13,7 @@ import {
   listResolvedCountryPolicies,
   type ResolvedCountryPolicy,
 } from "@/lib/country-policy-store";
+import { getKycScanMode } from "@/lib/kyc-malware-scan";
 
 type OpsEventRow = Awaited<ReturnType<typeof listRecentOpsEvents>>[number];
 import { PLATFORM_POLICY, getPayoutWindowLabel } from "@/lib/platform-policy";
@@ -26,6 +27,8 @@ function formatBoolInputName(name: string) {
 }
 
 export default async function AdminLaunchPage() {
+  const kycScanMode = getKycScanMode();
+  const clamavConfigured = Boolean(process.env.CLAMAV_HOST?.trim());
   const [policies, recentOpsEvents] = await Promise.all([
     listResolvedCountryPolicies(),
     listRecentOpsEvents(50),
@@ -40,7 +43,7 @@ export default async function AdminLaunchPage() {
         </p>
       </div>
 
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <section className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground mb-1">Payout window</p>
           <p className="text-lg font-semibold">{getPayoutWindowLabel()}</p>
@@ -63,6 +66,20 @@ export default async function AdminLaunchPage() {
           <p className="text-xs text-muted-foreground mb-1">Live betting</p>
           <p className="text-lg font-semibold">
             {PLATFORM_POLICY.trading.liveBettingAllowed ? "Allowed" : "Blocked"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground mb-1">KYC scanning</p>
+          <p className="text-lg font-semibold">
+            {clamavConfigured ? "ClamAV configured" : "Scanner not configured"}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Mode {kycScanMode}
+            {clamavConfigured
+              ? ""
+              : kycScanMode === "require_clean"
+                ? " · uploads block until scanner is armed"
+                : " · uploads degrade best-effort"}
           </p>
         </div>
       </section>

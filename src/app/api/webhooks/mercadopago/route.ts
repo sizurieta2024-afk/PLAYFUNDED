@@ -50,7 +50,7 @@ async function fetchMpPayment(paymentId: string): Promise<{
 }
 
 export async function POST(request: NextRequest) {
-  const limit = enforceRateLimit(request, "api:webhooks:mercadopago", {
+  const limit = await enforceRateLimit(request, "api:webhooks:mercadopago", {
     windowMs: 60_000,
     max: 240,
   });

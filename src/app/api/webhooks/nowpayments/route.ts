@@ -3,13 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { verifyNowPaymentsSignature } from "@/lib/nowpayments";
 import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 import { recordOpsEvent } from "@/lib/ops-events";
-import { withWebhookLock } from "@/lib/payments/webhook-lock";
+import { fulfillNowPaymentsPayment } from "@/lib/payments/nowpayments-fulfillment";
 
 // NOWPayments IPN: fires on every status change.
 // We only act on "finished" (fully confirmed) payments.
 
 export async function POST(request: NextRequest) {
-  const limit = enforceRateLimit(request, "api:webhooks:nowpayments", {
+  const limit = await enforceRateLimit(request, "api:webhooks:nowpayments", {
     windowMs: 60_000,
     max: 240,
   });
@@ -68,81 +68,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Tier not found" }, { status: 404 });
   }
 
-  const payMethod =
-    data.pay_currency === "btc"
-      ? "btc"
-      : data.pay_currency.startsWith("usdc")
-        ? "usdc"
-        : "usdt";
-
-  const outcome = await withWebhookLock(
-    prisma,
-    "nowpayments",
+  const outcome = await fulfillNowPaymentsPayment({
+    db: prisma,
     providerRef,
-    async (tx) => {
-      const existing = await tx.payment.findFirst({ where: { providerRef } });
-      if (existing?.status === "completed") {
-        return { status: "duplicate" as const };
-      }
-
-      const pendingPayment = await tx.payment.findFirst({
-        where: { providerRef, status: "pending" },
-      });
-
-      if (pendingPayment) {
-        await tx.payment.update({
-          where: { id: pendingPayment.id },
-          data: {
-            status: "completed",
-            metadata: {
-              ...(typeof pendingPayment.metadata === "object" &&
-              pendingPayment.metadata !== null
-                ? pendingPayment.metadata
-                : {}),
-              paymentId: data.payment_id,
-              payCurrency: data.pay_currency,
-              payAmount: data.pay_amount,
-            },
-          },
-        });
-      } else {
-        await tx.payment.create({
-          data: {
-            userId,
-            tierId,
-            amount: Math.round(data.price_amount * 100),
-            currency: data.price_currency.toUpperCase(),
-            method: payMethod,
-            status: "completed",
-            providerRef,
-            metadata: {
-              paymentId: data.payment_id,
-              payCurrency: data.pay_currency,
-              payAmount: data.pay_amount,
-              policyVersion: null,
-            },
-          },
-        });
-      }
-
-      await tx.challenge.create({
-        data: {
-          userId,
-          tierId,
-          status: "active",
-          phase: "phase1",
-          balance: tier.fundedBankroll,
-          startBalance: tier.fundedBankroll,
-          dailyStartBalance: tier.fundedBankroll,
-          highestBalance: tier.fundedBankroll,
-          peakBalance: tier.fundedBankroll,
-          phase1StartBalance: tier.fundedBankroll,
-        },
-      });
-
-      return { status: "created" as const };
-    },
-  );
+    userId,
+    tierId,
+    tierFundedBankroll: tier.fundedBankroll,
+    priceAmount: data.price_amount,
+    priceCurrency: data.price_currency,
+    payCurrency: data.pay_currency,
+    payAmount: data.pay_amount,
+  });
 
   if (outcome.status === "duplicate") {
     await recordOpsEvent({

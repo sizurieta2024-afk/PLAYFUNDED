@@ -204,7 +204,7 @@ async function handleCheckoutCompleted(
 }
 
 export async function POST(req: NextRequest) {
-  const limit = enforceRateLimit(req, "api:webhooks:stripe", {
+  const limit = await enforceRateLimit(req, "api:webhooks:stripe", {
     windowMs: 60_000,
     max: 240,
   });

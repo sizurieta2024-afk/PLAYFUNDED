@@ -13,13 +13,15 @@ import {
   fetchOddsApiScores,
   type GameResult,
 } from "@/lib/odds/scores";
-import { gradePick, buildPostSettlementUpdate } from "@/lib/settlement/settle";
+import { gradePick, type SettleStatus } from "@/lib/settlement/settle";
 import {
   sendEmail,
   phase1PassedEmail,
   fundedEmail,
   challengeFailedEmail,
 } from "@/lib/email";
+import { recordOpsEvent } from "@/lib/ops-events";
+import { settlePendingPick } from "@/lib/settlement/settle-service";
 
 function isAuthorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -69,7 +71,30 @@ export async function POST(req: NextRequest) {
   });
 
   if (pendingPicks.length === 0) {
-    return NextResponse.json({ ok: true, settled: 0, skipped: 0, report: [] });
+    const settledAt = now.toISOString();
+    await recordOpsEvent({
+      type: "cron_settle_completed",
+      level: "info",
+      source: "api:settle",
+      subjectType: "cron",
+      subjectId: "settle",
+      details: {
+        settledAt,
+        settled: 0,
+        skipped: 0,
+        errorCount: 0,
+        pendingPicks: 0,
+        noop: true,
+      },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      settledAt,
+      settled: 0,
+      skipped: 0,
+      report: [],
+    });
   }
 
   const scoreGroups = new Map<
@@ -169,97 +194,22 @@ export async function POST(req: NextRequest) {
         },
       );
 
-      const txResult = await prisma.$transaction(async (tx) => {
-        const currentPick = await tx.pick.findUnique({
-          where: { id: pick.id },
-          include: {
-            challenge: {
-              include: {
-                tier: true,
-                user: { select: { email: true, name: true } },
-              },
-            },
-          },
-        });
-
-        if (!currentPick || currentPick.status !== "pending" || currentPick.settledAt) {
-          return {
-            skipped: true,
-            reason: "Pick already settled",
-          } as const;
-        }
-
-        const settledCount = await tx.pick.count({
-          where: {
-            challengeId: currentPick.challenge.id,
-            status: { in: ["won", "lost", "push"] },
-          },
-        });
-
-        const settledPickCount =
-          settlement.status === "void" ? settledCount : settledCount + 1;
-
-        const settlePick = {
-          ...currentPick,
-          status: settlement.status as "won" | "lost" | "void" | "push",
-          actualPayout: settlement.actualPayout,
-        };
-
-        const { challengeUpdate, autoFail, phaseAdvance } =
-          buildPostSettlementUpdate(
-            settlePick,
-            currentPick.challenge,
-            currentPick.challenge.tier,
-            settledPickCount,
-          );
-
-        const challengeWrite = await tx.challenge.updateMany({
-          where: {
-            id: currentPick.challenge.id,
-            updatedAt: currentPick.challenge.updatedAt,
-          },
-          data: challengeUpdate,
-        });
-        if (challengeWrite.count !== 1) {
-          throw new Error("Challenge changed during settlement");
-        }
-
-        const pickWrite = await tx.pick.updateMany({
-          where: {
-            id: currentPick.id,
-            status: "pending",
-            settledAt: null,
-          },
-          data: {
-            status: settlement.status,
-            actualPayout: settlement.actualPayout,
-            settledAt: now,
-          },
-        });
-        if (pickWrite.count !== 1) {
-          throw new Error("Pick changed during settlement");
-        }
-
-        return {
-          skipped: false,
-          autoFail,
-          phaseAdvance,
-          priorPhase: currentPick.challenge.phase,
-          tierName: currentPick.challenge.tier.name,
-          fundedBankroll: currentPick.challenge.tier.fundedBankroll,
-          profitSplitPct: currentPick.challenge.tier.profitSplitPct,
-          userEmail: currentPick.challenge.user.email,
-          userName: currentPick.challenge.user.name,
-        } as const;
+      const txResult = await settlePendingPick(prisma, {
+        pickId: pick.id,
+        status: settlement.status as SettleStatus,
+        settledAt: now,
       });
 
-      if (txResult.skipped) {
+      if (!txResult.ok) {
         report.push({
           pickId: pick.id,
           eventName: pick.eventName,
           status: "pending",
           outcome: "skipped",
-          reason: txResult.reason,
+          reason:
+            txResult.code === "ALREADY_SETTLED"
+              ? "Pick already settled"
+              : txResult.error,
         });
         skipped++;
         continue;
@@ -310,9 +260,26 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const settledAt = now.toISOString();
+  const errorCount = report.filter((entry) => entry.outcome === "error").length;
+
+  await recordOpsEvent({
+    type: errorCount > 0 ? "cron_settle_failed" : "cron_settle_completed",
+    level: errorCount > 0 ? "warn" : "info",
+    source: "api:settle",
+    subjectType: "cron",
+    subjectId: "settle",
+    details: {
+      settledAt,
+      settled,
+      skipped,
+      errorCount,
+    },
+  });
+
   return NextResponse.json({
     ok: true,
-    settledAt: now.toISOString(),
+    settledAt,
     settled,
     skipped,
     report,

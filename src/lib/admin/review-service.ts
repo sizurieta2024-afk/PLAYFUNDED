@@ -39,55 +39,115 @@ export interface ReviewKycInput {
   reviewNote?: string;
 }
 
+export type ReviewPayoutResult =
+  | {
+      ok: true;
+      payout: ReviewedPayout;
+    }
+  | {
+      ok: false;
+      code: "NOT_FOUND_OR_NOT_PENDING" | "RETRYABLE_CONFLICT";
+    };
+
 export async function reviewPayoutByAdmin(
   input: ReviewPayoutInput,
-): Promise<ReviewedPayout | null> {
-  return input.db.$transaction(
-    async (tx) => {
-      const now = new Date();
-      const updated = await tx.payout.updateMany({
-        where: {
-          id: input.payoutId,
-          status: "pending",
-        },
-        data: {
-          status: input.action === "approve" ? "paid" : "failed",
-          txRef: input.txRef ?? null,
-          adminNote: input.adminNote ?? null,
-          approvedAt: input.action === "approve" ? now : null,
-          paidAt: input.action === "approve" ? now : null,
-        },
-      });
-      if (updated.count !== 1) {
-        return null;
-      }
+): Promise<ReviewPayoutResult> {
+  try {
+    const payout = await input.db.$transaction(
+      async (tx) => {
+        const now = new Date();
+        const existing = await tx.payout.findUnique({
+          where: { id: input.payoutId },
+          select: {
+            id: true,
+            status: true,
+            challengeId: true,
+            providerData: true,
+          },
+        });
+        if (!existing || existing.status !== "pending") {
+          return null;
+        }
 
-      await tx.auditLog.create({
-        data: {
-          adminId: input.adminId,
-          action: input.action === "approve" ? "approve_payout" : "reject_payout",
-          targetType: "payout",
-          targetId: input.payoutId,
-          note: input.adminNote ?? input.txRef,
-        },
-      });
+        if (input.action === "reject" && existing.challengeId) {
+          const requestedProfitAmount = extractRequestedProfitAmount(existing.providerData);
+          if (requestedProfitAmount !== null) {
+            await tx.challenge.update({
+              where: { id: existing.challengeId },
+              data: { balance: { increment: requestedProfitAmount } },
+            });
+          }
+        }
 
-      return tx.payout.findUnique({
-        where: { id: input.payoutId },
-        include: {
-          user: {
-            select: {
-              email: true,
-              name: true,
+        const updated = await tx.payout.updateMany({
+          where: {
+            id: input.payoutId,
+            status: "pending",
+          },
+          data: {
+            status: input.action === "approve" ? "paid" : "failed",
+            txRef: input.txRef ?? null,
+            adminNote: input.adminNote ?? null,
+            approvedAt: input.action === "approve" ? now : null,
+            paidAt: input.action === "approve" ? now : null,
+          },
+        });
+        if (updated.count !== 1) {
+          return null;
+        }
+
+        await tx.auditLog.create({
+          data: {
+            adminId: input.adminId,
+            action: input.action === "approve" ? "approve_payout" : "reject_payout",
+            targetType: "payout",
+            targetId: input.payoutId,
+            note: input.adminNote ?? input.txRef,
+          },
+        });
+
+        return tx.payout.findUnique({
+          where: { id: input.payoutId },
+          include: {
+            user: {
+              select: {
+                email: true,
+                name: true,
+              },
             },
           },
-        },
-      });
-    },
-    {
-      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-    },
-  );
+        });
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
+
+    if (!payout) {
+      return { ok: false, code: "NOT_FOUND_OR_NOT_PENDING" };
+    }
+
+    return { ok: true, payout };
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2034"
+    ) {
+      return { ok: false, code: "RETRYABLE_CONFLICT" };
+    }
+    throw error;
+  }
+}
+
+function extractRequestedProfitAmount(providerData: Prisma.JsonValue | null): number | null {
+  if (!providerData || typeof providerData !== "object" || Array.isArray(providerData)) {
+    return null;
+  }
+
+  const requested = (providerData as Prisma.JsonObject).requestedProfitAmount;
+  return typeof requested === "number" && Number.isInteger(requested)
+    ? requested
+    : null;
 }
 
 export async function reviewKycByAdmin(

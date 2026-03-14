@@ -22,7 +22,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const limit = enforceRateLimit(req, "api:checkout:stripe", {
+  const limit = await enforceRateLimit(req, "api:checkout:stripe", {
     windowMs: 60_000,
     max: 12,
   });

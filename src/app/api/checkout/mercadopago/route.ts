@@ -9,7 +9,7 @@ import { recordOpsEvent } from "@/lib/ops-events";
 import { PLATFORM_POLICY } from "@/lib/platform-policy";
 
 export async function POST(request: NextRequest) {
-  const limit = enforceRateLimit(request, "api:checkout:mercadopago", {
+  const limit = await enforceRateLimit(request, "api:checkout:mercadopago", {
     windowMs: 60_000,
     max: 12,
   });

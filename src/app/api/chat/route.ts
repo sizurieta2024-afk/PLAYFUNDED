@@ -56,7 +56,7 @@ interface Message {
 }
 
 export async function POST(req: NextRequest) {
-  const limit = enforceRateLimit(req, "api:chat", {
+  const limit = await enforceRateLimit(req, "api:chat", {
     windowMs: 60_000,
     max: 20,
   });

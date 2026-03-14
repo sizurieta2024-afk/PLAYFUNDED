@@ -11,7 +11,7 @@ import { PLATFORM_POLICY } from "@/lib/platform-policy";
 const VALID_CURRENCIES: CryptoCurrency[] = ["usdttrc20", "usdcerc20", "btc"];
 
 export async function POST(request: NextRequest) {
-  const limit = enforceRateLimit(request, "api:checkout:nowpayments", {
+  const limit = await enforceRateLimit(request, "api:checkout:nowpayments", {
     windowMs: 60_000,
     max: 12,
   });

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
 import type { IdType } from "@prisma/client";
+import { resolveKycPayoutEligibility } from "@/lib/kyc/eligibility";
 
 export async function submitKyc(formData: {
   fullName: string;
@@ -29,6 +30,11 @@ export async function submitKyc(formData: {
   // Don't re-submit if already approved
   if (user.kycSubmission?.status === "approved") {
     return {};
+  }
+
+  const eligibility = await resolveKycPayoutEligibility(prisma, user);
+  if (!eligibility.allowed) {
+    return { error: eligibility.code };
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;

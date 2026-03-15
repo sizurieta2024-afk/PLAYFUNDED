@@ -11,6 +11,7 @@ import { OddsApiProvider } from "@/lib/odds/odds-api";
 import { ApiFootballProvider } from "@/lib/odds/api-football";
 import { LEAGUE_CONFIG } from "@/lib/odds/types";
 import type { OddsEvent } from "@/lib/odds/types";
+import { recordOpsEvent } from "@/lib/ops-events";
 
 function isAuthorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -102,10 +103,25 @@ async function runSync(req: NextRequest) {
 
   const totalFetched = results.reduce((sum, r) => sum + r.fetched, 0);
   const totalErrors = results.filter((r) => r.error).length;
+  const syncedAt = new Date().toISOString();
+
+  await recordOpsEvent({
+    type: totalErrors > 0 ? "cron_odds_sync_failed" : "cron_odds_sync_completed",
+    level: totalErrors > 0 ? "warn" : "info",
+    source: "api:odds:sync",
+    subjectType: "cron",
+    subjectId: "odds-sync",
+    details: {
+      syncedAt,
+      totalFetched,
+      totalErrors,
+      failedLeagues: results.filter((r) => r.error).map((r) => r.league),
+    },
+  });
 
   return NextResponse.json({
     ok: true,
-    syncedAt: new Date().toISOString(),
+    syncedAt,
     totalFetched,
     totalErrors,
     results,

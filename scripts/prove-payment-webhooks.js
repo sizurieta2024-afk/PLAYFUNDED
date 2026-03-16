@@ -78,8 +78,18 @@ function proveWebhookVerificationAndIdempotency() {
     assertMatch(file, /providerRef/, "missing provider reference handling");
     assertMatch(file, /webhook_duplicate/, "missing duplicate webhook path");
     assertMatch(file, /recordOpsEvent\(/, "missing persisted webhook ops event");
-    assertMatch(file, /dailyStartBalance:/, "missing dailyStartBalance on challenge creation");
   }
+
+  assertMatch(
+    "src/app/api/webhooks/nowpayments/route.ts",
+    /fulfillNowPaymentsPayment\(/,
+    "missing NOWPayments fulfillment service call",
+  );
+  assertMatch(
+    "src/lib/payments/nowpayments-fulfillment.ts",
+    /dailyStartBalance:\s*input\.tierFundedBankroll/,
+    "missing dailyStartBalance on NOWPayments challenge creation",
+  );
   console.log("PASS webhook_verification");
 }
 

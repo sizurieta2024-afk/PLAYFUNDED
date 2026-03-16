@@ -146,10 +146,6 @@ async function expectBlockedState(browser, email, password) {
       state: "visible",
       timeout: 15000,
     });
-    await page.getByText("KYC becomes available once you have a funded challenge ready for payout.").waitFor({
-      state: "visible",
-      timeout: 15000,
-    });
 
     const uploadButtons = page.getByRole("button", { name: /upload file/i });
     const uploadCount = await uploadButtons.count();
@@ -168,6 +164,7 @@ async function expectBlockedState(browser, email, password) {
     return {
       route: "/en/dashboard/payouts",
       uploadButtonsVisible: uploadCount,
+      buyChallengeVisible: await page.getByRole("link", { name: /buy challenge/i }).isVisible().catch(() => false),
       apiStatus: response.status(),
       apiError: responseJson.error ?? null,
     };

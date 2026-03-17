@@ -1,6 +1,6 @@
 # Live Validation Status
 
-Updated: 2026-03-12
+Updated: 2026-03-17
 
 ## Proven Live
 
@@ -16,6 +16,13 @@ Updated: 2026-03-12
 - Admin positive smoke:
   - production-mode local build on port `3004`
   - `/en/admin`, `/en/admin/kyc`, `/en/admin/launch` all returned `200` for a real temporary admin session
+- GitHub CI and launch smokes:
+  - `workflow_dispatch` is proven on the remote repository
+  - GitHub run `23133863176` completed successfully on commit `7a2f56c`
+  - `launch-smokes` passed remotely, including:
+    - `Admin smoke`
+    - `Payout KYC smoke`
+    - `Admin support smoke`
 
 ## Proven By Archive Validation
 
@@ -32,7 +39,6 @@ Updated: 2026-03-12
   - `cron_failures` reported `1`
 - Permanent Slack/Discord alert destination, because no real `PF_ALERT_WEBHOOK_URL` / `PF_ALERT_WEBHOOK_KIND` is configured in GitHub
 - Production Vercel KYC scanning, because production runtime still lacks `CLAMAV_*` and `KYC_*` scan env vars
-- GitHub `launch-smokes` on the updated manually-dispatchable `CI` workflow, because the workflow changes are local until pushed
 - Full Supabase platform restore outside the application `public` schema
 - Exact end-user browser copy for the KYC malware rejection, even though the route-level rejection path was proven
 

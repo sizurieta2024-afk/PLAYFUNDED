@@ -2,6 +2,8 @@
 
 Generated from `node scripts/audit-launch-env.mjs` on 2026-03-11.
 
+Updated operational status: 2026-03-17.
+
 ## Scope
 
 - Local `.env.local`
@@ -51,15 +53,16 @@ Generated from `node scripts/audit-launch-env.mjs` on 2026-03-11.
 
 - Ops health checking is configured and can run from GitHub Actions today.
 - External alerting is not active right now because there is still no permanent Slack/Discord webhook destination configured in GitHub.
-- The `CI` workflow now has the secrets needed for `launch-smokes`, and it is designed to run on `push` or `workflow_dispatch`.
+- The `CI` workflow has the secrets needed for `launch-smokes`, and that job is now proven on GitHub for both `workflow_dispatch` and remote branch execution.
 - Production KYC scanning is not active on Vercel because the runtime has no ClamAV connection settings.
 - Production KYC behavior is therefore strict-by-default: if `KYC_SCAN_MODE` stays unset in production, uploads block unless ClamAV is available because the app now defaults production to `require_clean`.
 - Local KYC scanning was proven only by injecting scan env vars at runtime during the live validation session.
 - The audit script treats alert-webhook secrets as optional even though the workflow can reference them on failure paths.
+- GitHub Actions workflow files have been upgraded off Node 20 action runtimes to remove the hosted-runner deprecation warnings.
 
 ## Recommended Next Actions
 
 1. Set a real `PF_ALERT_WEBHOOK_URL` and `PF_ALERT_WEBHOOK_KIND` in GitHub once you have the permanent Slack/Discord destination.
 2. Keep production KYC in strict mode unless you intentionally choose `best_effort` as a temporary override.
 3. Persist the ClamAV/KYC scan env vars in the real production environments when you are ready to arm upload scanning.
-4. Run `CI` via `workflow_dispatch` after the updated workflow is pushed so `launch-smokes` is proven on GitHub, not just locally.
+4. Re-run `CI` and `ops-health-5m` after workflow edits so the Node 20 deprecation warnings stay gone on future runs.

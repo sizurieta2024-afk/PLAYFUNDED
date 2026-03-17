@@ -151,6 +151,7 @@ First checks:
   - `SUPABASE_SERVICE_ROLE_KEY`
   - `CRON_SECRET`
 - Confirm the `CI` workflow was triggered by `push` or `workflow_dispatch`, not a pull request.
+- Confirm the workflow run is using the expected branch head/commit, not an older dispatch or stale rerun.
 - Inspect `/tmp/playfunded-ci.log` from the workflow artifacts/logs if app startup failed.
 
 Containment:
@@ -160,3 +161,6 @@ Containment:
 Recovery:
 - Re-run the `CI` workflow manually once the secrets and build issue are corrected.
 - Verify `smoke:admin`, `smoke:payout-kyc`, and `smoke:admin-support` all pass in the same run.
+- Treat exact-copy failures in smoke checks as lower-signal than behavioral failures:
+  - prefer proving auth, redirects, upload-button visibility, and API rejection/acceptance behavior
+  - only require exact UI copy when the wording itself is operationally important

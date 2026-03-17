@@ -27,6 +27,16 @@ const createdAuditIds = [];
 const createdTierIds = [];
 let fixtureResourceIds = null;
 
+async function waitFor(check, timeoutMs = 15000, intervalMs = 250) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const result = await check();
+    if (result) return result;
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error(`Timed out after ${timeoutMs}ms`);
+}
+
 async function createAuthUser(label) {
   const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   const email = `${slug}+${Date.now()}@playfunded.local`;
@@ -375,17 +385,29 @@ try {
       timeout: 15000,
     });
 
-    const [rejectedKyc, approvedKyc, rejectedPayout, approvedPayoutRow, payoutChallenge, settledPick, settleChallenge, banTarget] =
-      await Promise.all([
-        prisma.kycSubmission.findUnique({ where: { id: fixture.ids.rejectedKycId } }),
-        prisma.kycSubmission.findUnique({ where: { id: fixture.ids.approvedKycId } }),
-        prisma.payout.findUnique({ where: { id: fixture.ids.rejectedPayoutId } }),
-        prisma.payout.findUnique({ where: { id: approvedPayout.id } }),
-        prisma.challenge.findUnique({ where: { id: fixture.ids.payoutChallengeId } }),
-        prisma.pick.findUnique({ where: { id: fixture.ids.pendingPickId } }),
-        prisma.challenge.findUnique({ where: { id: fixture.ids.settleChallengeId } }),
-        prisma.user.findUnique({ where: { id: fixture.ids.banTargetId } }),
-      ]);
+    const [
+      rejectedKyc,
+      approvedKyc,
+      rejectedPayout,
+      approvedPayoutRow,
+      payoutChallenge,
+      settledPick,
+      settleChallenge,
+    ] = await Promise.all([
+      prisma.kycSubmission.findUnique({ where: { id: fixture.ids.rejectedKycId } }),
+      prisma.kycSubmission.findUnique({ where: { id: fixture.ids.approvedKycId } }),
+      prisma.payout.findUnique({ where: { id: fixture.ids.rejectedPayoutId } }),
+      prisma.payout.findUnique({ where: { id: approvedPayout.id } }),
+      prisma.challenge.findUnique({ where: { id: fixture.ids.payoutChallengeId } }),
+      prisma.pick.findUnique({ where: { id: fixture.ids.pendingPickId } }),
+      prisma.challenge.findUnique({ where: { id: fixture.ids.settleChallengeId } }),
+    ]);
+    const banTarget = await waitFor(async () => {
+      const user = await prisma.user.findUnique({
+        where: { id: fixture.ids.banTargetId },
+      });
+      return user?.isBanned === false && user.banReason === null ? user : null;
+    });
 
     assert.equal(kycRejectResponse.status(), 200);
     assert.equal(rejectedKyc?.status, "rejected");

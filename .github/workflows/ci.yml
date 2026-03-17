@@ -47,6 +47,9 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Pin npm
+        run: npm install -g npm@11.9.0
+
       - name: Install
         run: |
           set -o pipefail
@@ -78,6 +81,9 @@ jobs:
         with:
           node-version: 20
           cache: npm
+
+      - name: Pin npm
+        run: npm install -g npm@11.9.0
 
       - name: Install
         run: |
@@ -138,6 +144,9 @@ jobs:
         with:
           node-version: 20
           cache: npm
+
+      - name: Pin npm
+        run: npm install -g npm@11.9.0
 
       - name: Install
         run: |
@@ -203,6 +212,9 @@ jobs:
         with:
           node-version: 20
           cache: npm
+
+      - name: Pin npm
+        run: npm install -g npm@11.9.0
 
       - name: Install
         run: |

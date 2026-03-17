@@ -205,7 +205,9 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm ci
+        run: |
+          set -o pipefail
+          npm ci 2>&1 | awk '!/The configuration property `package.json#prisma`/ && !/The Prisma config file in prisma.config.ts overrides the deprecated `package.json#prisma` property in package.json\./ && !/For more information, see: https:\/\/pris.ly\/prisma-config/'
 
       - name: Production dependency audit
         run: npm audit --omit=dev --audit-level=high

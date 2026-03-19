@@ -6,6 +6,7 @@ const email = process.env.GOOGLE_TEST_EMAIL;
 const password = process.env.GOOGLE_TEST_PASSWORD;
 const loginPath = process.env.GOOGLE_TEST_LOGIN_PATH ?? "/en/auth/login";
 const channel = process.env.PLAYWRIGHT_CHANNEL;
+const hostResolverRules = process.env.HOST_RESOLVER_RULES;
 
 if (!email || !password) {
   throw new Error("GOOGLE_TEST_EMAIL and GOOGLE_TEST_PASSWORD are required");
@@ -37,6 +38,7 @@ async function maybeHandleGoogleIntermediates(page) {
 const browser = await chromium.launch({
   headless: true,
   ...(channel ? { channel } : {}),
+  ...(hostResolverRules ? { args: [`--host-resolver-rules=${hostResolverRules}`] } : {}),
 });
 
 try {

@@ -4,6 +4,7 @@ const path = require("node:path");
 
 const { validateKycFile } = require("../src/lib/kyc-file.ts");
 const {
+  getKycDeployEnvironment,
   getKycScanMode,
   shouldQuarantineKycUpload,
 } = require("../src/lib/kyc-malware-scan.ts");
@@ -124,14 +125,47 @@ function proveKycValidation() {
   );
   delete process.env.KYC_SCAN_MODE;
   const originalNodeEnv = process.env.NODE_ENV;
+  const originalAppEnv = process.env.APP_ENV;
+  const originalVercelEnv = process.env.VERCEL_ENV;
+
+  delete process.env.APP_ENV;
+  delete process.env.VERCEL_ENV;
   process.env.NODE_ENV = "production";
+  assert.equal(getKycDeployEnvironment(), "production");
   assert.equal(getKycScanMode(), "require_clean");
-  process.env.NODE_ENV = "development";
+
+  process.env.VERCEL_ENV = "preview";
+  assert.equal(getKycDeployEnvironment(), "preview");
   assert.equal(getKycScanMode(), "best_effort");
+
+  process.env.APP_ENV = "staging";
+  assert.equal(getKycDeployEnvironment(), "staging");
+  assert.equal(getKycScanMode(), "best_effort");
+
+  process.env.APP_ENV = "production";
+  assert.equal(getKycDeployEnvironment(), "production");
+  assert.equal(getKycScanMode(), "require_clean");
+
+  delete process.env.APP_ENV;
+  delete process.env.VERCEL_ENV;
+  process.env.NODE_ENV = "development";
+  assert.equal(getKycDeployEnvironment(), "development");
+  assert.equal(getKycScanMode(), "best_effort");
+
   if (originalNodeEnv === undefined) {
     delete process.env.NODE_ENV;
   } else {
     process.env.NODE_ENV = originalNodeEnv;
+  }
+  if (originalAppEnv === undefined) {
+    delete process.env.APP_ENV;
+  } else {
+    process.env.APP_ENV = originalAppEnv;
+  }
+  if (originalVercelEnv === undefined) {
+    delete process.env.VERCEL_ENV;
+  } else {
+    process.env.VERCEL_ENV = originalVercelEnv;
   }
 
   assertMatch(

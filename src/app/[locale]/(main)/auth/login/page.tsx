@@ -2,6 +2,7 @@
 
 import { useFormState, useFormStatus } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
+import NextLink from 'next/link'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { signInWithEmail } from '@/app/actions/auth'
@@ -56,18 +57,19 @@ function LoginForm() {
         {/* OAuth error */}
         {oauthError && (
           <div className="bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-            <p className="text-destructive text-sm">Error al iniciar sesión con Google. Inténtalo de nuevo.</p>
+            <p className="text-destructive text-sm">{t('oauthError')}</p>
           </div>
         )}
 
         {/* Google sign-in */}
-        <Link
+        <NextLink
           href="/api/auth/google"
+          locale={false}
           className="flex items-center justify-center gap-3 w-full px-4 py-2.5 rounded-md border border-border bg-secondary text-foreground text-sm font-medium hover:bg-secondary/80 transition-colors"
         >
           <GoogleIcon />
           {t('googleButton')}
-        </Link>
+        </NextLink>
 
         {/* Divider */}
         <div className="relative flex items-center gap-3">

@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlayFunded — Nordic</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+
+    :root {
+      --navy: #1a1a2e;
+      --navy-light: #252545;
+      --green: #00a878;
+      --green-light: #00c48c;
+      --bg: #ffffff;
+      --card: #f5f5f0;
+      --border: #e8e8e0;
+      --text: #1a1a2e;
+      --muted: #6b7280;
+      --muted-light: #9ca3af;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+    h1, h2, h3, h4 { font-family: 'Syne', sans-serif; }
+
+    /* ── TICKER ── */
+    .ticker-wrap {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      height: 36px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 200;
+    }
+    .ticker-label {
+      flex-shrink: 0;
+      padding: 0 18px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--navy);
+      border-right: 1px solid var(--border);
+      height: 100%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .live-dot-svg { width: 12px; height: 12px; flex-shrink: 0; }
+    @keyframes pulse-dot { 0%,100% { opacity:1; r:3; } 70% { opacity:0; r:5.5; } }
+    .pulse-anim { animation: pulse-dot 2s ease-out infinite; }
+    .ticker-scroll-wrap { overflow: hidden; flex: 1; height: 100%; display: flex; align-items: center; }
+    .ticker-inner {
+      display: flex; white-space: nowrap;
+      animation: ticker-run 32s linear infinite;
+      width: max-content;
+    }
+    @keyframes ticker-run { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    .ticker-item { display: inline-flex; align-items: center; padding: 0 28px; gap: 8px; font-size: 12px; color: var(--muted); }
+    .ticker-name { color: var(--navy); font-weight: 600; }
+    .ticker-amount { color: var(--green); font-weight: 600; }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 36px; left: 0; right: 0;
+      z-index: 199;
+      background: rgba(255,255,255,0.96);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 40px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: -0.3px;
+      color: var(--navy);
+    }
+    .logo em { font-style: normal; color: var(--green); }
+    .nav-links {
+      display: flex; gap: 36px; list-style: none;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500; font-size: 14px;
+    }
+    .nav-links a { color: var(--muted); text-decoration: none; transition: color 150ms; cursor: pointer; }
+    .nav-links a:hover { color: var(--navy); }
+    @media (max-width:767px) { .nav-links { display: none; } nav { padding: 0 20px; } }
+    .nav-cta-group { display: flex; gap: 10px; align-items: center; }
+    .nav-btn-outline {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600; font-size: 13px;
+      background: transparent; color: var(--navy);
+      border: 1.5px solid var(--border);
+      padding: 8px 18px; border-radius: 6px; cursor: pointer;
+      transition: border-color 200ms, color 200ms;
+    }
+    .nav-btn-outline:hover { border-color: var(--navy); }
+    .nav-btn-fill {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600; font-size: 13px;
+      background: var(--navy); color: #fff;
+      border: 1.5px solid var(--navy);
+      padding: 8px 18px; border-radius: 6px; cursor: pointer;
+      transition: background 200ms, transform 150ms;
+    }
+    .nav-btn-fill:hover { background: var(--navy-light); transform: translateY(-1px); }
+
+    /* ── MAIN ── */
+    main { position: relative; z-index: 1; padding-top: 100px; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: calc(100vh - 100px);
+      display: flex; align-items: center;
+      padding: 80px 40px 60px;
+      max-width: 1280px; margin: 0 auto;
+      gap: 80px;
+    }
+    .hero-copy { flex: 1; min-width: 0; }
+    .hero-eyebrow {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 2.5px; text-transform: uppercase;
+      color: var(--green); margin-bottom: 24px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .eyebrow-line { width: 28px; height: 2px; background: var(--green); border-radius: 1px; }
+    h1 {
+      font-size: clamp(2.8rem, 6vw, 5.6rem);
+      font-weight: 800; line-height: 1.06;
+      letter-spacing: -1.5px; color: var(--navy);
+      margin-bottom: 24px;
+    }
+    .hero-sub {
+      font-size: 17px; line-height: 1.75;
+      color: var(--muted); max-width: 500px; margin-bottom: 44px;
+      font-weight: 400;
+    }
+    .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+    .btn-fill {
+      font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 15px;
+      background: var(--navy); color: #fff; border: 2px solid var(--navy);
+      padding: 14px 32px; border-radius: 8px; cursor: pointer;
+      transition: background 200ms, transform 150ms, box-shadow 200ms;
+    }
+    .btn-fill:hover { background: var(--navy-light); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(26,26,46,0.16); }
+    .btn-outline {
+      font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 15px;
+      background: transparent; color: var(--navy);
+      border: 2px solid var(--border);
+      padding: 14px 32px; border-radius: 8px; cursor: pointer;
+      transition: border-color 200ms, box-shadow 200ms;
+    }
+    .btn-outline:hover { border-color: var(--navy); box-shadow: 0 4px 16px rgba(26,26,46,0.08); }
+
+    /* ── ACCOUNT CARD ── */
+    .hero-card-wrap { flex: 0 0 420px; max-width: 420px; }
+    @media (max-width:1023px) { .hero-card-wrap { display: none; } .hero { min-height: auto; padding: 60px 20px 40px; } }
+    .account-card {
+      background: #fff;
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 4px 32px rgba(26,26,46,0.08), 0 1px 4px rgba(26,26,46,0.04);
+      position: relative;
+      overflow: hidden;
+    }
+    .account-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--green); border-radius: 16px 16px 0 0;
+    }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .card-label {
+      font-size: 10px; font-weight: 600; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
+    }
+    .card-balance {
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: 32px; color: var(--navy); line-height: 1;
+    }
+    .card-phase {
+      font-size: 10px; font-weight: 600; padding: 5px 12px;
+      background: rgba(0,168,120,0.1); color: var(--green);
+      border: 1.5px solid rgba(0,168,120,0.25);
+      border-radius: 20px; letter-spacing: 1px; text-transform: uppercase;
+    }
+
+    /* Sparkline */
+    .sparkline-wrap { margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .sparkline-label {
+      font-size: 10px; font-weight: 600; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+    }
+    .sparkline-svg { width: 100%; height: 64px; overflow: visible; }
+    @keyframes draw-sparkline { from { stroke-dashoffset: 700; } to { stroke-dashoffset: 0; } }
+    .spark-path {
+      fill: none; stroke: var(--green);
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      stroke-dasharray: 700; stroke-dashoffset: 700;
+      animation: draw-sparkline 2s cubic-bezier(0.4,0,0.2,1) 0.6s forwards;
+    }
+    .spark-dot { fill: var(--green); }
+
+    /* Picks table */
+    .picks-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 22px; }
+    .picks-table th {
+      color: var(--muted); font-weight: 600; font-size: 10px;
+      letter-spacing: 1px; text-transform: uppercase; text-align: left;
+      padding: 0 0 10px; border-bottom: 1.5px solid var(--border);
+      font-family: 'DM Sans', sans-serif;
+    }
+    .picks-table td {
+      padding: 9px 0; border-bottom: 1px solid var(--card);
+      color: var(--text); vertical-align: middle;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .picks-table td:last-child, .picks-table th:last-child { text-align: right; }
+    .pl-positive { color: var(--green); font-weight: 600; }
+    @keyframes blink-live { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+    .pl-live { color: #f59e0b; font-weight: 600; animation: blink-live 1.4s ease-in-out infinite; }
+
+    /* Progress */
+    .progress-section { margin-bottom: 22px; }
+    .progress-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 11px; font-weight: 600; }
+    .progress-label { color: var(--muted); }
+    .progress-value { color: var(--green); }
+    .progress-track { height: 6px; background: var(--card); border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; width: 72%; background: var(--green); border-radius: 3px; }
+    .payout-btn {
+      width: 100%; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 14px;
+      background: var(--navy); color: #fff; border: none;
+      padding: 13px; border-radius: 8px; cursor: pointer;
+      transition: background 200ms, box-shadow 200ms;
+    }
+    .payout-btn:hover { background: var(--navy-light); box-shadow: 0 6px 20px rgba(26,26,46,0.2); }
+
+    /* ── STATS ── */
+    .stats-section { padding: 52px 40px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .stats-inner {
+      max-width: 1280px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(4,1fr);
+    }
+    @media (max-width:767px) { .stats-inner { grid-template-columns: repeat(2,1fr); } }
+    .stat-item {
+      padding: 20px 32px; text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .stat-item:last-child { border-right: none; }
+    @media (max-width:767px) {
+      .stat-item:nth-child(2) { border-right: none; }
+      .stat-item { border-bottom: 1px solid var(--border); }
+      .stat-item:nth-child(3),.stat-item:nth-child(4) { border-bottom: none; }
+    }
+    .stat-num {
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: clamp(2rem, 3.5vw, 3rem); line-height: 1;
+      color: var(--navy); margin-bottom: 6px;
+    }
+    .stat-label { font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0.5px; }
+
+    /* ── HOW IT WORKS ── */
+    .section { padding: 100px 40px; max-width: 1280px; margin: 0 auto; }
+    .section-pre {
+      font-size: 11px; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--green); margin-bottom: 14px;
+    }
+    .section-h2 {
+      font-size: clamp(2rem, 3.5vw, 3rem); font-weight: 800;
+      letter-spacing: -0.5px; margin-bottom: 64px; color: var(--navy);
+    }
+    .section-h2 em { font-style: normal; color: var(--green); }
+    .steps-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; }
+    @media (max-width:767px) { .steps-grid { grid-template-columns: 1fr; } }
+    .step-card {
+      padding: 36px 32px;
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      transition: border-color 250ms, box-shadow 250ms, transform 200ms;
+    }
+    .step-card:hover {
+      border-color: var(--navy);
+      box-shadow: 0 8px 32px rgba(26,26,46,0.1);
+      transform: translateY(-3px);
+    }
+    .step-num-circle {
+      width: 48px; height: 48px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 18px;
+      color: var(--navy);
+      transition: border-color 250ms;
+    }
+    .step-card:hover .step-num-circle { border-color: var(--green); color: var(--green); }
+    .step-h3 { font-size: 20px; font-weight: 800; margin-bottom: 12px; letter-spacing: -0.2px; color: var(--navy); }
+    .step-p { font-size: 14px; line-height: 1.75; color: var(--muted); }
+
+    /* ── TIERS ── */
+    .tiers-outer { padding: 0 40px 100px; max-width: 1280px; margin: 0 auto; }
+    .tiers-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; }
+    @media (max-width:767px) { .tiers-grid { grid-template-columns: 1fr; } .tiers-outer { padding: 0 20px 60px; } }
+    .tier-card {
+      background: #fff; border: 1.5px solid var(--border);
+      border-radius: 14px; padding: 36px;
+      position: relative; overflow: hidden; cursor: pointer;
+      transition: border-color 250ms, box-shadow 250ms, transform 200ms;
+    }
+    .tier-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--green); }
+    .tier-card:hover { border-color: var(--navy); transform: translateY(-4px); box-shadow: 0 12px 40px rgba(26,26,46,0.12); }
+    .tier-badge {
+      display: inline-flex; align-items: center;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--green); margin-bottom: 18px;
+    }
+    .tier-size {
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: 36px; line-height: 1; margin-bottom: 6px;
+      color: var(--navy); letter-spacing: -1px;
+    }
+    .tier-name-lbl { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+    .tier-divider { width: 100%; height: 1px; background: var(--border); margin-bottom: 22px; }
+    .tier-list { list-style: none; margin-bottom: 30px; }
+    .tier-list li {
+      font-size: 13px; color: var(--muted); padding: 8px 0;
+      border-bottom: 1px solid var(--card);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .tier-list li svg { flex-shrink: 0; }
+    .tier-list li strong { color: var(--navy); font-weight: 600; }
+    .tier-cta-btn {
+      width: 100%; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 14px;
+      background: var(--navy); color: #fff; border: none;
+      padding: 13px; border-radius: 8px; cursor: pointer;
+      transition: background 200ms, box-shadow 200ms;
+    }
+    .tier-cta-btn:hover { background: var(--navy-light); box-shadow: 0 6px 20px rgba(26,26,46,0.2); }
+
+    /* ── TESTIMONIALS ── */
+    .testi-section { background: var(--card); padding: 90px 40px; }
+    .testi-inner { max-width: 1280px; margin: 0 auto; }
+    .testi-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; margin-top: 64px; }
+    @media (max-width:767px) { .testi-grid { grid-template-columns: 1fr; } }
+    .testi-card {
+      background: #fff; border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 30px;
+      transition: box-shadow 250ms, transform 200ms;
+    }
+    .testi-card:hover { box-shadow: 0 8px 32px rgba(26,26,46,0.1); transform: translateY(-2px); }
+    .quote-icon { margin-bottom: 16px; }
+    .testi-quote { font-size: 14px; line-height: 1.75; color: var(--muted); margin-bottom: 24px; }
+    .testi-sep { width: 100%; height: 1px; background: var(--border); margin-bottom: 18px; }
+    .testi-footer { display: flex; align-items: center; justify-content: space-between; }
+    .testi-name { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 16px; color: var(--navy); }
+    .testi-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .testi-amount { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; color: var(--green); }
+
+    /* ── CTA ── */
+    .cta-section { background: var(--navy); padding: 100px 40px; text-align: center; }
+    .cta-inner { max-width: 720px; margin: 0 auto; }
+    .cta-title { font-size: clamp(2.2rem, 4vw, 3.4rem); font-weight: 800; color: #fff; margin-bottom: 18px; letter-spacing: -0.5px; }
+    .cta-sub { font-size: 16px; color: rgba(255,255,255,0.65); margin-bottom: 44px; line-height: 1.75; }
+    .cta-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .cta-btn-fill {
+      font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 15px;
+      background: var(--green); color: #fff; border: 2px solid var(--green);
+      padding: 14px 34px; border-radius: 8px; cursor: pointer;
+      transition: background 200ms, transform 150ms;
+    }
+    .cta-btn-fill:hover { background: var(--green-light); transform: translateY(-2px); }
+    .cta-btn-outline {
+      font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 15px;
+      background: transparent; color: rgba(255,255,255,0.8);
+      border: 2px solid rgba(255,255,255,0.25);
+      padding: 14px 34px; border-radius: 8px; cursor: pointer;
+      transition: border-color 200ms, color 200ms;
+    }
+    .cta-btn-outline:hover { border-color: rgba(255,255,255,0.6); color: #fff; }
+
+    /* ── FOOTER ── */
+    footer { background: var(--card); border-top: 1px solid var(--border); padding: 36px 40px; }
+    .footer-inner {
+      max-width: 1280px; margin: 0 auto;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 16px;
+    }
+    .footer-copy { font-size: 12px; color: var(--muted); }
+    .footer-links { display: flex; gap: 24px; list-style: none; }
+    .footer-links a {
+      font-size: 12px; color: var(--muted); text-decoration: none;
+      cursor: pointer; transition: color 150ms;
+    }
+    .footer-links a:hover { color: var(--green); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .spark-path { animation: none; stroke-dashoffset: 0; }
+      .ticker-inner { animation: none; }
+      .pulse-anim { animation: none; }
+      .pl-live { animation: none; }
+      * { transition-duration: 0ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TICKER -->
+  <div class="ticker-wrap" role="marquee" aria-label="Live funded trader activity">
+    <div class="ticker-label">
+      <svg class="live-dot-svg" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="3" fill="#00a878"/>
+        <circle class="pulse-anim" cx="7" cy="7" r="2.5" fill="none" stroke="#00a878" stroke-width="1.5"/>
+      </svg>
+      Live
+    </div>
+    <div class="ticker-scroll-wrap">
+      <div class="ticker-inner" aria-hidden="true">
+        <span class="ticker-item"><span class="ticker-name">Juan R. (MX)</span><span>—</span><span class="ticker-amount">$4,200 funded</span></span>
+        <span class="ticker-item"><span class="ticker-name">Andrea P. (CO)</span><span>—</span><span class="ticker-amount">$1,875 payout</span></span>
+        <span class="ticker-item"><span class="ticker-name">Marcos T. (AR)</span><span>—</span><span class="ticker-amount">$6,100 funded</span></span>
+        <span class="ticker-item"><span class="ticker-name">Sofia M. (CL)</span><span>—</span><span class="ticker-amount">$2,340 payout</span></span>
+        <span class="ticker-item"><span class="ticker-name">Diego F. (PE)</span><span>—</span><span class="ticker-amount">$3,150 funded</span></span>
+        <span class="ticker-item"><span class="ticker-name">Juan R. (MX)</span><span>—</span><span class="ticker-amount">$4,200 funded</span></span>
+        <span class="ticker-item"><span class="ticker-name">Andrea P. (CO)</span><span>—</span><span class="ticker-amount">$1,875 payout</span></span>
+        <span class="ticker-item"><span class="ticker-name">Marcos T. (AR)</span><span>—</span><span class="ticker-amount">$6,100 funded</span></span>
+        <span class="ticker-item"><span class="ticker-name">Sofia M. (CL)</span><span>—</span><span class="ticker-amount">$2,340 payout</span></span>
+        <span class="ticker-item"><span class="ticker-name">Diego F. (PE)</span><span>—</span><span class="ticker-amount">$3,150 funded</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <nav aria-label="Main navigation">
+    <div class="logo">Play<em>Funded</em></div>
+    <ul class="nav-links">
+      <li><a href="#challenges">Challenges</a></li>
+      <li><a href="#how">Proceso</a></li>
+      <li><a href="#traders">Traders</a></li>
+      <li><a href="#payouts">Payouts</a></li>
+    </ul>
+    <div class="nav-cta-group">
+      <button class="nav-btn-outline">Ingresar</button>
+      <button class="nav-btn-fill">Empezar</button>
+    </div>
+  </nav>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero" aria-labelledby="hero-h1">
+      <div class="hero-copy">
+        <p class="hero-eyebrow"><span class="eyebrow-line"></span>Sports Prop Trading para LATAM</p>
+        <h1 id="hero-h1">Opera con capital real. Cobra en 48 horas.</h1>
+        <p class="hero-sub">Demuestra tu habilidad en sports props y obtén hasta $25,000 en capital financiado. Quédate con hasta el 80% de tus ganancias.</p>
+        <div class="hero-actions">
+          <button class="btn-fill">Ver Challenges</button>
+          <button class="btn-outline">Como Funciona</button>
+        </div>
+      </div>
+
+      <div class="hero-card-wrap">
+        <div class="account-card" role="img" aria-label="Sample funded trader account dashboard showing balance and recent picks">
+          <div class="card-header">
+            <div>
+              <div class="card-label">Saldo de Cuenta</div>
+              <div class="card-balance">$12,840</div>
+            </div>
+            <div class="card-phase">Phase 2</div>
+          </div>
+
+          <div class="sparkline-wrap">
+            <div class="sparkline-label">Performance — 30 dias</div>
+            <svg class="sparkline-svg" viewBox="0 0 370 64" preserveAspectRatio="none" role="img" aria-label="Upward trending performance chart over 30 days">
+              <path class="spark-path" d="M0,52 L22,48 L44,44 L66,46 L88,40 L110,35 L132,30 L154,27 L176,29 L198,22 L220,18 L242,21 L264,14 L286,10 L308,12 L330,7 L352,5 L370,3"/>
+              <circle class="spark-dot" cx="370" cy="3" r="4" aria-hidden="true"/>
+            </svg>
+          </div>
+
+          <table class="picks-table" aria-label="Recent picks">
+            <thead>
+              <tr><th>Pick</th><th>Odds</th><th>Stake</th><th>P&amp;L</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Real Madrid ML</td><td>1.85</td><td>$200</td><td class="pl-positive">+$170</td></tr>
+              <tr><td>Lakers -3.5</td><td>1.91</td><td>$150</td><td class="pl-positive">+$143</td></tr>
+              <tr><td>Chiefs ML</td><td>2.10</td><td>$100</td><td class="pl-live">LIVE</td></tr>
+            </tbody>
+          </table>
+
+          <div class="progress-section">
+            <div class="progress-header">
+              <span class="progress-label">Progreso del Challenge</span>
+              <span class="progress-value">72%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" role="progressbar" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+          </div>
+
+          <button class="payout-btn">Solicitar Pago</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATS -->
+    <section class="stats-section" aria-label="Platform statistics">
+      <div class="stats-inner">
+        <div class="stat-item"><div class="stat-num">$183K+</div><div class="stat-label">Total Pagado</div></div>
+        <div class="stat-item"><div class="stat-num">247</div><div class="stat-label">Traders Financiados</div></div>
+        <div class="stat-item"><div class="stat-num">48h</div><div class="stat-label">Tiempo Prom. de Pago</div></div>
+        <div class="stat-item"><div class="stat-num">80%</div><div class="stat-label">Max Profit Split</div></div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section id="how" class="section" aria-labelledby="how-h2">
+      <p class="section-pre">El Proceso</p>
+      <h2 class="section-h2" id="how-h2">Simple. Justo. <em>Transparente.</em></h2>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-num-circle">1</div>
+          <h3 class="step-h3">Elige tu Challenge</h3>
+          <p class="step-p">Selecciona el tamaño de cuenta — Starter $5K, Pro $10K o Elite $25K — y empieza la evaluación de inmediato.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num-circle">2</div>
+          <h3 class="step-h3">Demuestra tu Habilidad</h3>
+          <p class="step-p">Tradea sports props con disciplina. Alcanza el profit target y respeta los límites de drawdown del período de evaluación.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num-circle">3</div>
+          <h3 class="step-h3">Recibe Capital y Pagos</h3>
+          <p class="step-p">Pasa el challenge y obtén una cuenta real financiada. Retira ganancias en 48 horas. Hasta 80% de profit split para ti.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHALLENGE TIERS -->
+    <div id="challenges">
+      <div style="max-width:1280px;margin:0 auto;padding:0 40px 40px;">
+        <p class="section-pre">Cuentas Disponibles</p>
+        <h2 class="section-h2">Elige tu <em>Challenge</em></h2>
+      </div>
+      <div class="tiers-outer">
+        <div class="tiers-grid" role="list" aria-label="Challenge tiers">
+          <div class="tier-card" role="listitem">
+            <span class="tier-badge">Starter</span>
+            <div class="tier-size">$5,000</div>
+            <div class="tier-name-lbl">Cuenta Starter</div>
+            <div class="tier-divider"></div>
+            <ul class="tier-list">
+              <li>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="#00a878" stroke-width="1.5"/><path d="M4 7l2 2 4-4" stroke="#00a878" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <strong>70%</strong> profit split
+              </li>
+              <li>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="#00a878" stroke-width="1.5"/><path d="M4 7l2 2 4-4" stroke="#00a878" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <strong>48h</strong> payout promedio
+              </li>
+              <li>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="#00a878" stroke-width="1.5"/><path d="M4 7l2 2 4-4" stroke="#00a878" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Max drawdown 8%
+              </li>
+              <li>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="#00a878" stroke-width="1.5"/><path d="M4 7l2 2 4-4" stroke="#00a878" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Profit target 10%
+              </li>
+            </ul>
+            <button class="tier-cta-btn">Empezar — $97</button>
+          </div>
+          <div class="tier-card" role="listitem">
+            <span class="tier-badge">Pro</span>
+            <div class="tier-size">$10,000</div>
+            <div class="tier-name-lbl">Cuenta Pro</div>
+            <div class="tier-divider"></div>
+            <ul class="tier-list">
+              <li>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="#00a878" stroke-width="1.5"/><path d="M4 7l2 2 4-4" stroke="#00a878" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <strong>75%</strong> profit split
+              </li>
+              <li>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="#00a878" stroke-width="1.5"/><path d="M4 7l2 2 4-4" stroke="#00a878" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <strong>48h</strong> payout promedio
+              </li>
+              <li>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="#00a878" stroke-width="1.5"/><path d="M4 7l2 2 4-4" stroke="#00a878" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Max drawdown 8%
+              </li>
+              <li>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="#00a878" stroke-width="1.5"/><path d="M4 7l2 2 4-4" stroke="#00a878" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Analytics avanzado
+              </li>
+            </ul>
+            <button class="tier-cta-btn">Empezar — $197</button>
+          </div>
+          <div class="tier-card" role="listitem">
+            <span class="tier-badge">Elite</span>
+            <div class="tier-size">$25,000</div>
+            <div class="tier-name-lbl">Cuenta Elite</div>
+            <div class="tier-divider"></div>
+            <ul class="tier-list">
+              <li>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="#00a878" stroke-width="1.5"/><path d="M4 7l2 2 4-4" stroke="#00a878" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <strong>80%</strong> profit split
+              </li>
+              <li>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="#00a878" stroke-width="1.5"/><path d="M4 7l2 2 4-4" stroke="#00a878" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <strong>48h</strong> payout promedio
+              </li>
+              <li>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="#00a878" stroke-width="1.5"/><path d="M4 7l2 2 4-4" stroke="#00a878" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Max drawdown 8%
+              </li>
+              <li>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="#00a878" stroke-width="1.5"/><path d="M4 7l2 2 4-4" stroke="#00a878" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Account manager dedicado
+              </li>
+            </ul>
+            <button class="tier-cta-btn">Empezar — $397</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TESTIMONIALS -->
+    <section id="traders" class="testi-section" aria-label="Trader testimonials">
+      <div class="testi-inner">
+        <p class="section-pre">Resultados</p>
+        <h2 class="section-h2">Lo que dicen <em>nuestros traders</em></h2>
+        <div class="testi-grid">
+          <div class="testi-card">
+            <div class="quote-icon">
+              <svg width="28" height="22" viewBox="0 0 28 22" fill="none" aria-hidden="true">
+                <path d="M0 22V13.2C0 5.87 4.2 1.47 12.6 0L13.8 2.2C10.2 3.13 7.53 4.67 5.8 6.8C4.13 8.87 3.3 11.27 3.3 14H6.6V22H0ZM15.4 22V13.2C15.4 5.87 19.6 1.47 28 0L29.2 2.2C25.6 3.13 22.93 4.67 21.2 6.8C19.53 8.87 18.7 11.27 18.7 14H22V22H15.4Z" fill="#e8e8e0"/>
+              </svg>
+            </div>
+            <p class="testi-quote">Pasé el Elite challenge en 18 días. El proceso fue completamente transparente y el payout llegó en menos de 48 horas. Exactamente como prometieron.</p>
+            <div class="testi-sep"></div>
+            <div class="testi-footer">
+              <div>
+                <div class="testi-name">Juan R.</div>
+                <div class="testi-meta">Mexico — Elite Trader</div>
+              </div>
+              <div class="testi-amount">+$4,200</div>
+            </div>
+          </div>
+          <div class="testi-card">
+            <div class="quote-icon">
+              <svg width="28" height="22" viewBox="0 0 28 22" fill="none" aria-hidden="true">
+                <path d="M0 22V13.2C0 5.87 4.2 1.47 12.6 0L13.8 2.2C10.2 3.13 7.53 4.67 5.8 6.8C4.13 8.87 3.3 11.27 3.3 14H6.6V22H0ZM15.4 22V13.2C15.4 5.87 19.6 1.47 28 0L29.2 2.2C25.6 3.13 22.93 4.67 21.2 6.8C19.53 8.87 18.7 11.27 18.7 14H22V22H15.4Z" fill="#e8e8e0"/>
+              </svg>
+            </div>
+            <p class="testi-quote">Tres meses en Pro y ya he retirado cuatro veces. La plataforma es confiable, el equipo es profesional y los pagos siempre puntuales.</p>
+            <div class="testi-sep"></div>
+            <div class="testi-footer">
+              <div>
+                <div class="testi-name">Andrea P.</div>
+                <div class="testi-meta">Colombia — Pro Trader</div>
+              </div>
+              <div class="testi-amount">+$1,875</div>
+            </div>
+          </div>
+          <div class="testi-card">
+            <div class="quote-icon">
+              <svg width="28" height="22" viewBox="0 0 28 22" fill="none" aria-hidden="true">
+                <path d="M0 22V13.2C0 5.87 4.2 1.47 12.6 0L13.8 2.2C10.2 3.13 7.53 4.67 5.8 6.8C4.13 8.87 3.3 11.27 3.3 14H6.6V22H0ZM15.4 22V13.2C15.4 5.87 19.6 1.47 28 0L29.2 2.2C25.6 3.13 22.93 4.67 21.2 6.8C19.53 8.87 18.7 11.27 18.7 14H22V22H15.4Z" fill="#e8e8e0"/>
+              </svg>
+            </div>
+            <p class="testi-quote">Empecé en Starter y escale hasta Elite. PlayFunded me dio acceso a capital real que de otra manera nunca habría tenido. Recomendado 100%.</p>
+            <div class="testi-sep"></div>
+            <div class="testi-footer">
+              <div>
+                <div class="testi-name">Marcos T.</div>
+                <div class="testi-meta">Argentina — Elite Trader</div>
+              </div>
+              <div class="testi-amount">+$6,100</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section" aria-labelledby="cta-h2">
+      <div class="cta-inner">
+        <h2 class="cta-title" id="cta-h2">Empieza tu Challenge hoy</h2>
+        <p class="cta-sub">Mas de 247 traders latinoamericanos ya operan con capital real. Unete, pasa el challenge y cobra en 48 horas.</p>
+        <div class="cta-actions">
+          <button class="cta-btn-fill">Ver Challenges</button>
+          <button class="cta-btn-outline">Hablar con Soporte</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <p class="footer-copy">© 2025 PlayFunded. Todos los derechos reservados. El trading deportivo conlleva riesgo.</p>
+      <ul class="footer-links">
+        <li><a href="#">Terminos</a></li>
+        <li><a href="#">Privacidad</a></li>
+        <li><a href="#">Contacto</a></li>
+        <li><a href="#">FAQ</a></li>
+      </ul>
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -39,6 +39,36 @@ interface FileState {
   error?: string;
 }
 
+function mapUploadError(code: string | undefined, t: Record<string, string>): string {
+  switch (code) {
+    case "file_empty":
+      return t.fileEmpty;
+    case "file_bad_signature":
+      return t.fileBadSignature;
+    case "file_name_invalid":
+      return t.fileNameInvalid;
+    case "file_malware_detected":
+      return t.fileMalwareDetected;
+    case "scan_unavailable":
+      return t.scanUnavailable;
+    case "already_approved":
+      return t.alreadyApproved;
+    case "pending_review":
+      return t.pendingReview;
+    case "payouts_disabled_country":
+      return t.payoutsDisabledCountry;
+    case "no_funded_challenge":
+      return t.noFundedChallenge;
+    case "no_profit_available":
+      return t.noProfitAvailable;
+    case "quarantine_failed":
+    case "upload_failed":
+      return t.uploadFailed;
+    default:
+      return t.uploadFailed;
+  }
+}
+
 export function KycForm({ t }: KycFormProps) {
   const [fullName, setFullName] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
@@ -69,13 +99,13 @@ export function KycForm({ t }: KycFormProps) {
     const fd = new FormData();
     fd.append("file", file);
     const res = await fetch("/api/kyc/upload", { method: "POST", body: fd });
+    const data = (await res.json()) as { path?: string; error?: string };
     if (!res.ok) {
-      setter({ uploading: false, error: "Upload failed" });
+      setter({ uploading: false, error: mapUploadError(data.error, t) });
       return null;
     }
-    const data = (await res.json()) as { path?: string; error?: string };
     if (!data.path) {
-      setter({ uploading: false, error: data.error ?? "Upload failed" });
+      setter({ uploading: false, error: mapUploadError(data.error, t) });
       return null;
     }
     setter({ uploading: false, path: data.path });
@@ -115,7 +145,7 @@ export function KycForm({ t }: KycFormProps) {
     setSubmitting(false);
 
     if (result.error) {
-      setError(result.error);
+      setError(mapUploadError(result.error, t));
     } else {
       setSubmitted(true);
     }

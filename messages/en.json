@@ -323,7 +323,18 @@
     "submitted": "Submitted! We'll review within 24 hours.",
     "fileTooBig": "File must be under 10 MB",
     "fileWrongType": "Only JPG, PNG, PDF allowed",
-    "required": "This field is required"
+    "required": "This field is required",
+    "uploadFailed": "Upload failed. Try again.",
+    "fileEmpty": "The file is empty.",
+    "fileBadSignature": "The file contents do not match the selected file type.",
+    "fileNameInvalid": "The file name is not allowed.",
+    "fileMalwareDetected": "This file was blocked by our security scanner.",
+    "scanUnavailable": "Document scanning is temporarily unavailable. Try again shortly.",
+    "alreadyApproved": "Your identity is already verified.",
+    "pendingReview": "Your verification is already under review.",
+    "payoutsDisabledCountry": "Identity verification is not available in your country right now.",
+    "noFundedChallenge": "KYC becomes available once you have a funded challenge ready for payout.",
+    "noProfitAvailable": "KYC becomes available once you have profit ready to request for payout."
   },
   "leaderboard": {
     "pageTitle": "Leaderboard",
@@ -401,10 +412,11 @@
   },
   "auth": {
     "login": {
-      "title": "PlayFunded",
-      "subtitle": "Sign in to your account",
-      "googleButton": "Continue with Google",
-      "orEmail": "or with email",
+    "title": "PlayFunded",
+    "subtitle": "Sign in to your account",
+    "googleButton": "Continue with Google",
+    "oauthError": "Google sign-in failed. Please try again.",
+    "orEmail": "or with email",
       "emailLabel": "Email",
       "emailPlaceholder": "you@email.com",
       "passwordLabel": "Password",

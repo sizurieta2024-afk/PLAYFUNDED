@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlayFunded — Crimson</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    :root {
+      --crimson: #c0162b;
+      --red: #ff4d6d;
+      --gold: #ffd700;
+      --gold-muted: #c9a227;
+      --bg: #0d0305;
+      --card: #140208;
+      --border: rgba(192,22,43,0.25);
+      --border-subtle: rgba(192,22,43,0.12);
+      --text: #f5e8eb;
+      --muted: #9a7b80;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .heading-font { font-family: 'Cormorant Garamond', serif; }
+
+    /* TICKER */
+    .ticker-wrap {
+      background: rgba(20,2,8,.95);
+      border-bottom: 1px solid var(--border-subtle);
+      overflow: hidden;
+      height: 36px;
+      display: flex;
+      align-items: center;
+    }
+    .ticker-label {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 16px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      border-right: 1px solid var(--border-subtle);
+      height: 100%;
+    }
+    .live-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--crimson);
+      box-shadow: 0 0 6px var(--crimson);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { opacity:1; box-shadow:0 0 6px var(--crimson); }
+      50% { opacity:.6; box-shadow:0 0 2px var(--crimson); }
+    }
+    .ticker-track { flex: 1; overflow: hidden; }
+    .ticker-inner {
+      display: flex;
+      white-space: nowrap;
+      animation: ticker-scroll 32s linear infinite;
+    }
+    .ticker-item {
+      display: inline-flex;
+      align-items: center;
+      padding: 0 32px;
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--muted);
+      letter-spacing: .02em;
+    }
+    .ticker-item .amt { color: var(--gold); font-weight: 600; margin: 0 4px; }
+    .ticker-sep { color: var(--border); padding: 0 4px; }
+    @keyframes ticker-scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .ticker-inner, .live-dot, .sparkline-path, .progress-fill {
+        animation: none !important;
+        stroke-dashoffset: 0 !important;
+      }
+    }
+
+    /* NAV */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,3,5,.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .nav-inner {
+      max-width: 1200px; margin: 0 auto; padding: 0 32px;
+      height: 60px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 700; font-size: 22px;
+      color: var(--text); letter-spacing: .02em;
+    }
+    .logo span { color: var(--crimson); }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a {
+      font-size: 13px; font-weight: 400; color: var(--muted);
+      text-decoration: none; transition: color 150ms; cursor: pointer; letter-spacing: .04em;
+    }
+    .nav-links a:hover { color: var(--text); }
+    @media (max-width: 768px) { .nav-links { display: none; } }
+    .nav-cta {
+      background: var(--crimson); color: var(--text); font-size: 13px; font-weight: 600;
+      padding: 9px 22px; border: none; cursor: pointer;
+      transition: background 200ms; letter-spacing: .04em; text-transform: uppercase;
+    }
+    .nav-cta:hover { background: #a01226; }
+
+    /* HERO */
+    .hero {
+      max-width: 1200px; margin: 0 auto; padding: 100px 32px 80px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start;
+    }
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; }
+      .hero-right { display: none; }
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 11px; font-weight: 600; letter-spacing: .15em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 24px;
+      border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;
+    }
+    .hero-eyebrow-line { width: 24px; height: 1px; background: var(--crimson); }
+
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(3rem, 5vw + 1rem, 5.5rem);
+      font-weight: 700; line-height: 1.0; letter-spacing: -.01em;
+      color: var(--text); margin-bottom: 24px;
+    }
+    h1 .accent { color: var(--crimson); }
+    h1 .gold { color: var(--gold); }
+    .hero-sub { font-size: 16px; line-height: 1.7; color: var(--muted); margin-bottom: 40px; max-width: 420px; font-weight: 300; }
+    .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+    .btn-primary {
+      background: var(--crimson); color: #fff; font-size: 14px; font-weight: 600;
+      padding: 14px 32px; border: none; cursor: pointer;
+      transition: background 200ms; letter-spacing: .06em; text-transform: uppercase;
+    }
+    .btn-primary:hover { background: #a01226; }
+    .btn-ghost {
+      background: transparent; color: var(--muted); font-size: 13px; font-weight: 400;
+      padding: 14px 24px; border: 1px solid var(--border);
+      cursor: pointer; transition: border-color 200ms, color 200ms; letter-spacing: .04em;
+    }
+    .btn-ghost:hover { border-color: var(--crimson); color: var(--text); }
+
+    .hero-divider { width: 40px; height: 2px; background: var(--crimson); margin: 40px 0; }
+
+    .hero-stats-inline { display: flex; gap: 32px; flex-wrap: wrap; }
+    .hero-stat-item {}
+    .hero-stat-num {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px; font-weight: 700; color: var(--gold); line-height: 1; margin-bottom: 2px;
+    }
+    .hero-stat-label { font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+
+    /* ACCOUNT CARD */
+    .account-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 28px;
+    }
+    .card-header {
+      display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;
+    }
+    .card-account-label {
+      font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
+    }
+    .card-account-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px; font-weight: 700; color: var(--text);
+    }
+    .card-badge {
+      font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--crimson); border: 1px solid var(--border); padding: 3px 8px;
+    }
+    .card-balance-label { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+    .card-balance {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 44px; font-weight: 700; color: var(--text); letter-spacing: -.01em; line-height: 1; margin-bottom: 6px;
+    }
+    .card-balance-sub { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+
+    .sparkline-wrap { width: 100%; height: 60px; margin-bottom: 20px; }
+    .sparkline-path {
+      stroke-dasharray: 420;
+      stroke-dashoffset: 420;
+      animation: draw-line 1.8s ease-out .4s forwards;
+    }
+    @keyframes draw-line { to { stroke-dashoffset: 0; } }
+
+    .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 6px; letter-spacing: .04em; }
+    .progress-label strong { color: var(--gold); font-weight: 700; }
+    .progress-track { height: 4px; background: rgba(255,255,255,.06); overflow: hidden; }
+    .progress-fill {
+      height: 100%; width: 72%; background: var(--crimson);
+      animation: progress-grow 1.4s ease-out .6s both; transform-origin: left;
+    }
+    @keyframes progress-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+    .picks-section-label { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 20px 0 12px; }
+    .picks-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .picks-table th {
+      text-align: left; color: var(--muted); font-weight: 500; font-size: 10px;
+      text-transform: uppercase; letter-spacing: .08em; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .picks-table td { padding: 8px 0; border-bottom: 1px solid rgba(192,22,43,.06); color: var(--text); font-weight: 400; }
+    .picks-table tr:last-child td { border-bottom: none; }
+    .pnl-pos { color: var(--gold); font-weight: 600; }
+    .live-badge {
+      font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--crimson); border: 1px solid var(--border); padding: 1px 5px;
+    }
+
+    .payout-btn {
+      width: 100%; background: var(--crimson); color: #fff; font-size: 13px; font-weight: 600;
+      padding: 12px; border: none; cursor: pointer; transition: background 200ms; margin-top: 20px;
+      text-transform: uppercase; letter-spacing: .08em;
+    }
+    .payout-btn:hover { background: #a01226; }
+
+    /* STATS */
+    .stats-section {
+      background: var(--card);
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .stats-inner {
+      max-width: 1200px; margin: 0 auto; padding: 0 32px;
+      display: grid; grid-template-columns: repeat(4,1fr);
+    }
+    @media (max-width: 640px) { .stats-inner { grid-template-columns: repeat(2,1fr); } }
+    .stat-card { padding: 32px 24px; border-right: 1px solid var(--border-subtle); text-align: center; position: relative; }
+    .stat-card:last-child { border-right: none; }
+    .stat-num {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 36px; font-weight: 700; color: var(--gold); line-height: 1; margin-bottom: 8px;
+    }
+    .stat-label { font-size: 12px; color: var(--muted); font-weight: 400; letter-spacing: .04em; }
+
+    /* SECTIONS */
+    .section { max-width: 1200px; margin: 0 auto; padding: 96px 32px; }
+    .section-eyebrow {
+      font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 12px; display: flex; align-items: center; gap: 12px;
+    }
+    .section-eyebrow::before { content:''; display:block; width:24px; height:1px; background:var(--crimson); }
+    .section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2rem, 3vw, 3rem); font-weight: 700; color: var(--text); margin-bottom: 56px; letter-spacing: -.01em;
+    }
+
+    /* STEPS */
+    .steps-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--border-subtle); }
+    @media (max-width: 640px) { .steps-grid { grid-template-columns: 1fr; } }
+    .step-card {
+      background: var(--bg); padding: 36px 28px;
+      transition: background 200ms; cursor: default;
+    }
+    .step-card:hover { background: var(--card); }
+    .step-circle {
+      width: 48px; height: 48px; border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center; margin-bottom: 24px;
+    }
+    .step-num-inner {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 20px; font-weight: 700; color: var(--crimson);
+    }
+    .step-icon-inner { display: flex; align-items: center; justify-content: center; }
+    .step-title { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+    .step-desc { font-size: 14px; line-height: 1.7; color: var(--muted); font-weight: 300; }
+
+    /* TIERS */
+    .tiers-section { background: var(--card); border-top: 1px solid var(--border-subtle); }
+    .tiers-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+    @media (max-width: 640px) { .tiers-grid { grid-template-columns: 1fr; } }
+    .tier-card {
+      background: var(--bg); padding: 32px;
+      border-left: 3px solid transparent;
+      transition: border-color 200ms; cursor: pointer; position: relative;
+    }
+    .tier-card:hover { border-left-color: var(--crimson); }
+    .tier-card.featured { border-left-color: var(--crimson); background: rgba(192,22,43,.04); }
+    .tier-badge {
+      display: inline-block; background: var(--crimson); color: #fff;
+      font-size: 10px; font-weight: 700; padding: 2px 8px; margin-bottom: 16px;
+      text-transform: uppercase; letter-spacing: .08em;
+    }
+    .tier-name { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; margin-bottom: 12px; }
+    .tier-amount {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 40px; font-weight: 700; color: var(--text); line-height: 1; margin-bottom: 4px;
+    }
+    .tier-card:hover .tier-amount, .tier-card.featured .tier-amount { color: var(--gold); }
+    .tier-price { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
+    .tier-features { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+    .tier-feature { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--text); font-weight: 300; }
+    .tier-check { flex-shrink: 0; }
+    .tier-btn {
+      width: 100%; padding: 12px; font-size: 13px; font-weight: 600;
+      cursor: pointer; border: 1px solid var(--border); color: var(--muted); background: transparent;
+      transition: background 200ms, color 200ms, border-color 200ms;
+      text-transform: uppercase; letter-spacing: .08em;
+    }
+    .tier-card.featured .tier-btn, .tier-btn:hover { background: var(--crimson); color: #fff; border-color: var(--crimson); }
+
+    /* TESTIMONIALS */
+    .testimonials-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+    @media (max-width: 640px) { .testimonials-grid { grid-template-columns: 1fr; } }
+    .tcard {
+      background: var(--card); padding: 28px;
+      border: 1px solid var(--border-subtle);
+      transition: border-color 200ms;
+    }
+    .tcard:hover { border-color: var(--border); }
+    .tcard-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+    .tcard-avatar {
+      width: 44px; height: 44px; border: 1px solid var(--border);
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 17px; font-weight: 700; color: var(--crimson);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .tcard-name { font-size: 15px; font-weight: 600; color: var(--text); }
+    .tcard-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .tcard-amount {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px; font-weight: 700; color: var(--gold); margin-bottom: 10px; line-height: 1;
+    }
+    .tcard-text { font-size: 14px; line-height: 1.7; color: var(--muted); font-weight: 300; font-style: italic; }
+
+    /* CTA */
+    .cta-section {
+      background: var(--crimson);
+      padding: 96px 32px; text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .cta-section::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle at 50% 0%, rgba(255,77,109,.3) 0%, transparent 70%);
+    }
+    .cta-inner { max-width: 640px; margin: 0 auto; position: relative; }
+    .cta-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.6); margin-bottom: 16px; }
+    .cta-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2.2rem, 4vw, 3.6rem); font-weight: 700; color: #fff;
+      margin-bottom: 20px; letter-spacing: -.01em; line-height: 1.05;
+    }
+    .cta-sub { font-size: 16px; color: rgba(255,255,255,.75); margin-bottom: 40px; line-height: 1.6; font-weight: 300; }
+    .cta-btn {
+      background: transparent; color: #fff; font-size: 14px; font-weight: 600;
+      padding: 15px 40px; border: 2px solid rgba(255,255,255,.6); cursor: pointer;
+      transition: background 200ms, border-color 200ms; letter-spacing: .08em; text-transform: uppercase;
+    }
+    .cta-btn:hover { background: rgba(255,255,255,.12); border-color: #fff; }
+
+    /* FOOTER */
+    footer { background: var(--card); border-top: 1px solid var(--border-subtle); padding: 56px 32px 32px; }
+    .footer-inner { max-width: 1200px; margin: 0 auto; }
+    .footer-top { display: grid; grid-template-columns: 2fr repeat(3,1fr); gap: 48px; margin-bottom: 48px; }
+    @media (max-width: 768px) { .footer-top { grid-template-columns: 1fr; } }
+    .footer-logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 12px;
+    }
+    .footer-logo span { color: var(--crimson); }
+    .footer-tagline { font-size: 13px; color: var(--muted); line-height: 1.7; max-width: 240px; font-weight: 300; }
+    .footer-col h4 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--text); margin-bottom: 16px; }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .footer-col a { font-size: 13px; color: var(--muted); text-decoration: none; cursor: pointer; transition: color 150ms; font-weight: 300; }
+    .footer-col a:hover { color: var(--crimson); }
+    .footer-bottom { border-top: 1px solid var(--border-subtle); padding-top: 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .footer-copy { font-size: 12px; color: var(--muted); }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a { font-size: 12px; color: var(--muted); text-decoration: none; cursor: pointer; transition: color 150ms; }
+    .footer-links a:hover { color: var(--crimson); }
+  </style>
+</head>
+<body>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-label">
+    <span class="live-dot" role="img" aria-label="Transmisión en vivo"></span>
+    En vivo
+  </div>
+  <div class="ticker-track" aria-live="off">
+    <div class="ticker-inner">
+      <span class="ticker-item">Juan R. (MX) —<span class="amt">$4,200</span>financiado</span><span class="ticker-sep">·</span>
+      <span class="ticker-item">Andrea P. (CO) —<span class="amt">$1,875</span>cobrado</span><span class="ticker-sep">·</span>
+      <span class="ticker-item">Marcos T. (AR) —<span class="amt">$6,100</span>financiado</span><span class="ticker-sep">·</span>
+      <span class="ticker-item">Sofia M. (CL) —<span class="amt">$2,340</span>cobrado</span><span class="ticker-sep">·</span>
+      <span class="ticker-item">Diego F. (PE) —<span class="amt">$3,150</span>financiado</span><span class="ticker-sep">·</span>
+      <span class="ticker-item">Juan R. (MX) —<span class="amt">$4,200</span>financiado</span><span class="ticker-sep">·</span>
+      <span class="ticker-item">Andrea P. (CO) —<span class="amt">$1,875</span>cobrado</span><span class="ticker-sep">·</span>
+      <span class="ticker-item">Marcos T. (AR) —<span class="amt">$6,100</span>financiado</span><span class="ticker-sep">·</span>
+      <span class="ticker-item">Sofia M. (CL) —<span class="amt">$2,340</span>cobrado</span><span class="ticker-sep">·</span>
+      <span class="ticker-item">Diego F. (PE) —<span class="amt">$3,150</span>financiado</span><span class="ticker-sep">·</span>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav aria-label="Navegación principal">
+  <div class="nav-inner">
+    <div class="logo">Play<span>Funded</span></div>
+    <ul class="nav-links">
+      <li><a>Desafíos</a></li>
+      <li><a>Cómo funciona</a></li>
+      <li><a>Traders</a></li>
+      <li><a>FAQ</a></li>
+    </ul>
+    <button class="nav-cta">Empezar</button>
+  </div>
+</nav>
+
+<main>
+<!-- HERO -->
+<section class="hero">
+  <div>
+    <div class="hero-eyebrow">
+      <span class="hero-eyebrow-line"></span>
+      Firma de prop trading deportivo
+    </div>
+    <h1>Opera con<br/><span class="accent">capital real.</span><br/>Sin riesgos<br/>propios.</h1>
+    <p class="hero-sub">Demuestra tu disciplina y accede a cuentas financiadas de hasta $25,000. La plataforma VIP del trader profesional en LATAM.</p>
+    <div class="hero-actions">
+      <button class="btn-primary">Ver desafíos</button>
+      <button class="btn-ghost">Conocer más</button>
+    </div>
+    <div class="hero-divider"></div>
+    <div class="hero-stats-inline">
+      <div class="hero-stat-item">
+        <div class="hero-stat-num">$183K+</div>
+        <div class="hero-stat-label">Total pagado</div>
+      </div>
+      <div class="hero-stat-item">
+        <div class="hero-stat-num">247</div>
+        <div class="hero-stat-label">Traders activos</div>
+      </div>
+      <div class="hero-stat-item">
+        <div class="hero-stat-num">48h</div>
+        <div class="hero-stat-label">Pago promedio</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACCOUNT CARD RIGHT -->
+  <div class="hero-right">
+    <div class="account-card">
+      <div class="card-header">
+        <div>
+          <div class="card-account-label">Cuenta activa</div>
+          <div class="card-account-name">Cuenta Pro</div>
+        </div>
+        <div class="card-badge">Fase 1/2</div>
+      </div>
+      <div class="card-balance-label">Saldo actual</div>
+      <div class="card-balance">$10,450</div>
+      <div class="card-balance-sub">+$450 desde inicio · objetivo $11,000</div>
+
+      <svg class="sparkline-wrap" viewBox="0 0 300 60" preserveAspectRatio="none" role="img" aria-label="Gráfico de rendimiento de cuenta">
+        <defs>
+          <linearGradient id="sg-crimson" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ffd700" stop-opacity=".12"/>
+            <stop offset="100%" stop-color="#ffd700" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d="M0,54 L30,48 L60,42 L90,38 L120,30 L150,24 L180,27 L210,19 L240,13 L270,8 L300,5 L300,60 L0,60 Z" fill="url(#sg-crimson)"/>
+        <path class="sparkline-path" d="M0,54 L30,48 L60,42 L90,38 L120,30 L150,24 L180,27 L210,19 L240,13 L270,8 L300,5" fill="none" stroke="#ffd700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+
+      <div class="progress-label"><span>Progreso del desafío</span><strong>72%</strong></div>
+      <div class="progress-track"><div class="progress-fill"></div></div>
+
+      <div class="picks-section-label">Picks recientes</div>
+      <table class="picks-table" role="table" aria-label="Tabla de picks recientes">
+        <thead><tr><th>Pick</th><th>Odds</th><th>Stake</th><th>P&amp;L</th></tr></thead>
+        <tbody>
+          <tr><td>Real Madrid ML</td><td>1.85</td><td>$200</td><td class="pnl-pos">+$170</td></tr>
+          <tr><td>Lakers -3.5</td><td>1.91</td><td>$150</td><td class="pnl-pos">+$143</td></tr>
+          <tr><td>Chiefs ML</td><td>2.10</td><td>$100</td><td><span class="live-badge">LIVE</span></td></tr>
+        </tbody>
+      </table>
+      <button class="payout-btn">Solicitar Pago</button>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-section">
+  <div class="stats-inner">
+    <div class="stat-card"><div class="stat-num">$183K+</div><div class="stat-label">Total pagado</div></div>
+    <div class="stat-card"><div class="stat-num">247</div><div class="stat-label">Traders financiados</div></div>
+    <div class="stat-card"><div class="stat-num">48h</div><div class="stat-label">Tiempo promedio de pago</div></div>
+    <div class="stat-card"><div class="stat-num">80%</div><div class="stat-label">Split máximo</div></div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="section">
+  <div class="section-eyebrow">Proceso</div>
+  <div class="section-title">El camino al capital financiado</div>
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-circle">
+        <div class="step-icon-inner">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" stroke="#c0162b" stroke-width="1.5"/>
+            <rect x="14" y="3" width="7" height="7" stroke="#c0162b" stroke-width="1.5"/>
+            <rect x="3" y="14" width="7" height="7" stroke="#c0162b" stroke-width="1.5"/>
+            <path d="M14 17.5h6M17 14.5v6" stroke="#c0162b" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="step-title">Elige tu desafío</div>
+      <div class="step-desc">Selecciona entre cuentas de $5K, $10K o $25K. Una tarifa única de acceso al simulador de capital real.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-circle">
+        <div class="step-icon-inner">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke="#c0162b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="step-title">Demuestra tu disciplina</div>
+      <div class="step-desc">Opera con disciplina, gestión de riesgo impecable y consistencia. Supera los objetivos de cada fase.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-circle">
+        <div class="step-icon-inner">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="#c0162b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="step-title">Cobra hasta 80% de tus ganancias</div>
+      <div class="step-desc">Con cuenta financiada activa, recibe tus pagos en menos de 48 horas. Sin límites de escalado.</div>
+    </div>
+  </div>
+</section>
+
+<!-- TIERS -->
+<section class="tiers-section">
+  <div class="section">
+    <div class="section-eyebrow">Niveles</div>
+    <div class="section-title">Elige tu nivel de ambición</div>
+    <div class="tiers-grid">
+      <div class="tier-card">
+        <div class="tier-name">Starter</div>
+        <div class="tier-amount">$5,000</div>
+        <div class="tier-price">desde $99</div>
+        <ul class="tier-features">
+          <li class="tier-feature">
+            <span class="tier-check"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2.5 7l3 3 6-6" stroke="#c0162b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            70% profit split
+          </li>
+          <li class="tier-feature">
+            <span class="tier-check"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2.5 7l3 3 6-6" stroke="#c0162b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            Pago en 48h
+          </li>
+          <li class="tier-feature">
+            <span class="tier-check"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2.5 7l3 3 6-6" stroke="#c0162b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            Drawdown máximo 8%
+          </li>
+        </ul>
+        <button class="tier-btn">Comenzar</button>
+      </div>
+      <div class="tier-card featured">
+        <div class="tier-badge">Recomendado</div>
+        <div class="tier-name">Pro</div>
+        <div class="tier-amount">$10,000</div>
+        <div class="tier-price">desde $179</div>
+        <ul class="tier-features">
+          <li class="tier-feature">
+            <span class="tier-check"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2.5 7l3 3 6-6" stroke="#ffd700" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            75% profit split
+          </li>
+          <li class="tier-feature">
+            <span class="tier-check"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2.5 7l3 3 6-6" stroke="#ffd700" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            Pago en 48h
+          </li>
+          <li class="tier-feature">
+            <span class="tier-check"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2.5 7l3 3 6-6" stroke="#ffd700" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            Drawdown máximo 8%
+          </li>
+        </ul>
+        <button class="tier-btn">Comenzar</button>
+      </div>
+      <div class="tier-card">
+        <div class="tier-name">Elite</div>
+        <div class="tier-amount">$25,000</div>
+        <div class="tier-price">desde $349</div>
+        <ul class="tier-features">
+          <li class="tier-feature">
+            <span class="tier-check"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2.5 7l3 3 6-6" stroke="#c0162b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            80% profit split
+          </li>
+          <li class="tier-feature">
+            <span class="tier-check"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2.5 7l3 3 6-6" stroke="#c0162b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            Pago en 48h
+          </li>
+          <li class="tier-feature">
+            <span class="tier-check"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2.5 7l3 3 6-6" stroke="#c0162b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            Drawdown máximo 10%
+          </li>
+        </ul>
+        <button class="tier-btn">Comenzar</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="section">
+  <div class="section-eyebrow">Testimonios</div>
+  <div class="section-title">Traders que operan con capital propio</div>
+  <div class="testimonials-grid">
+    <div class="tcard">
+      <div class="tcard-header">
+        <div class="tcard-avatar">JR</div>
+        <div>
+          <div class="tcard-name">Juan R.</div>
+          <div class="tcard-meta">México · Elite</div>
+        </div>
+      </div>
+      <div class="tcard-amount">+$4,200</div>
+      <p class="tcard-text">"PlayFunded me dio la oportunidad de demostrar mi estrategia con capital real. Proceso transparente y pagos rapidísimos."</p>
+    </div>
+    <div class="tcard">
+      <div class="tcard-header">
+        <div class="tcard-avatar">AP</div>
+        <div>
+          <div class="tcard-name">Andrea P.</div>
+          <div class="tcard-meta">Colombia · Pro</div>
+        </div>
+      </div>
+      <div class="tcard-amount">+$1,875</div>
+      <p class="tcard-text">"Pasé las dos fases en 3 semanas. Soporte excelente, pago en menos de 24 horas. La mejor decisión que tomé."</p>
+    </div>
+    <div class="tcard">
+      <div class="tcard-header">
+        <div class="tcard-avatar">MT</div>
+        <div>
+          <div class="tcard-name">Marcos T.</div>
+          <div class="tcard-meta">Argentina · Elite</div>
+        </div>
+      </div>
+      <div class="tcard-amount">+$6,100</div>
+      <p class="tcard-text">"La mejor plataforma de prop trading deportivo en LATAM. Llevo 4 meses operando y los resultados hablan solos."</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-inner">
+    <div class="cta-eyebrow">Acceso exclusivo</div>
+    <h2 class="cta-title">¿Listo para operar<br/>con capital real?</h2>
+    <p class="cta-sub">Únete a la firma de prop trading deportivo más exclusiva de América Latina. Elige tu desafío y comienza hoy.</p>
+    <button class="cta-btn">Ver desafíos disponibles</button>
+  </div>
+</section>
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div>
+        <div class="footer-logo">Play<span>Funded</span></div>
+        <p class="footer-tagline">La firma de prop trading deportivo de alto rendimiento en América Latina.</p>
+      </div>
+      <div class="footer-col"><h4>Producto</h4><ul><li><a>Desafíos</a></li><li><a>Dashboard</a></li><li><a>Pagos</a></li><li><a>Afiliados</a></li></ul></div>
+      <div class="footer-col"><h4>Empresa</h4><ul><li><a>Sobre nosotros</a></li><li><a>Blog</a></li><li><a>Traders</a></li><li><a>Contacto</a></li></ul></div>
+      <div class="footer-col"><h4>Legal</h4><ul><li><a>Términos</a></li><li><a>Privacidad</a></li><li><a>Reglas</a></li><li><a>FAQ</a></li></ul></div>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-copy">© 2025 PlayFunded. Todos los derechos reservados.</span>
+      <div class="footer-links"><a>Twitter</a><a>Instagram</a><a>Discord</a></div>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

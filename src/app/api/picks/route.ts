@@ -9,17 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
 import { checkStakeCap, checkMinStake, isEventLocked } from "@/lib/challenge";
 import { findMarketOutcome, parseMarkets } from "@/lib/odds/markets";
-
-class PickRequestError extends Error {
-  status: number;
-  code: string;
-
-  constructor(status: number, code: string, message: string) {
-    super(message);
-    this.status = status;
-    this.code = code;
-  }
-}
+import { placePickRequest } from "@/lib/picks/place-service";
 
 // ── POST — place a pick ──────────────────────────────────────────────────────
 
@@ -225,108 +215,32 @@ export async function POST(req: NextRequest) {
   const potentialPayout = Math.round(stake * matchedOutcome.odds);
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
-      const freshChallenge = await tx.challenge.findFirst({
-        where: { id: challengeId, userId: user.id },
-        include: { tier: true },
-      });
-
-      if (!freshChallenge) {
-        throw new PickRequestError(404, "CHALLENGE_NOT_FOUND", "Challenge not found");
-      }
-
-      if (freshChallenge.status !== "active" && freshChallenge.status !== "funded") {
-        throw new PickRequestError(
-          400,
-          "CHALLENGE_NOT_ACTIVE",
-          "Challenge is not active",
-        );
-      }
-
-      if (freshChallenge.pausedUntil && new Date() < freshChallenge.pausedUntil) {
-        throw new PickRequestError(
-          400,
-          "CHALLENGE_PAUSED",
-          "Challenge is currently paused",
-        );
-      }
-
-      if (stake > freshChallenge.balance) {
-        throw new PickRequestError(
-          422,
-          "INSUFFICIENT_BALANCE",
-          "Insufficient balance for this pick",
-        );
-      }
-
-      const currentStakeViolation = checkStakeCap(freshChallenge, stake);
-      if (currentStakeViolation) {
-        throw new PickRequestError(
-          400,
-          currentStakeViolation.code,
-          currentStakeViolation.error,
-        );
-      }
-
-      const currentMinStakeViolation = checkMinStake(freshChallenge, stake);
-      if (currentMinStakeViolation) {
-        throw new PickRequestError(
-          422,
-          currentMinStakeViolation.code,
-          currentMinStakeViolation.error,
-        );
-      }
-
-      const updated = await tx.challenge.updateMany({
-        where: {
-          id: challengeId,
-          userId: user.id,
-          balance: freshChallenge.balance,
-        },
-        data: { balance: { decrement: stake } },
-      });
-
-      if (updated.count !== 1) {
-        throw new PickRequestError(
-          409,
-          "CHALLENGE_BALANCE_CHANGED",
-          "Balance changed while placing the pick. Try again.",
-        );
-      }
-
-      const pick = await tx.pick.create({
-        data: {
-          challengeId,
-          userId: user.id,
-          sport,
-          league,
-          event,
-          eventName: oddsEvent.eventName ?? eventName ?? null,
-          marketType,
-          selection: matchedOutcome.name,
-          odds: matchedOutcome.odds,
-          linePoint: matchedOutcome.point ?? null,
-          stake,
-          potentialPayout,
-          eventStart: parsedEventStart,
-        },
-      });
-
-      return {
-        pick,
-        newBalance: freshChallenge.balance - stake,
-      };
+    const result = await placePickRequest({
+      db: prisma,
+      challengeId,
+      userId: user.id,
+      sport,
+      league,
+      event,
+      eventName: oddsEvent.eventName ?? eventName ?? null,
+      marketType,
+      selection: matchedOutcome.name,
+      odds: matchedOutcome.odds,
+      linePoint: matchedOutcome.point ?? null,
+      stake,
+      potentialPayout,
+      eventStart: parsedEventStart,
     });
 
-    return NextResponse.json(result, { status: 201 });
-  } catch (error) {
-    if (error instanceof PickRequestError) {
+    if (!result.ok) {
       return NextResponse.json(
-        { error: error.message, code: error.code },
-        { status: error.status },
+        { error: result.error, code: result.code },
+        { status: result.status },
       );
     }
 
+    return NextResponse.json(result, { status: 201 });
+  } catch (error) {
     console.error("[api/picks] Failed to place pick:", error);
     return NextResponse.json(
       { error: "Failed to place pick", code: "PICK_CREATE_FAILED" },

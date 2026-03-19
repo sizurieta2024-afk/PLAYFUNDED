@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlayFunded — Neon Tokyo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+    :root {
+      --pink: #ff2d78;
+      --yellow: #ffe600;
+      --neon-green: #00ff88;
+      --bg: #080810;
+      --card: #0d0d1a;
+      --card-border: #1a1a30;
+      --glow-pink: 0 0 20px rgba(255,45,120,0.5), 0 0 60px rgba(255,45,120,0.2);
+      --glow-yellow: 0 0 20px rgba(255,230,0,0.5), 0 0 60px rgba(255,230,0,0.2);
+      --glow-green: 0 0 20px rgba(0,255,136,0.5), 0 0 60px rgba(0,255,136,0.2);
+      --text-primary: #f0f0ff;
+      --text-muted: #6060a0;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'IBM Plex Mono', monospace;
+      background-color: var(--bg);
+      color: var(--text-primary);
+      overflow-x: hidden;
+    }
+    h1, h2, h3, h4, .heading { font-family: 'Rajdhani', sans-serif; }
+
+    /* City grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        repeating-linear-gradient(0deg, rgba(255,45,120,0.022) 0px, transparent 1px, transparent 64px, rgba(255,45,120,0.022) 65px),
+        repeating-linear-gradient(90deg, rgba(255,45,120,0.022) 0px, transparent 1px, transparent 64px, rgba(255,45,120,0.022) 65px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── TICKER ── */
+    .ticker-wrap {
+      background: #050510;
+      border-bottom: 1px solid rgba(255,45,120,0.3);
+      height: 36px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 200;
+    }
+    .ticker-label {
+      flex-shrink: 0;
+      padding: 0 16px;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 2.5px;
+      color: var(--pink);
+      border-right: 1px solid rgba(255,45,120,0.25);
+      height: 100%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .live-dot-svg { width: 14px; height: 14px; flex-shrink: 0; }
+    @keyframes pulse-ring { 0%,100% { opacity:1; r:3; } 70% { opacity:0; r:6; } }
+    .pulse-ring-anim { animation: pulse-ring 1.6s ease-out infinite; }
+    .ticker-scroll-wrap { overflow: hidden; flex: 1; height: 100%; display: flex; align-items: center; }
+    .ticker-inner {
+      display: flex;
+      white-space: nowrap;
+      animation: ticker-run 30s linear infinite;
+      width: max-content;
+    }
+    @keyframes ticker-run { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    .ticker-item { display: inline-flex; align-items: center; padding: 0 28px; gap: 8px; font-size: 11.5px; }
+    .ticker-name { color: var(--pink); font-weight: 600; }
+    .ticker-amount { color: var(--yellow); font-weight: 600; }
+    .ticker-sep { color: var(--text-muted); }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 36px; left: 0; right: 0;
+      z-index: 199;
+      background: rgba(8,8,16,0.94);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,45,120,0.2);
+      padding: 0 32px;
+      height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 22px;
+      letter-spacing: 1.5px;
+    }
+    .logo-play { color: var(--text-primary); }
+    .logo-funded { color: var(--pink); }
+    .nav-links {
+      display: flex; gap: 36px; list-style: none;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 600; font-size: 13px;
+      letter-spacing: 1.5px; text-transform: uppercase;
+    }
+    .nav-links a { color: var(--text-muted); text-decoration: none; transition: color 150ms; cursor: pointer; }
+    .nav-links a:hover { color: var(--pink); }
+    @media (max-width:767px) { .nav-links { display: none; } }
+    .nav-cta {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700; font-size: 12px;
+      letter-spacing: 2px; text-transform: uppercase;
+      background: var(--pink); color: var(--yellow);
+      border: none; padding: 9px 22px; cursor: pointer;
+      clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+      transition: box-shadow 200ms, transform 150ms;
+    }
+    .nav-cta:hover { box-shadow: var(--glow-pink); transform: translateY(-1px); }
+
+    /* ── MAIN ── */
+    main { position: relative; z-index: 1; padding-top: 98px; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: calc(100vh - 98px);
+      display: flex; align-items: center;
+      padding: 80px 32px 60px;
+      max-width: 1300px; margin: 0 auto;
+      gap: 64px;
+    }
+    .hero-copy { flex: 1; min-width: 0; }
+    .hero-eyebrow {
+      font-size: 10px; letter-spacing: 3.5px; text-transform: uppercase;
+      color: var(--neon-green); margin-bottom: 22px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .hero-eyebrow-line { width: 36px; height: 1px; background: var(--neon-green); box-shadow: 0 0 8px var(--neon-green); }
+    h1 {
+      font-size: clamp(2.8rem, 6.5vw, 5.8rem);
+      font-weight: 700; line-height: 1.04;
+      background: linear-gradient(130deg, var(--pink) 0%, #ff8800 45%, var(--yellow) 80%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      filter: drop-shadow(0 0 24px rgba(255,45,120,0.3));
+      margin-bottom: 26px;
+    }
+    .hero-sub { font-size: 14px; line-height: 1.8; color: var(--text-muted); max-width: 500px; margin-bottom: 44px; }
+    .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; }
+    .btn-primary {
+      font-family: 'Rajdhani', sans-serif; font-weight: 700;
+      font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+      background: var(--pink); color: var(--yellow); border: none;
+      padding: 14px 34px; cursor: pointer;
+      clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+      transition: box-shadow 200ms, transform 150ms;
+    }
+    .btn-primary:hover { box-shadow: var(--glow-pink); transform: translateY(-2px); }
+    .btn-secondary {
+      font-family: 'Rajdhani', sans-serif; font-weight: 700;
+      font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+      background: transparent; color: var(--yellow);
+      border: 1px solid rgba(255,230,0,0.35);
+      padding: 14px 34px; cursor: pointer;
+      clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+      transition: box-shadow 200ms, border-color 200ms;
+    }
+    .btn-secondary:hover { border-color: var(--yellow); box-shadow: var(--glow-yellow); }
+
+    /* ── ACCOUNT CARD ── */
+    .hero-card-wrap { flex: 0 0 420px; max-width: 420px; }
+    @media (max-width:1023px) { .hero-card-wrap { display: none; } .hero { min-height: auto; padding: 60px 20px 40px; } }
+    .account-card {
+      background: var(--card);
+      border: 1px solid rgba(255,45,120,0.3);
+      box-shadow: var(--glow-pink), inset 0 1px 0 rgba(255,45,120,0.08);
+      padding: 26px; position: relative; overflow: hidden;
+    }
+    .account-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--pink), var(--yellow));
+    }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; }
+    .card-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+    .card-balance { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 34px; color: var(--text-primary); line-height: 1; }
+    .card-phase {
+      font-size: 9px; padding: 4px 10px;
+      background: rgba(255,45,120,0.12);
+      border: 1px solid rgba(255,45,120,0.35);
+      color: var(--pink); letter-spacing: 1.5px; text-transform: uppercase; align-self: flex-start;
+    }
+
+    /* Sparkline */
+    .sparkline-wrap { margin-bottom: 22px; border-bottom: 1px solid var(--card-border); padding-bottom: 20px; }
+    .sparkline-label { font-size: 9px; letter-spacing: 2px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; }
+    .sparkline-svg { width: 100%; height: 66px; overflow: visible; }
+    @keyframes draw-sparkline { from { stroke-dashoffset: 700; } to { stroke-dashoffset: 0; } }
+    .spark-path {
+      fill: none; stroke: url(#neonSparkGrad);
+      stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+      stroke-dasharray: 700; stroke-dashoffset: 700;
+      animation: draw-sparkline 2.2s cubic-bezier(0.4,0,0.2,1) 0.4s forwards;
+    }
+    .spark-dot { fill: var(--yellow); filter: drop-shadow(0 0 4px var(--yellow)); }
+
+    /* Picks table */
+    .picks-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 20px; }
+    .picks-table th {
+      color: var(--text-muted); font-weight: 500; font-size: 9px;
+      letter-spacing: 1.5px; text-transform: uppercase; text-align: left;
+      padding: 0 0 8px; border-bottom: 1px solid var(--card-border);
+    }
+    .picks-table td {
+      padding: 8px 0; border-bottom: 1px solid rgba(26,26,48,0.6);
+      color: var(--text-primary); vertical-align: middle;
+    }
+    .picks-table td:last-child, .picks-table th:last-child { text-align: right; }
+    .pl-positive { color: var(--neon-green); font-weight: 600; }
+    @keyframes blink-live { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
+    .pl-live { color: var(--yellow); font-weight: 600; animation: blink-live 1.2s step-end infinite; }
+
+    /* Progress */
+    .progress-section { margin-bottom: 20px; }
+    .progress-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 10px; }
+    .progress-label { color: var(--text-muted); }
+    .progress-value { color: var(--yellow); font-weight: 600; }
+    .progress-track { height: 6px; background: rgba(255,45,120,0.1); border-radius: 1px; overflow: hidden; }
+    .progress-fill {
+      height: 100%; width: 72%; background: var(--pink);
+      box-shadow: 0 0 10px rgba(255,45,120,0.7), 0 0 3px var(--yellow);
+    }
+    .payout-btn {
+      width: 100%; font-family: 'Rajdhani', sans-serif;
+      font-weight: 700; font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+      background: linear-gradient(90deg, var(--pink), #cc1f5e);
+      color: var(--yellow); border: none; padding: 13px; cursor: pointer;
+      clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+      transition: box-shadow 200ms;
+    }
+    .payout-btn:hover { box-shadow: var(--glow-pink); }
+
+    /* ── STATS ── */
+    .stats-section {
+      background: var(--card);
+      border-top: 1px solid rgba(255,45,120,0.12);
+      border-bottom: 1px solid rgba(255,45,120,0.12);
+      padding: 44px 24px;
+    }
+    .stats-inner { max-width: 1300px; margin: 0 auto; display: grid; grid-template-columns: repeat(4,1fr); }
+    @media (max-width:767px) { .stats-inner { grid-template-columns: repeat(2,1fr); } }
+    .stat-item { padding: 20px 24px; text-align: center; border-right: 1px solid rgba(255,45,120,0.1); }
+    .stat-item:last-child { border-right: none; }
+    @media (max-width:767px) {
+      .stat-item:nth-child(2) { border-right: none; }
+      .stat-item { border-bottom: 1px solid rgba(255,45,120,0.1); }
+      .stat-item:nth-child(3),.stat-item:nth-child(4) { border-bottom: none; }
+    }
+    .stat-num {
+      font-family: 'Rajdhani', sans-serif; font-weight: 700;
+      font-size: clamp(1.9rem, 3vw, 2.9rem); line-height: 1; margin-bottom: 7px;
+    }
+    .s-pink { color: var(--pink); text-shadow: 0 0 18px rgba(255,45,120,0.55); }
+    .s-yellow { color: var(--yellow); text-shadow: 0 0 18px rgba(255,230,0,0.55); }
+    .s-green { color: var(--neon-green); text-shadow: 0 0 18px rgba(0,255,136,0.55); }
+    .stat-label { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); }
+
+    /* ── HOW IT WORKS ── */
+    .section { padding: 100px 32px; max-width: 1300px; margin: 0 auto; }
+    .section-pre { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--pink); margin-bottom: 16px; }
+    .section-h2 { font-size: clamp(1.9rem, 3.5vw, 3.2rem); font-weight: 700; margin-bottom: 60px; color: var(--text-primary); }
+    .section-h2 em {
+      font-style: normal;
+      background: linear-gradient(90deg, var(--pink), var(--yellow));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .steps-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 28px; }
+    @media (max-width:767px) { .steps-grid { grid-template-columns: 1fr; } }
+    .step-card {
+      background: var(--card); border: 1px solid var(--card-border);
+      padding: 34px; position: relative;
+      transition: border-color 250ms, box-shadow 250ms;
+    }
+    .step-card:hover { border-color: rgba(255,45,120,0.45); box-shadow: var(--glow-pink); }
+    .step-icon-ring {
+      width: 54px; height: 54px;
+      border: 1.5px solid var(--pink);
+      box-shadow: 0 0 12px rgba(255,45,120,0.25);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px;
+    }
+    .step-bg-num {
+      position: absolute; top: 12px; right: 18px;
+      font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 56px;
+      color: rgba(255,45,120,0.055); line-height: 1; user-select: none;
+    }
+    .step-h3 { font-size: 21px; font-weight: 700; margin-bottom: 10px; color: var(--text-primary); }
+    .step-p { font-size: 12px; line-height: 1.75; color: var(--text-muted); }
+
+    /* ── TIERS ── */
+    .tiers-outer { padding: 0 32px 100px; max-width: 1300px; margin: 0 auto; }
+    .tiers-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; }
+    @media (max-width:767px) { .tiers-grid { grid-template-columns: 1fr; } .tiers-outer { padding: 0 20px 60px; } }
+    .tier-card {
+      background: var(--card); border: 1px solid var(--card-border);
+      padding: 34px; position: relative; cursor: pointer;
+      transition: transform 220ms, box-shadow 220ms, border-color 220ms;
+    }
+    .tier-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+    .tc-pink::before { background: var(--pink); }
+    .tc-yellow::before { background: var(--yellow); }
+    .tc-green::before { background: var(--neon-green); }
+    .tier-card:hover { transform: translateY(-5px); }
+    .tc-pink:hover { box-shadow: var(--glow-pink); border-color: rgba(255,45,120,0.4); }
+    .tc-yellow:hover { box-shadow: var(--glow-yellow); border-color: rgba(255,230,0,0.4); }
+    .tc-green:hover { box-shadow: var(--glow-green); border-color: rgba(0,255,136,0.4); }
+    .tier-badge {
+      display: inline-block; font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+      padding: 3px 10px; margin-bottom: 18px;
+    }
+    .tc-pink .tier-badge { background: rgba(255,45,120,0.12); color: var(--pink); }
+    .tc-yellow .tier-badge { background: rgba(255,230,0,0.12); color: var(--yellow); }
+    .tc-green .tier-badge { background: rgba(0,255,136,0.12); color: var(--neon-green); }
+    .tier-size { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 38px; line-height: 1; margin-bottom: 6px; color: var(--text-primary); }
+    .tier-name-lbl { font-family: 'Rajdhani', sans-serif; font-size: 15px; color: var(--text-muted); margin-bottom: 26px; }
+    .tier-list { list-style: none; margin-bottom: 28px; }
+    .tier-list li {
+      font-size: 11px; color: var(--text-muted); padding: 7px 0;
+      border-bottom: 1px solid rgba(26,26,48,0.8);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .tier-list li::before { content: ''; width: 4px; height: 4px; background: currentColor; opacity: 0.45; flex-shrink: 0; }
+    .tier-list li strong { color: var(--text-primary); font-weight: 600; }
+    .tier-cta-btn {
+      width: 100%; font-family: 'Rajdhani', sans-serif; font-weight: 700;
+      font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+      border: none; padding: 13px; cursor: pointer;
+      clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+      transition: box-shadow 200ms;
+    }
+    .tc-pink .tier-cta-btn { background: var(--pink); color: var(--yellow); }
+    .tc-pink .tier-cta-btn:hover { box-shadow: var(--glow-pink); }
+    .tc-yellow .tier-cta-btn { background: var(--yellow); color: #080810; }
+    .tc-yellow .tier-cta-btn:hover { box-shadow: var(--glow-yellow); }
+    .tc-green .tier-cta-btn { background: var(--neon-green); color: #080810; }
+    .tc-green .tier-cta-btn:hover { box-shadow: var(--glow-green); }
+
+    /* ── TESTIMONIALS ── */
+    .testi-section {
+      background: var(--card);
+      border-top: 1px solid rgba(255,45,120,0.1);
+      border-bottom: 1px solid rgba(255,45,120,0.1);
+      padding: 80px 32px;
+    }
+    .testi-inner { max-width: 1300px; margin: 0 auto; }
+    .testi-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; margin-top: 60px; }
+    @media (max-width:767px) { .testi-grid { grid-template-columns: 1fr; } }
+    .testi-card {
+      background: var(--bg); border: 1px solid var(--card-border); border-left-width: 3px;
+      padding: 28px; transition: transform 220ms;
+    }
+    .testi-card:hover { transform: translateY(-3px); }
+    .t-pink { border-left-color: var(--pink); }
+    .t-yellow { border-left-color: var(--yellow); }
+    .t-green { border-left-color: var(--neon-green); }
+    .testi-quote { font-size: 12px; line-height: 1.75; color: var(--text-muted); margin-bottom: 22px; font-style: italic; }
+    .testi-footer { display: flex; align-items: center; justify-content: space-between; }
+    .testi-name { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 17px; color: var(--text-primary); }
+    .testi-meta { font-size: 9px; letter-spacing: 1px; color: var(--text-muted); margin-top: 2px; }
+    .testi-amount { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 21px; }
+    .t-pink .testi-amount { color: var(--pink); }
+    .t-yellow .testi-amount { color: var(--yellow); }
+    .t-green .testi-amount { color: var(--neon-green); }
+
+    /* ── CTA ── */
+    .cta-section { padding: 100px 32px; text-align: center; max-width: 820px; margin: 0 auto; }
+    .cta-title {
+      font-size: clamp(2.1rem, 4.5vw, 3.8rem); font-weight: 700;
+      background: linear-gradient(130deg, var(--pink), var(--yellow));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 18px;
+    }
+    .cta-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 42px; line-height: 1.8; }
+    .cta-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+    /* ── FOOTER ── */
+    footer { background: #030308; border-top: 1px solid rgba(255,45,120,0.15); padding: 36px 32px; }
+    .footer-inner {
+      max-width: 1300px; margin: 0 auto;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 16px;
+    }
+    .footer-copy { font-size: 10px; color: var(--text-muted); }
+    .footer-links { display: flex; gap: 24px; list-style: none; }
+    .footer-links a { font-size: 10px; color: var(--text-muted); text-decoration: none; cursor: pointer; transition: color 150ms; }
+    .footer-links a:hover { color: var(--pink); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .spark-path { animation: none; stroke-dashoffset: 0; }
+      .ticker-inner { animation: none; }
+      .pulse-ring-anim { animation: none; }
+      .pl-live { animation: none; }
+      * { transition-duration: 0ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TICKER -->
+  <div class="ticker-wrap" role="marquee" aria-label="Live funded trader activity">
+    <div class="ticker-label">
+      <svg class="live-dot-svg" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="8" cy="8" r="3.5" fill="#ff2d78"/>
+        <circle class="pulse-ring-anim" cx="8" cy="8" r="3" fill="none" stroke="#ff2d78" stroke-width="1.5"/>
+      </svg>
+      LIVE
+    </div>
+    <div class="ticker-scroll-wrap">
+      <div class="ticker-inner" aria-hidden="true">
+        <span class="ticker-item"><span class="ticker-name">Juan R. (MX)</span><span class="ticker-sep">—</span><span class="ticker-amount">$4,200 funded</span></span>
+        <span class="ticker-item"><span class="ticker-name">Andrea P. (CO)</span><span class="ticker-sep">—</span><span class="ticker-amount">$1,875 payout</span></span>
+        <span class="ticker-item"><span class="ticker-name">Marcos T. (AR)</span><span class="ticker-sep">—</span><span class="ticker-amount">$6,100 funded</span></span>
+        <span class="ticker-item"><span class="ticker-name">Sofia M. (CL)</span><span class="ticker-sep">—</span><span class="ticker-amount">$2,340 payout</span></span>
+        <span class="ticker-item"><span class="ticker-name">Diego F. (PE)</span><span class="ticker-sep">—</span><span class="ticker-amount">$3,150 funded</span></span>
+        <span class="ticker-item"><span class="ticker-name">Juan R. (MX)</span><span class="ticker-sep">—</span><span class="ticker-amount">$4,200 funded</span></span>
+        <span class="ticker-item"><span class="ticker-name">Andrea P. (CO)</span><span class="ticker-sep">—</span><span class="ticker-amount">$1,875 payout</span></span>
+        <span class="ticker-item"><span class="ticker-name">Marcos T. (AR)</span><span class="ticker-sep">—</span><span class="ticker-amount">$6,100 funded</span></span>
+        <span class="ticker-item"><span class="ticker-name">Sofia M. (CL)</span><span class="ticker-sep">—</span><span class="ticker-amount">$2,340 payout</span></span>
+        <span class="ticker-item"><span class="ticker-name">Diego F. (PE)</span><span class="ticker-sep">—</span><span class="ticker-amount">$3,150 funded</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <nav aria-label="Main navigation">
+    <div class="logo"><span class="logo-play">PLAY</span><span class="logo-funded">FUNDED</span></div>
+    <ul class="nav-links">
+      <li><a href="#challenges">Challenges</a></li>
+      <li><a href="#how">Proceso</a></li>
+      <li><a href="#traders">Traders</a></li>
+      <li><a href="#payouts">Payouts</a></li>
+    </ul>
+    <button class="nav-cta">Empezar</button>
+  </nav>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero" aria-labelledby="hero-h1">
+      <div class="hero-copy">
+        <p class="hero-eyebrow"><span class="hero-eyebrow-line"></span>Sports Prop Trading Platform</p>
+        <h1 id="hero-h1">TRADE<br>SPORTS.<br>GET<br>FUNDED.</h1>
+        <p class="hero-sub">Demuestra tu habilidad en sports props. Pasa el challenge, obtén hasta $25,000 en capital real y quédate con hasta el 80% de tus ganancias.</p>
+        <div class="hero-actions">
+          <button class="btn-primary">Ver Challenges</button>
+          <button class="btn-secondary">Como Funciona</button>
+        </div>
+      </div>
+
+      <div class="hero-card-wrap">
+        <div class="account-card" role="img" aria-label="Sample trader account dashboard showing balance and picks">
+          <div class="card-header">
+            <div>
+              <div class="card-label">Account Balance</div>
+              <div class="card-balance">$12,840</div>
+            </div>
+            <div class="card-phase">Phase 2</div>
+          </div>
+
+          <div class="sparkline-wrap">
+            <div class="sparkline-label">Performance — 30 days</div>
+            <svg class="sparkline-svg" viewBox="0 0 370 66" preserveAspectRatio="none" role="img" aria-label="Upward trending performance chart over 30 days">
+              <defs>
+                <linearGradient id="neonSparkGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#ff2d78"/>
+                  <stop offset="55%" stop-color="#ff8800"/>
+                  <stop offset="100%" stop-color="#ffe600"/>
+                </linearGradient>
+              </defs>
+              <path class="spark-path" d="M0,54 L22,50 L44,45 L66,48 L88,41 L110,36 L132,31 L154,27 L176,30 L198,22 L220,17 L242,20 L264,13 L286,9 L308,11 L330,6 L352,4 L370,2"/>
+              <circle class="spark-dot" cx="370" cy="2" r="3.5" aria-hidden="true"/>
+            </svg>
+          </div>
+
+          <table class="picks-table" aria-label="Recent picks">
+            <thead>
+              <tr><th>Pick</th><th>Odds</th><th>Stake</th><th>P&amp;L</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Real Madrid ML</td><td>1.85</td><td>$200</td><td class="pl-positive">+$170</td></tr>
+              <tr><td>Lakers -3.5</td><td>1.91</td><td>$150</td><td class="pl-positive">+$143</td></tr>
+              <tr><td>Chiefs ML</td><td>2.10</td><td>$100</td><td class="pl-live">LIVE</td></tr>
+            </tbody>
+          </table>
+
+          <div class="progress-section">
+            <div class="progress-header">
+              <span class="progress-label">Challenge Progress</span>
+              <span class="progress-value">72%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" role="progressbar" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+          </div>
+
+          <button class="payout-btn">Request Payout</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATS -->
+    <section class="stats-section" aria-label="Platform statistics">
+      <div class="stats-inner">
+        <div class="stat-item"><div class="stat-num s-pink">$183K+</div><div class="stat-label">Total Paid Out</div></div>
+        <div class="stat-item"><div class="stat-num s-yellow">247</div><div class="stat-label">Funded Traders</div></div>
+        <div class="stat-item"><div class="stat-num s-green">48h</div><div class="stat-label">Avg Payout Time</div></div>
+        <div class="stat-item"><div class="stat-num s-pink">80%</div><div class="stat-label">Max Profit Split</div></div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section id="how" class="section" aria-labelledby="how-h2">
+      <p class="section-pre">Proceso</p>
+      <h2 class="section-h2" id="how-h2">Como <em>Funciona</em></h2>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-bg-num">01</div>
+          <div class="step-icon-ring">
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+              <rect x="2" y="2" width="9" height="9" stroke="#ff2d78" stroke-width="1.5"/>
+              <rect x="15" y="2" width="9" height="9" stroke="#ff2d78" stroke-width="1.5"/>
+              <rect x="2" y="15" width="9" height="9" stroke="#ff2d78" stroke-width="1.5"/>
+              <path d="M15 19.5h9M19.5 15v9" stroke="#ffe600" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3 class="step-h3 heading">Elige tu Challenge</h3>
+          <p class="step-p">Selecciona el tamaño de cuenta — Starter $5K, Pro $10K o Elite $25K — que mejor se adapte a tu estilo de trading.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-bg-num">02</div>
+          <div class="step-icon-ring">
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+              <circle cx="13" cy="13" r="10" stroke="#ff2d78" stroke-width="1.5"/>
+              <path d="M13 7v7l4 4" stroke="#ffe600" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3 class="step-h3 heading">Demuestra tu Habilidad</h3>
+          <p class="step-p">Tradea sports props alcanzando el target de profit y respetando todas las reglas de risk management del período de evaluación.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-bg-num">03</div>
+          <div class="step-icon-ring">
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+              <path d="M13 2L16.5 9.5L24 10.4L18.5 15.7L19.9 23L13 19.5L6.1 23L7.5 15.7L2 10.4L9.5 9.5L13 2Z" stroke="#ff2d78" stroke-width="1.5" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3 class="step-h3 heading">Recibe Capital y Pagos</h3>
+          <p class="step-p">Obtén tu cuenta financiada real. Retira tus ganancias en 48 horas con hasta 80% de profit split directo a tu billetera.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHALLENGE TIERS -->
+    <div id="challenges">
+      <div style="max-width:1300px;margin:0 auto;padding:0 32px 40px;">
+        <p class="section-pre">Cuentas</p>
+        <h2 class="section-h2">Elige tu <em>Challenge</em></h2>
+      </div>
+      <div class="tiers-outer">
+        <div class="tiers-grid" role="list" aria-label="Challenge tiers">
+          <div class="tier-card tc-pink" role="listitem">
+            <span class="tier-badge">Starter</span>
+            <div class="tier-size">$5,000</div>
+            <div class="tier-name-lbl">Cuenta Starter</div>
+            <ul class="tier-list">
+              <li><strong>70%</strong> profit split</li>
+              <li><strong>48h</strong> payout promedio</li>
+              <li>Max drawdown 8%</li>
+              <li>Profit target 10%</li>
+              <li>Soporte chat 24/7</li>
+            </ul>
+            <button class="tier-cta-btn">Empezar — $97</button>
+          </div>
+          <div class="tier-card tc-yellow" role="listitem">
+            <span class="tier-badge">Pro</span>
+            <div class="tier-size">$10,000</div>
+            <div class="tier-name-lbl">Cuenta Pro</div>
+            <ul class="tier-list">
+              <li><strong>75%</strong> profit split</li>
+              <li><strong>48h</strong> payout promedio</li>
+              <li>Max drawdown 8%</li>
+              <li>Profit target 10%</li>
+              <li>Analytics avanzado</li>
+            </ul>
+            <button class="tier-cta-btn">Empezar — $197</button>
+          </div>
+          <div class="tier-card tc-green" role="listitem">
+            <span class="tier-badge">Elite</span>
+            <div class="tier-size">$25,000</div>
+            <div class="tier-name-lbl">Cuenta Elite</div>
+            <ul class="tier-list">
+              <li><strong>80%</strong> profit split</li>
+              <li><strong>48h</strong> payout promedio</li>
+              <li>Max drawdown 8%</li>
+              <li>Profit target 10%</li>
+              <li>Account manager dedicado</li>
+            </ul>
+            <button class="tier-cta-btn">Empezar — $397</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TESTIMONIALS -->
+    <section id="traders" class="testi-section" aria-label="Trader testimonials">
+      <div class="testi-inner">
+        <p class="section-pre">Testimonios</p>
+        <h2 class="section-h2">Resultados <em>Reales</em></h2>
+        <div class="testi-grid">
+          <div class="testi-card t-pink">
+            <p class="testi-quote">"Pasé el Elite challenge en 18 días. El proceso fue completamente transparente y el payout llegó en menos de 48 horas. La mejor plataforma de prop trading en LATAM."</p>
+            <div class="testi-footer">
+              <div>
+                <div class="testi-name">Juan R.</div>
+                <div class="testi-meta">Mexico — Elite Trader</div>
+              </div>
+              <div class="testi-amount">+$4,200</div>
+            </div>
+          </div>
+          <div class="testi-card t-yellow">
+            <p class="testi-quote">"Tres meses en Pro y ya he retirado cuatro veces. La plataforma es seria, el equipo responde rapido y los pagos siempre llegan cuando prometen."</p>
+            <div class="testi-footer">
+              <div>
+                <div class="testi-name">Andrea P.</div>
+                <div class="testi-meta">Colombia — Pro Trader</div>
+              </div>
+              <div class="testi-amount">+$1,875</div>
+            </div>
+          </div>
+          <div class="testi-card t-green">
+            <p class="testi-quote">"Empecé en Starter y escale hasta Elite. PlayFunded me dio acceso a capital real que nunca habría tenido. El modelo es justo y los términos completamente claros."</p>
+            <div class="testi-footer">
+              <div>
+                <div class="testi-name">Marcos T.</div>
+                <div class="testi-meta">Argentina — Elite Trader</div>
+              </div>
+              <div class="testi-amount">+$6,100</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section" aria-labelledby="cta-h2">
+      <h2 class="cta-title" id="cta-h2">LISTO PARA SER FUNDED?</h2>
+      <p class="cta-sub">Mas de 247 traders latinoamericanos ya operan con capital real en PlayFunded. Empieza tu challenge hoy y retira en 48 horas.</p>
+      <div class="cta-actions">
+        <button class="btn-primary">Empezar Challenge</button>
+        <button class="btn-secondary">Hablar con Soporte</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <p class="footer-copy">© 2025 PlayFunded. Todos los derechos reservados. El trading deportivo conlleva riesgo.</p>
+      <ul class="footer-links">
+        <li><a href="#">Terminos</a></li>
+        <li><a href="#">Privacidad</a></li>
+        <li><a href="#">Contacto</a></li>
+        <li><a href="#">FAQ</a></li>
+      </ul>
+    </div>
+  </footer>
+
+</body>
+</html>

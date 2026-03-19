@@ -323,7 +323,18 @@
     "submitted": "¡Enviado! Revisaremos en 24 horas.",
     "fileTooBig": "El archivo debe ser menor a 10 MB",
     "fileWrongType": "Solo se permiten JPG, PNG, PDF",
-    "required": "Este campo es obligatorio"
+    "required": "Este campo es obligatorio",
+    "uploadFailed": "La carga falló. Inténtalo de nuevo.",
+    "fileEmpty": "El archivo está vacío.",
+    "fileBadSignature": "El contenido del archivo no coincide con el tipo seleccionado.",
+    "fileNameInvalid": "El nombre del archivo no está permitido.",
+    "fileMalwareDetected": "Este archivo fue bloqueado por nuestro escáner de seguridad.",
+    "scanUnavailable": "El escaneo de documentos no está disponible temporalmente. Inténtalo de nuevo en breve.",
+    "alreadyApproved": "Tu identidad ya está verificada.",
+    "pendingReview": "Tu verificación ya está en revisión.",
+    "payoutsDisabledCountry": "La verificación de identidad no está disponible en tu país por ahora.",
+    "noFundedChallenge": "El KYC estará disponible cuando tengas un desafío financiado listo para cobrar.",
+    "noProfitAvailable": "El KYC estará disponible cuando tengas ganancias listas para solicitar pago."
   },
   "leaderboard": {
     "pageTitle": "Tabla de líderes",
@@ -404,6 +415,7 @@
       "title": "PlayFunded",
       "subtitle": "Inicia sesión en tu cuenta",
       "googleButton": "Continuar con Google",
+      "oauthError": "Error al iniciar sesión con Google. Inténtalo de nuevo.",
       "orEmail": "o con email",
       "emailLabel": "Email",
       "emailPlaceholder": "tu@email.com",

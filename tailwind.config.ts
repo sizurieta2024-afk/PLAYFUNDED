@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 const config: Config = {
   darkMode: ["class"],
@@ -55,19 +56,20 @@ const config: Config = {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
-        // PlayFunded brand tokens — exact spec values (#0a0a0f / #1a1a2e / #2d6a4f / #f4a261)
+        // PlayFunded brand tokens
         pf: {
-          brand: "#2d6a4f",        // spec green — primary CTA, funded, gains
-          "brand-dark": "#235a40", // darker green — hover states
-          gold: "#f4a261",         // spec gold — champion tier, streak bonus
-          "gold-dark": "#e8894a",  // darker gold — hover
-          danger: "#ef4444",       // losses, failed, errors
+          brand: "#22C55E", // vibrant green — primary CTA, funded, gains
+          "brand-dark": "#16A34A", // darker green — hover states
+          gold: "#f4a261", // gold — champion tier, streak bonus
+          "gold-dark": "#e8894a", // darker gold — hover
+          danger: "#ef4444", // losses, failed, errors
           "danger-dark": "#dc2626",
-          // Dark mode surfaces — exact spec values
-          dark: "#0a0a0f",
-          "dark-surface": "#1a1a2e",
-          "dark-elevated": "#252540",
-          "dark-border": "#1e2040",
+          // Dark mode surfaces
+          dark: "#020617", // OLED black — hero sections
+          "dark-surface": "#030911", // dashboard sidebar bg
+          "dark-card": "#0d1520", // card bg in dark sections
+          "dark-elevated": "#111827",
+          "dark-border": "#1e293b",
           // Light mode surfaces
           light: "#f1f5f9",
           "light-surface": "#ffffff",
@@ -86,7 +88,13 @@ const config: Config = {
         "pf-sm": "0 1px 3px 0 rgba(0,0,0,0.4), 0 1px 2px -1px rgba(0,0,0,0.4)",
         "pf-md": "0 4px 12px 0 rgba(0,0,0,0.35)",
         "pf-lg": "0 8px 24px 0 rgba(0,0,0,0.4)",
-        "pf-brand": "0 0 0 3px rgba(45,106,79,0.35)",
+        "pf-brand": "0 0 0 3px rgba(34,197,94,0.35)",
+        "pf-glow-sm": "0 0 20px rgba(34,197,94,0.25)",
+        "pf-glow": "0 0 35px rgba(34,197,94,0.35)",
+        "pf-glow-lg": "0 0 60px rgba(34,197,94,0.45)",
+        "tier-elite": "0 0 40px rgba(139,92,246,0.25)",
+        "tier-master": "0 0 40px rgba(249,115,22,0.25)",
+        "tier-legend": "0 0 40px rgba(234,179,8,0.25)",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -95,7 +103,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 };
 
 export default config;

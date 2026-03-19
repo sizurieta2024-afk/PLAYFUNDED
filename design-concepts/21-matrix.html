@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlayFunded — Matrix</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+    :root {
+      --green: #00ff41;
+      --green-dim: rgba(0,255,65,0.5);
+      --green-neon: #39ff14;
+      --green-dark: #008f11;
+      --green-bg: rgba(0,255,65,0.04);
+      --green-card-border: rgba(0,255,65,0.15);
+      --bg: #000000;
+      --card: #030303;
+      --border: rgba(0,255,65,0.15);
+      --text: #00ff41;
+      --text-dim: rgba(0,255,65,0.5);
+      --text-muted: rgba(0,255,65,0.35);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Share Tech Mono', 'Courier New', monospace;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* SCANLINE OVERLAY */
+    body::before {
+      content: '';
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,.04) 2px,
+        rgba(0,0,0,.04) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 1;
+    }
+
+    /* MATRIX RAIN */
+    .matrix-rain {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .rain-col {
+      position: absolute;
+      top: -100%;
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--green-dark);
+      white-space: pre;
+      user-select: none;
+      opacity: 0;
+      animation: rain-fall linear infinite;
+    }
+    @keyframes rain-fall {
+      0% { transform: translateY(-100%); opacity: 0; }
+      5% { opacity: .7; }
+      90% { opacity: .4; }
+      100% { transform: translateY(110vh); opacity: 0; }
+    }
+
+    /* All content above rain */
+    .content-wrap { position: relative; z-index: 1; }
+
+    /* TICKER */
+    .ticker-wrap {
+      background: rgba(0,0,0,.97);
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+      height: 34px;
+      display: flex;
+      align-items: center;
+    }
+    .ticker-label {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 14px;
+      font-size: 10px;
+      font-weight: normal;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .15em;
+      border-right: 1px solid var(--border);
+      height: 100%;
+    }
+    .live-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green), 0 0 16px rgba(0,255,65,.4);
+      animation: pulse-dot 1s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { box-shadow: 0 0 8px var(--green), 0 0 16px rgba(0,255,65,.4); }
+      50% { box-shadow: 0 0 4px var(--green-dark), 0 0 8px rgba(0,143,17,.3); }
+    }
+    .ticker-track { flex: 1; overflow: hidden; }
+    .ticker-inner {
+      display: flex;
+      white-space: nowrap;
+      animation: ticker-scroll 22s linear infinite;
+    }
+    .ticker-item {
+      display: inline-flex;
+      align-items: center;
+      padding: 0 24px;
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: .06em;
+    }
+    .ticker-item .amt { color: var(--green); font-weight: normal; margin: 0 4px; }
+    .ticker-sep { color: var(--border); padding: 0 4px; }
+    @keyframes ticker-scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .rain-col,
+      .ticker-inner,
+      .live-dot,
+      .sparkline-path,
+      .progress-fill {
+        animation: none !important;
+        stroke-dashoffset: 0 !important;
+      }
+      .rain-col { display: none; }
+    }
+
+    /* NAV */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(0,0,0,.95);
+      backdrop-filter: blur(4px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 1200px; margin: 0 auto; padding: 0 28px;
+      height: 56px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo {
+      font-size: 18px;
+      color: var(--green);
+      letter-spacing: .06em;
+      text-shadow: 0 0 12px rgba(0,255,65,.5);
+    }
+    .logo span { color: var(--green-neon); }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a {
+      font-size: 12px; color: var(--text-dim); text-decoration: none;
+      transition: color 150ms; cursor: pointer; letter-spacing: .08em;
+    }
+    .nav-links a:hover { color: var(--green); text-shadow: 0 0 8px rgba(0,255,65,.4); }
+    @media (max-width: 768px) { .nav-links { display: none; } }
+    .nav-cta {
+      background: transparent; color: var(--green); font-family: 'Share Tech Mono', monospace;
+      font-size: 12px; padding: 8px 18px;
+      border: 1px solid var(--green); cursor: pointer;
+      transition: background 200ms, box-shadow 200ms; letter-spacing: .1em;
+    }
+    .nav-cta:hover {
+      background: rgba(0,255,65,.08);
+      box-shadow: 0 0 16px rgba(0,255,65,.2), inset 0 0 16px rgba(0,255,65,.06);
+    }
+
+    /* HERO */
+    .hero {
+      max-width: 1200px; margin: 0 auto; padding: 88px 28px 72px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: start;
+    }
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; }
+      .hero-right { display: none; }
+    }
+    .hero-prompt {
+      font-size: 11px; color: var(--text-dim); letter-spacing: .08em; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 0;
+    }
+    .hero-prompt::before { content: '> '; color: var(--green-dark); }
+    .hero-prompt-cursor {
+      display: inline-block; width: 8px; height: 14px; background: var(--green);
+      margin-left: 3px; animation: blink .9s step-end infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+    @media (prefers-reduced-motion: reduce) { .hero-prompt-cursor { animation: none; } }
+
+    h1 {
+      font-size: clamp(2rem, 4vw + .8rem, 3.8rem);
+      font-weight: normal; line-height: 1.1; letter-spacing: -.01em;
+      color: var(--green); margin-bottom: 24px;
+      text-shadow: 0 0 20px rgba(0,255,65,.3);
+    }
+    h1 .accent { color: var(--green-neon); text-shadow: 0 0 30px rgba(57,255,20,.6); }
+    .hero-sub { font-size: 14px; line-height: 1.8; color: var(--text-dim); margin-bottom: 40px; max-width: 440px; letter-spacing: .03em; }
+    .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; }
+    .btn-primary {
+      background: transparent; color: var(--green); font-family: 'Share Tech Mono', monospace;
+      font-size: 13px; padding: 13px 28px;
+      border: 1px solid var(--green); cursor: pointer;
+      transition: background 200ms, box-shadow 200ms; letter-spacing: .1em;
+    }
+    .btn-primary:hover {
+      background: rgba(0,255,65,.1);
+      box-shadow: 0 0 24px rgba(0,255,65,.25), inset 0 0 20px rgba(0,255,65,.05);
+    }
+    .btn-ghost {
+      background: transparent; color: var(--text-dim); font-family: 'Share Tech Mono', monospace;
+      font-size: 13px; padding: 13px 24px;
+      border: 1px solid rgba(0,255,65,.25); cursor: pointer;
+      transition: border-color 200ms, color 200ms; letter-spacing: .08em;
+    }
+    .btn-ghost:hover { border-color: var(--green); color: var(--green); }
+
+    .hero-sys-info { margin-top: 28px; }
+    .sys-line { font-size: 11px; color: var(--text-muted); letter-spacing: .06em; line-height: 2; }
+    .sys-line .sys-val { color: var(--text-dim); }
+    .sys-line .sys-hi { color: var(--green); }
+
+    /* ACCOUNT CARD */
+    .account-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 24px;
+      position: relative;
+    }
+    .account-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--green-dark) 0%, var(--green) 50%, var(--green-dark) 100%);
+    }
+    .card-header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+    .card-sys-label { font-size: 10px; color: var(--text-muted); letter-spacing: .12em; margin-bottom: 4px; }
+    .card-account-name { font-size: 16px; color: var(--green); letter-spacing: .06em; }
+    .card-badge {
+      font-size: 10px; color: var(--green-dark); border: 1px solid var(--green-dark);
+      padding: 2px 8px; letter-spacing: .1em;
+    }
+    .card-balance-label { font-size: 10px; color: var(--text-muted); letter-spacing: .12em; margin-bottom: 6px; }
+    .card-balance { font-size: 40px; color: var(--green); letter-spacing: .02em; line-height: 1; margin-bottom: 4px; text-shadow: 0 0 20px rgba(0,255,65,.3); }
+    .card-balance-sub { font-size: 11px; color: var(--text-muted); margin-bottom: 16px; letter-spacing: .06em; }
+
+    .sparkline-wrap { width: 100%; height: 56px; margin-bottom: 16px; }
+    .sparkline-path {
+      stroke-dasharray: 420;
+      stroke-dashoffset: 420;
+      animation: draw-line 1.8s ease-out .3s forwards;
+    }
+    @keyframes draw-line { to { stroke-dashoffset: 0; } }
+
+    .progress-label {
+      display: flex; justify-content: space-between;
+      font-size: 11px; color: var(--text-muted); margin-bottom: 5px; letter-spacing: .06em;
+    }
+    .progress-label .pct { color: var(--green); }
+    .progress-track { height: 4px; background: rgba(0,255,65,.08); overflow: hidden; }
+    .progress-fill {
+      height: 100%; width: 72%; background: var(--green);
+      box-shadow: 0 0 8px rgba(0,255,65,.5);
+      animation: progress-grow 1.4s ease-out .5s both; transform-origin: left;
+    }
+    @keyframes progress-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+    .picks-label { font-size: 10px; color: var(--text-muted); letter-spacing: .12em; margin: 16px 0 8px; }
+    .picks-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .picks-table th {
+      text-align: left; color: var(--text-muted); font-weight: normal; font-size: 9px;
+      text-transform: uppercase; letter-spacing: .1em; padding-bottom: 6px;
+      border-bottom: 1px solid rgba(0,255,65,.1);
+    }
+    .picks-table td { padding: 6px 0; border-bottom: 1px solid rgba(0,255,65,.05); color: var(--text-dim); }
+    .picks-table tr:last-child td { border-bottom: none; }
+    .pnl-pos { color: var(--green); }
+    .live-badge {
+      font-size: 9px; letter-spacing: .12em;
+      color: var(--green-neon); border: 1px solid var(--green-neon);
+      padding: 1px 5px; text-shadow: 0 0 6px rgba(57,255,20,.6);
+    }
+
+    .payout-btn {
+      width: 100%; background: transparent; color: var(--green);
+      font-family: 'Share Tech Mono', monospace; font-size: 12px;
+      padding: 11px; border: 1px solid var(--green); cursor: pointer;
+      transition: background 200ms, box-shadow 200ms; margin-top: 16px;
+      letter-spacing: .1em;
+    }
+    .payout-btn:hover {
+      background: rgba(0,255,65,.1);
+      box-shadow: 0 0 16px rgba(0,255,65,.2);
+    }
+
+    /* STATS */
+    .stats-section { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--card); }
+    .stats-inner {
+      max-width: 1200px; margin: 0 auto; padding: 0 28px;
+      display: grid; grid-template-columns: repeat(4,1fr);
+    }
+    @media (max-width: 640px) { .stats-inner { grid-template-columns: repeat(2,1fr); } }
+    .stat-card { padding: 28px 20px; border-right: 1px solid var(--border); text-align: center; }
+    .stat-card:last-child { border-right: none; }
+    .stat-num { font-size: 28px; color: var(--green); line-height: 1; margin-bottom: 6px; text-shadow: 0 0 16px rgba(0,255,65,.4); }
+    .stat-label { font-size: 11px; color: var(--text-muted); letter-spacing: .06em; }
+
+    /* SECTIONS */
+    .section { max-width: 1200px; margin: 0 auto; padding: 88px 28px; }
+    .section-eyebrow { font-size: 10px; color: var(--text-muted); letter-spacing: .2em; text-transform: uppercase; margin-bottom: 12px; }
+    .section-eyebrow::before { content: '// '; color: var(--green-dark); }
+    .section-title { font-size: clamp(1.5rem, 2.5vw, 2rem); color: var(--green); margin-bottom: 52px; letter-spacing: .02em; }
+
+    /* STEPS */
+    .steps-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+    @media (max-width: 640px) { .steps-grid { grid-template-columns: 1fr; } }
+    .step-card {
+      background: var(--card); padding: 28px;
+      border: 1px solid var(--border);
+      transition: border-color 200ms, box-shadow 200ms; cursor: default;
+    }
+    .step-card:hover {
+      border-color: var(--green);
+      box-shadow: 0 0 24px rgba(0,255,65,.1), inset 0 0 24px rgba(0,255,65,.03);
+    }
+    .step-bracket { font-size: 28px; color: var(--green-dark); margin-bottom: 16px; line-height: 1; }
+    .step-num-text { font-size: 10px; color: var(--text-muted); letter-spacing: .16em; margin-bottom: 10px; }
+    .step-icon-svg { margin-bottom: 14px; }
+    .step-title { font-size: 14px; color: var(--green); margin-bottom: 10px; letter-spacing: .04em; }
+    .step-desc { font-size: 12px; line-height: 1.8; color: var(--text-dim); letter-spacing: .03em; }
+
+    /* TIERS */
+    .tiers-section { border-top: 1px solid var(--border); }
+    .tiers-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+    @media (max-width: 640px) { .tiers-grid { grid-template-columns: 1fr; } }
+    .tier-card {
+      background: var(--card); padding: 28px;
+      border: 1px solid var(--border);
+      transition: border-color 200ms, box-shadow 200ms; cursor: pointer;
+    }
+    .tier-card:hover, .tier-card.featured {
+      border-color: var(--green);
+      box-shadow: 0 0 32px rgba(0,255,65,.12), inset 0 0 32px rgba(0,255,65,.03);
+    }
+    .tier-sys { font-size: 10px; color: var(--text-muted); letter-spacing: .12em; margin-bottom: 12px; }
+    .tier-name { font-size: 11px; color: var(--text-dim); letter-spacing: .14em; margin-bottom: 10px; }
+    .tier-amount { font-size: 34px; color: var(--green); line-height: 1; margin-bottom: 4px; }
+    .tier-card:hover .tier-amount, .tier-card.featured .tier-amount { text-shadow: 0 0 20px rgba(0,255,65,.5); }
+    .tier-price { font-size: 12px; color: var(--text-muted); margin-bottom: 20px; letter-spacing: .04em; }
+    .tier-features { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+    .tier-feature { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-dim); letter-spacing: .03em; }
+    .tier-feat-arrow { color: var(--green-dark); }
+    .tier-btn {
+      width: 100%; padding: 11px; font-family: 'Share Tech Mono', monospace;
+      font-size: 12px; cursor: pointer; background: transparent;
+      border: 1px solid rgba(0,255,65,.4); color: var(--text-dim);
+      transition: background 200ms, border-color 200ms, color 200ms; letter-spacing: .1em;
+    }
+    .tier-card:hover .tier-btn, .tier-card.featured .tier-btn {
+      background: rgba(0,255,65,.1); border-color: var(--green); color: var(--green);
+    }
+
+    /* TESTIMONIALS */
+    .testimonials-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+    @media (max-width: 640px) { .testimonials-grid { grid-template-columns: 1fr; } }
+    .tcard {
+      background: var(--card); padding: 24px;
+      border: 1px solid var(--border);
+      transition: border-color 200ms;
+    }
+    .tcard:hover { border-color: rgba(0,255,65,.4); }
+    .tcard-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .tcard-avatar {
+      width: 40px; height: 40px; border: 1px solid var(--border);
+      font-size: 12px; color: var(--green);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .tcard-name { font-size: 13px; color: var(--green); letter-spacing: .04em; }
+    .tcard-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; letter-spacing: .04em; }
+    .tcard-amount { font-size: 22px; color: var(--green-neon); margin-bottom: 8px; text-shadow: 0 0 12px rgba(57,255,20,.4); }
+    .tcard-text { font-size: 12px; line-height: 1.75; color: var(--text-dim); letter-spacing: .03em; }
+
+    /* CTA */
+    .cta-section {
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      padding: 88px 28px; text-align: center;
+      background: linear-gradient(to bottom, rgba(0,255,65,.02) 0%, transparent 100%);
+    }
+    .cta-inner { max-width: 640px; margin: 0 auto; }
+    .cta-sys { font-size: 10px; color: var(--text-muted); letter-spacing: .2em; margin-bottom: 16px; }
+    .cta-sys::before { content: '> '; color: var(--green-dark); }
+    .cta-title { font-size: clamp(1.8rem, 3.5vw, 3rem); color: var(--green); margin-bottom: 20px; text-shadow: 0 0 30px rgba(0,255,65,.3); }
+    .cta-sub { font-size: 14px; color: var(--text-dim); margin-bottom: 40px; line-height: 1.75; letter-spacing: .04em; }
+    .cta-btn {
+      background: transparent; color: var(--green); font-family: 'Share Tech Mono', monospace;
+      font-size: 14px; padding: 15px 40px;
+      border: 1px solid var(--green); cursor: pointer;
+      transition: background 200ms, box-shadow 200ms; letter-spacing: .12em;
+    }
+    .cta-btn:hover {
+      background: rgba(0,255,65,.12);
+      box-shadow: 0 0 32px rgba(0,255,65,.3), inset 0 0 32px rgba(0,255,65,.06);
+    }
+
+    /* FOOTER */
+    footer { background: var(--card); border-top: 1px solid var(--border); padding: 52px 28px 28px; }
+    .footer-inner { max-width: 1200px; margin: 0 auto; }
+    .footer-top { display: grid; grid-template-columns: 2fr repeat(3,1fr); gap: 48px; margin-bottom: 40px; }
+    @media (max-width: 768px) { .footer-top { grid-template-columns: 1fr; } }
+    .footer-logo { font-size: 18px; color: var(--green); margin-bottom: 10px; letter-spacing: .06em; }
+    .footer-logo span { color: var(--green-neon); }
+    .footer-tagline { font-size: 12px; color: var(--text-muted); line-height: 1.75; max-width: 260px; letter-spacing: .04em; }
+    .footer-col h4 { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .16em; margin-bottom: 14px; }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .footer-col a { font-size: 12px; color: var(--text-muted); text-decoration: none; cursor: pointer; transition: color 150ms; letter-spacing: .04em; }
+    .footer-col a:hover { color: var(--green); }
+    .footer-bottom { border-top: 1px solid var(--border); padding-top: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .footer-copy { font-size: 11px; color: var(--text-muted); letter-spacing: .06em; }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a { font-size: 11px; color: var(--text-muted); text-decoration: none; cursor: pointer; transition: color 150ms; }
+    .footer-links a:hover { color: var(--green); }
+  </style>
+</head>
+<body>
+
+<!-- MATRIX RAIN -->
+<div class="matrix-rain" aria-hidden="true">
+  <span class="rain-col" style="left:3%;animation-duration:8s;animation-delay:0s;font-size:12px">ﾗ1ﾊ0ﾃ1ﾞ0ﾝ1ﾂ0ﾋ1ﾌ0ﾎ1</span>
+  <span class="rain-col" style="left:8%;animation-duration:11s;animation-delay:-3s;font-size:11px">0ﾔ1ﾕ0ﾖ1ﾗ0ﾘ1ﾙ0ﾚ1ﾛ0ﾜ1</span>
+  <span class="rain-col" style="left:14%;animation-duration:9s;animation-delay:-1.5s;font-size:13px">1ﾝ0ﾞ1ﾟ0ｦ1ｧ0ｨ1ｩ0ｪ1ｫ0</span>
+  <span class="rain-col" style="left:20%;animation-duration:13s;animation-delay:-5s;font-size:12px">ｬ1ｭ0ｮ1ｯ0ｱ1ｲ0ｳ1ｴ0ｵ1ｶ0</span>
+  <span class="rain-col" style="left:26%;animation-duration:7s;animation-delay:-2s;font-size:10px">1ｷ0ｸ1ｹ0ｺ1ｻ0ｼ1ｽ0ｾ1ｿ0</span>
+  <span class="rain-col" style="left:32%;animation-duration:12s;animation-delay:-4s;font-size:11px">ﾀ1ﾁ0ﾂ1ﾃ0ﾄ1ﾅ0ﾆ1ﾇ0ﾈ1ﾉ0</span>
+  <span class="rain-col" style="left:38%;animation-duration:10s;animation-delay:-0.5s;font-size:12px">1ﾊ0ﾋ1ﾌ0ﾍ1ﾎ0ﾏ1ﾐ0ﾑ1ﾒ0</span>
+  <span class="rain-col" style="left:44%;animation-duration:8.5s;animation-delay:-6s;font-size:13px">ﾓ1ﾔ0ﾕ1ﾖ0ﾗ1ﾘ0ﾙ1ﾚ0ﾛ1ﾜ0</span>
+  <span class="rain-col" style="left:50%;animation-duration:14s;animation-delay:-2.5s;font-size:11px">1ﾝ0ﾞ1ﾟ0ｦ1ｧ0ｨ1ｩ0ｪ1ｫ0</span>
+  <span class="rain-col" style="left:56%;animation-duration:9.5s;animation-delay:-1s;font-size:12px">0ｬ1ｭ0ｮ1ｯ0ｱ1ｲ0ｳ1ｴ0ｵ1</span>
+  <span class="rain-col" style="left:62%;animation-duration:11.5s;animation-delay:-3.5s;font-size:10px">ｶ1ｷ0ｸ1ｹ0ｺ1ｻ0ｼ1ｽ0ｾ1ｿ0</span>
+  <span class="rain-col" style="left:68%;animation-duration:7.5s;animation-delay:-5.5s;font-size:13px">1ﾀ0ﾁ1ﾂ0ﾃ1ﾄ0ﾅ1ﾆ0ﾇ1ﾈ0</span>
+  <span class="rain-col" style="left:74%;animation-duration:10.5s;animation-delay:-0.8s;font-size:11px">ﾉ1ﾊ0ﾋ1ﾌ0ﾍ1ﾎ0ﾏ1ﾐ0ﾑ1ﾒ0</span>
+  <span class="rain-col" style="left:80%;animation-duration:12.5s;animation-delay:-4.2s;font-size:12px">1ﾓ0ﾔ1ﾕ0ﾖ1ﾗ0ﾘ1ﾙ0ﾚ1ﾛ0</span>
+  <span class="rain-col" style="left:88%;animation-duration:8.8s;animation-delay:-2.2s;font-size:11px">ﾜ1ﾝ0ﾞ1ﾟ0ｦ1ｧ0ｨ1ｩ0ｪ1ｫ0</span>
+  <span class="rain-col" style="left:94%;animation-duration:13.5s;animation-delay:-6.5s;font-size:12px">0ｬ1ｭ0ｮ1ｯ0ｱ1ｲ0ｳ1ｴ0ｵ1ｶ0</span>
+</div>
+
+<div class="content-wrap">
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-label">
+    <span class="live-dot" role="img" aria-label="Transmisión en vivo"></span>
+    LIVE
+  </div>
+  <div class="ticker-track" aria-live="off">
+    <div class="ticker-inner">
+      <span class="ticker-item">JUAN_R [MX] &gt;&gt;<span class="amt">$4,200</span>FUNDED</span><span class="ticker-sep">||</span>
+      <span class="ticker-item">ANDREA_P [CO] &gt;&gt;<span class="amt">$1,875</span>PAYOUT</span><span class="ticker-sep">||</span>
+      <span class="ticker-item">MARCOS_T [AR] &gt;&gt;<span class="amt">$6,100</span>FUNDED</span><span class="ticker-sep">||</span>
+      <span class="ticker-item">SOFIA_M [CL] &gt;&gt;<span class="amt">$2,340</span>PAYOUT</span><span class="ticker-sep">||</span>
+      <span class="ticker-item">DIEGO_F [PE] &gt;&gt;<span class="amt">$3,150</span>FUNDED</span><span class="ticker-sep">||</span>
+      <span class="ticker-item">JUAN_R [MX] &gt;&gt;<span class="amt">$4,200</span>FUNDED</span><span class="ticker-sep">||</span>
+      <span class="ticker-item">ANDREA_P [CO] &gt;&gt;<span class="amt">$1,875</span>PAYOUT</span><span class="ticker-sep">||</span>
+      <span class="ticker-item">MARCOS_T [AR] &gt;&gt;<span class="amt">$6,100</span>FUNDED</span><span class="ticker-sep">||</span>
+      <span class="ticker-item">SOFIA_M [CL] &gt;&gt;<span class="amt">$2,340</span>PAYOUT</span><span class="ticker-sep">||</span>
+      <span class="ticker-item">DIEGO_F [PE] &gt;&gt;<span class="amt">$3,150</span>FUNDED</span><span class="ticker-sep">||</span>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav aria-label="Navegación principal">
+  <div class="nav-inner">
+    <div class="logo">PLAY<span>FUNDED</span></div>
+    <ul class="nav-links">
+      <li><a>./desafios</a></li>
+      <li><a>./proceso</a></li>
+      <li><a>./traders</a></li>
+      <li><a>./faq</a></li>
+    </ul>
+    <button class="nav-cta">[INICIAR]</button>
+  </div>
+</nav>
+
+<main>
+<!-- HERO -->
+<section class="hero">
+  <div>
+    <div class="hero-prompt">
+      SYSTEM: prop_trading_firm LATAM initialized<span class="hero-prompt-cursor"></span>
+    </div>
+    <h1>Opera sin<br/>riesgo.<br/><span class="accent">Capital real.</span></h1>
+    <p class="hero-sub">Accede al sistema de prop trading deportivo mas avanzado de LATAM. Demuestra tu algoritmo. Recibe capital de hasta $25,000. Sin riesgo propio.</p>
+    <div class="hero-actions">
+      <button class="btn-primary">[VER_DESAFIOS]</button>
+      <button class="btn-ghost">[COMO_FUNCIONA]</button>
+    </div>
+    <div class="hero-sys-info">
+      <div class="sys-line">STATUS: <span class="sys-val">247 traders </span><span class="sys-hi">ACTIVOS</span></div>
+      <div class="sys-line">TOTAL_PAGADO: <span class="sys-hi">$183,000+</span></div>
+      <div class="sys-line">TIEMPO_PAGO: <span class="sys-val">48h avg</span></div>
+      <div class="sys-line">MAX_SPLIT: <span class="sys-hi">80%</span></div>
+    </div>
+  </div>
+
+  <!-- ACCOUNT CARD -->
+  <div class="hero-right">
+    <div class="account-card">
+      <div class="card-header-row">
+        <div>
+          <div class="card-sys-label">// CUENTA ACTIVA</div>
+          <div class="card-account-name">CUENTA_PRO</div>
+        </div>
+        <div class="card-badge">FASE 1/2</div>
+      </div>
+      <div class="card-balance-label">// SALDO_ACTUAL</div>
+      <div class="card-balance">$10,450</div>
+      <div class="card-balance-sub">+$450 desde inicio || objetivo: $11,000</div>
+
+      <svg class="sparkline-wrap" viewBox="0 0 300 56" preserveAspectRatio="none" role="img" aria-label="Gráfico de rendimiento de cuenta">
+        <defs>
+          <linearGradient id="sg-matrix" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#00ff41" stop-opacity=".1"/>
+            <stop offset="100%" stop-color="#00ff41" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d="M0,50 L30,44 L60,38 L90,35 L120,28 L150,22 L180,25 L210,18 L240,12 L270,8 L300,5 L300,56 L0,56 Z" fill="url(#sg-matrix)"/>
+        <path class="sparkline-path" d="M0,50 L30,44 L60,38 L90,35 L120,28 L150,22 L180,25 L210,18 L240,12 L270,8 L300,5" fill="none" stroke="#00ff41" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 4px rgba(0,255,65,.5))"/>
+      </svg>
+
+      <div class="progress-label"><span>// CHALLENGE_PROGRESS</span><span class="pct">72%</span></div>
+      <div class="progress-track"><div class="progress-fill"></div></div>
+
+      <div class="picks-label">// PICKS_RECIENTES</div>
+      <table class="picks-table" role="table" aria-label="Tabla de picks recientes">
+        <thead><tr><th>PICK</th><th>ODDS</th><th>STAKE</th><th>P&amp;L</th></tr></thead>
+        <tbody>
+          <tr><td>Real Madrid ML</td><td>1.85</td><td>$200</td><td class="pnl-pos">+$170</td></tr>
+          <tr><td>Lakers -3.5</td><td>1.91</td><td>$150</td><td class="pnl-pos">+$143</td></tr>
+          <tr><td>Chiefs ML</td><td>2.10</td><td>$100</td><td><span class="live-badge">LIVE</span></td></tr>
+        </tbody>
+      </table>
+      <button class="payout-btn">[SOLICITAR_PAGO]</button>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-section">
+  <div class="stats-inner">
+    <div class="stat-card"><div class="stat-num">$183K+</div><div class="stat-label">// TOTAL_PAGADO</div></div>
+    <div class="stat-card"><div class="stat-num">247</div><div class="stat-label">// TRADERS_ACTIVOS</div></div>
+    <div class="stat-card"><div class="stat-num">48h</div><div class="stat-label">// TIEMPO_PAGO</div></div>
+    <div class="stat-card"><div class="stat-num">80%</div><div class="stat-label">// MAX_SPLIT</div></div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="section">
+  <div class="section-eyebrow">PROCESO</div>
+  <div class="section-title">PROTOCOLO DE ACCESO AL CAPITAL</div>
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-bracket">[ 01 ]</div>
+      <div class="step-icon-svg">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" stroke="#00ff41" stroke-width="1.5"/>
+          <rect x="14" y="3" width="7" height="7" stroke="#00ff41" stroke-width="1.5"/>
+          <rect x="3" y="14" width="7" height="7" stroke="#00ff41" stroke-width="1.5"/>
+          <path d="M14 17.5h6M17 14.5v6" stroke="#39ff14" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="step-title">SELECCIONA_DESAFIO</div>
+      <div class="step-desc">Elige entre cuentas de $5K, $10K o $25K. Pago unico de acceso. Sin suscripciones.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-bracket">[ 02 ]</div>
+      <div class="step-icon-svg">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke="#00ff41" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="step-title">EJECUTA_ESTRATEGIA</div>
+      <div class="step-desc">Opera picks deportivos con precision. Cumple los objetivos de rentabilidad en cada fase del challenge.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-bracket">[ 03 ]</div>
+      <div class="step-icon-svg">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="#00ff41" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="step-title">EXTRAE_GANANCIAS</div>
+      <div class="step-desc">Hasta 80% de profit split. Pagos procesados en menos de 48h. Sistema automatizado y verificado.</div>
+    </div>
+  </div>
+</section>
+
+<!-- TIERS -->
+<section class="tiers-section">
+  <div class="section">
+    <div class="section-eyebrow">NIVELES DE ACCESO</div>
+    <div class="section-title">SELECCIONA TU CUENTA</div>
+    <div class="tiers-grid">
+      <div class="tier-card">
+        <div class="tier-sys">// TIER_01</div>
+        <div class="tier-name">STARTER</div>
+        <div class="tier-amount">$5,000</div>
+        <div class="tier-price">desde $99</div>
+        <ul class="tier-features">
+          <li class="tier-feature"><span class="tier-feat-arrow">&gt;</span> 70% profit split</li>
+          <li class="tier-feature"><span class="tier-feat-arrow">&gt;</span> Pago en 48h</li>
+          <li class="tier-feature"><span class="tier-feat-arrow">&gt;</span> Drawdown max 8%</li>
+        </ul>
+        <button class="tier-btn">[SELECCIONAR]</button>
+      </div>
+      <div class="tier-card featured">
+        <div class="tier-sys">// TIER_02 * RECOMENDADO</div>
+        <div class="tier-name">PRO</div>
+        <div class="tier-amount">$10,000</div>
+        <div class="tier-price">desde $179</div>
+        <ul class="tier-features">
+          <li class="tier-feature"><span class="tier-feat-arrow">&gt;</span> 75% profit split</li>
+          <li class="tier-feature"><span class="tier-feat-arrow">&gt;</span> Pago en 48h</li>
+          <li class="tier-feature"><span class="tier-feat-arrow">&gt;</span> Drawdown max 8%</li>
+        </ul>
+        <button class="tier-btn">[SELECCIONAR]</button>
+      </div>
+      <div class="tier-card">
+        <div class="tier-sys">// TIER_03</div>
+        <div class="tier-name">ELITE</div>
+        <div class="tier-amount">$25,000</div>
+        <div class="tier-price">desde $349</div>
+        <ul class="tier-features">
+          <li class="tier-feature"><span class="tier-feat-arrow">&gt;</span> 80% profit split</li>
+          <li class="tier-feature"><span class="tier-feat-arrow">&gt;</span> Pago en 48h</li>
+          <li class="tier-feature"><span class="tier-feat-arrow">&gt;</span> Drawdown max 10%</li>
+        </ul>
+        <button class="tier-btn">[SELECCIONAR]</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="section">
+  <div class="section-eyebrow">VERIFICADO</div>
+  <div class="section-title">TRADERS_FINANCIADOS.LOG</div>
+  <div class="testimonials-grid">
+    <div class="tcard">
+      <div class="tcard-header">
+        <div class="tcard-avatar">[JR]</div>
+        <div>
+          <div class="tcard-name">JUAN_R</div>
+          <div class="tcard-meta">MX || ELITE</div>
+        </div>
+      </div>
+      <div class="tcard-amount">+$4,200</div>
+      <p class="tcard-text">"PlayFunded me dio la oportunidad de demostrar mi estrategia con capital real. Proceso transparente, pagos rapidos."</p>
+    </div>
+    <div class="tcard">
+      <div class="tcard-header">
+        <div class="tcard-avatar">[AP]</div>
+        <div>
+          <div class="tcard-name">ANDREA_P</div>
+          <div class="tcard-meta">CO || PRO</div>
+        </div>
+      </div>
+      <div class="tcard-amount">+$1,875</div>
+      <p class="tcard-text">"Fase 1 y 2 completadas en 3 semanas. Pago recibido en menos de 24h. El sistema funciona exactamente como lo prometen."</p>
+    </div>
+    <div class="tcard">
+      <div class="tcard-header">
+        <div class="tcard-avatar">[MT]</div>
+        <div>
+          <div class="tcard-name">MARCOS_T</div>
+          <div class="tcard-meta">AR || ELITE</div>
+        </div>
+      </div>
+      <div class="tcard-amount">+$6,100</div>
+      <p class="tcard-text">"La mejor plataforma de prop trading deportivo en LATAM. 4 meses operando, resultados consistentes. Sistema solido."</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-inner">
+    <div class="cta-sys">ACCESO_DISPONIBLE :: LATAM_2025</div>
+    <h2 class="cta-title">INICIA TU DESAFIO</h2>
+    <p class="cta-sub">Protocolo de trading deportivo activo en LATAM. 247 traders financiados. Capital disponible hasta $25,000. Sin riesgo propio.</p>
+    <button class="cta-btn">[ACCEDER_AHORA]</button>
+  </div>
+</section>
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div>
+        <div class="footer-logo">PLAY<span>FUNDED</span></div>
+        <p class="footer-tagline">// Firma de prop trading deportivo. LATAM. Activo 24/7.</p>
+      </div>
+      <div class="footer-col"><h4>// PRODUCTO</h4><ul><li><a>./desafios</a></li><li><a>./dashboard</a></li><li><a>./pagos</a></li><li><a>./afiliados</a></li></ul></div>
+      <div class="footer-col"><h4>// EMPRESA</h4><ul><li><a>./nosotros</a></li><li><a>./blog</a></li><li><a>./traders</a></li><li><a>./contacto</a></li></ul></div>
+      <div class="footer-col"><h4>// LEGAL</h4><ul><li><a>./terminos</a></li><li><a>./privacidad</a></li><li><a>./reglas</a></li><li><a>./faq</a></li></ul></div>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-copy">// (C) 2025 PLAYFUNDED. ALL_RIGHTS_RESERVED.</span>
+      <div class="footer-links"><a>./twitter</a><a>./instagram</a><a>./discord</a></div>
+    </div>
+  </div>
+</footer>
+
+</div><!-- end content-wrap -->
+</body>
+</html>

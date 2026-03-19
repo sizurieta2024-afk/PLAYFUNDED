@@ -6,6 +6,7 @@ import { requestPayout, rolloverProfits } from "@/app/actions/payouts";
 import { KycForm } from "@/components/kyc/KycForm";
 import type { PayoutMethod } from "@prisma/client";
 import { Link } from "@/i18n/navigation";
+import type { KycPayoutEligibilityCode } from "@/lib/kyc/eligibility";
 
 type KycStatus = "not_required" | "pending" | "approved" | "rejected" | null;
 
@@ -32,6 +33,7 @@ interface PayoutsClientProps {
   fundedChallenges: FundedChallenge[];
   pastPayouts: PayoutRecord[];
   kycStatus: KycStatus;
+  kycEligibilityCode: KycPayoutEligibilityCode;
   payoutCountry: string | null;
   availableMethods: PayoutMethod[];
   complianceNotice?: string | null;
@@ -60,6 +62,7 @@ export function PayoutsClient({
   fundedChallenges,
   pastPayouts,
   kycStatus,
+  kycEligibilityCode,
   payoutCountry,
   availableMethods,
   complianceNotice,
@@ -109,6 +112,22 @@ export function PayoutsClient({
       return t.bankDlocal ?? "Bank transfer (dLocal)";
     }
     return t[m] ?? FALLBACK_METHOD_LABELS[m];
+  }
+
+  function getKycBlockedMessage(code: KycPayoutEligibilityCode): string {
+    switch (code) {
+      case "already_approved":
+        return tKyc.alreadyApproved;
+      case "pending_review":
+        return tKyc.pendingReview;
+      case "payouts_disabled_country":
+        return tKyc.payoutsDisabledCountry;
+      case "no_profit_available":
+        return tKyc.noProfitAvailable;
+      case "no_funded_challenge":
+      default:
+        return tKyc.noFundedChallenge;
+    }
   }
 
   // Update requestedAmountInput when selected challenge changes
@@ -172,6 +191,36 @@ export function PayoutsClient({
     }
   }
 
+  const canShowKycForm =
+    kycEligibilityCode === "eligible" &&
+    (kycStatus === null || kycStatus === "not_required" || kycStatus === "rejected");
+
+  if (!canShowKycForm && (kycStatus === null || kycStatus === "not_required")) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-5">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-foreground">{t.kycRequired}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {getKycBlockedMessage(kycEligibilityCode)}
+              </p>
+            </div>
+          </div>
+        </div>
+        {fundedChallenges.length === 0 && (
+          <Link
+            href="/challenges"
+            className="inline-block px-6 py-2.5 rounded-lg bg-pf-brand text-white text-sm font-semibold hover:bg-pf-brand/90 transition-colors"
+          >
+            {t.buyChallenge}
+          </Link>
+        )}
+      </div>
+    );
+  }
+
   // KYC gate
   if (kycStatus === null || kycStatus === "not_required") {
     return (
@@ -209,6 +258,23 @@ export function PayoutsClient({
   }
 
   if (kycStatus === "rejected") {
+    if (!canShowKycForm) {
+      return (
+        <div className="space-y-6">
+          <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-5">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-foreground">{t.kycRejected}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {getKycBlockedMessage(kycEligibilityCode)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="space-y-6">
         <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-5">

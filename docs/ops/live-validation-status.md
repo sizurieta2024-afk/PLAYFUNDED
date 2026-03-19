@@ -45,7 +45,10 @@ Updated: 2026-03-17
 ## Explicit Current KYC Runtime Status
 
 - Intended production behavior: strict
-- Effective behavior without ClamAV envs: uploads block, they do not silently pass
+- Default behavior by environment:
+  - production => `require_clean`
+  - staging / preview / development => `best_effort`
+- Effective production behavior without ClamAV envs: uploads block, they do not silently pass
 - Admin launch view should be read as:
-  - `Mode require_clean`
+  - `production · mode require_clean`
   - `Scanner not configured`

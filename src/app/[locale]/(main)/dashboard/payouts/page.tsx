@@ -8,6 +8,7 @@ import { resolveCountry } from "@/lib/country-policy";
 import { resolvePayoutCountry } from "@/lib/payout-options";
 import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
 import { PLATFORM_POLICY, getPayoutWindowLabel } from "@/lib/platform-policy";
+import { evaluateKycPayoutEligibility } from "@/lib/kyc/eligibility";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -80,6 +81,12 @@ export default async function PayoutsPage({
       name: c.tier.name,
     },
   }));
+
+  const kycEligibility = evaluateKycPayoutEligibility({
+    kycStatus,
+    payoutsEnabled: countryPolicy.payoutsEnabled,
+    fundedChallenges,
+  });
 
   const pastPayouts = payouts.map((p) => ({
     id: p.id,
@@ -165,6 +172,17 @@ export default async function PayoutsPage({
     fileTooBig: tKyc("fileTooBig"),
     fileWrongType: tKyc("fileWrongType"),
     required: tKyc("required"),
+    uploadFailed: tKyc("uploadFailed"),
+    fileEmpty: tKyc("fileEmpty"),
+    fileBadSignature: tKyc("fileBadSignature"),
+    fileNameInvalid: tKyc("fileNameInvalid"),
+    fileMalwareDetected: tKyc("fileMalwareDetected"),
+    scanUnavailable: tKyc("scanUnavailable"),
+    alreadyApproved: tKyc("alreadyApproved"),
+    pendingReview: tKyc("pendingReview"),
+    payoutsDisabledCountry: tKyc("payoutsDisabledCountry"),
+    noFundedChallenge: tKyc("noFundedChallenge"),
+    noProfitAvailable: tKyc("noProfitAvailable"),
   };
 
   return (
@@ -180,6 +198,7 @@ export default async function PayoutsPage({
         fundedChallenges={fundedChallenges}
         pastPayouts={pastPayouts}
         kycStatus={kycStatus}
+        kycEligibilityCode={kycEligibility.code}
         payoutCountry={payoutCountry}
         availableMethods={availableMethods}
         complianceNotice={

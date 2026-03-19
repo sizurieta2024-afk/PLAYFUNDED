@@ -114,6 +114,7 @@ Recovery:
 
 Mode note:
 - Production currently defaults to `require_clean` if `KYC_SCAN_MODE` is unset.
+- Staging, preview, and internal environments default to `best_effort` unless `KYC_SCAN_MODE` or `APP_ENV` overrides that behavior.
 - If `CLAMAV_*` is not configured in production, KYC uploads are expected to block, not degrade silently.
 
 ## 6. Alerting Disabled Or Misconfigured

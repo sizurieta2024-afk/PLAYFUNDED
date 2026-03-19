@@ -13,7 +13,10 @@ import {
   listResolvedCountryPolicies,
   type ResolvedCountryPolicy,
 } from "@/lib/country-policy-store";
-import { getKycScanMode } from "@/lib/kyc-malware-scan";
+import {
+  getKycDeployEnvironment,
+  getKycScanMode,
+} from "@/lib/kyc-malware-scan";
 
 type OpsEventRow = Awaited<ReturnType<typeof listRecentOpsEvents>>[number];
 import { PLATFORM_POLICY, getPayoutWindowLabel } from "@/lib/platform-policy";
@@ -27,6 +30,7 @@ function formatBoolInputName(name: string) {
 }
 
 export default async function AdminLaunchPage() {
+  const kycDeployEnvironment = getKycDeployEnvironment();
   const kycScanMode = getKycScanMode();
   const clamavConfigured = Boolean(process.env.CLAMAV_HOST?.trim());
   const [policies, recentOpsEvents] = await Promise.all([
@@ -74,7 +78,7 @@ export default async function AdminLaunchPage() {
             {clamavConfigured ? "ClamAV configured" : "Scanner not configured"}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Mode {kycScanMode}
+            {kycDeployEnvironment} · mode {kycScanMode}
             {clamavConfigured
               ? ""
               : kycScanMode === "require_clean"

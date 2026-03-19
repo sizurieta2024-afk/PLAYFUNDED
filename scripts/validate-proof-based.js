@@ -273,9 +273,13 @@ const sourceCases = [
   {
     id: "ops.admin-launch-kyc-status",
     area: "payout flows",
-    claim: "The admin launch page exposes whether KYC scanning is configured and which mode production is using.",
+    claim: "The admin launch page exposes whether KYC scanning is configured plus the resolved deploy environment and scan mode.",
     file: "src/app/[locale]/admin/launch/page.tsx",
     checks: [
+      {
+        description: "The admin launch page reads the resolved KYC deploy environment",
+        matcher: /getKycDeployEnvironment\(/,
+      },
       {
         description: "The admin launch page reads the KYC scan mode",
         matcher: /getKycScanMode\(/,
@@ -287,6 +291,10 @@ const sourceCases = [
       {
         description: "The page shows the scanner configured vs unconfigured state",
         matcher: /Scanner not configured|ClamAV configured/,
+      },
+      {
+        description: "The page shows the deploy environment alongside the mode",
+        matcher: /kycDeployEnvironment.*mode.*kycScanMode/,
       },
     ],
   },

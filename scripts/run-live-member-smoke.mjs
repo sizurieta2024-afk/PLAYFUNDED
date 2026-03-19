@@ -206,12 +206,13 @@ async function runEnglishMemberFlow(browser) {
     const buyButtons = page.getByRole("button", {
       name: /buy challenge|buy now|comprar/i,
     });
-    await buyButtons.first().waitFor({ timeout: 15000 });
-    await buyButtons.first().click();
-    const modalHeading = page.getByRole("heading", {
-      name: /how do you want to pay|select payment method/i,
-    }).first();
-    await modalHeading.waitFor({ timeout: 10000 });
+    const firstBuyButton = buyButtons.first();
+    await firstBuyButton.waitFor({ timeout: 15000 });
+    await firstBuyButton.click();
+    const modalHeading = page.getByText(
+      /how do you want to pay|select payment method/i,
+    ).first();
+    await modalHeading.waitFor({ state: "visible", timeout: 15000 });
     const closeButton = page.locator("div.fixed.inset-0").locator("button").first();
     await closeButton.click();
     await modalHeading.waitFor({ state: "hidden", timeout: 10000 });

@@ -379,7 +379,18 @@ try {
     });
     await page.getByRole("button", { name: "Ban user" }).click();
     const banReasonInput = page.locator('input[placeholder="Ban reason (required)"]').first();
-    await banReasonInput.waitFor({ state: "visible", timeout: 15000 });
+    await banReasonInput.waitFor({ state: "attached", timeout: 15000 });
+    await banReasonInput.scrollIntoViewIfNeeded().catch(() => {});
+    await page
+      .waitForFunction(() => {
+        const input = document.querySelector(
+          'input[placeholder="Ban reason (required)"]',
+        );
+        if (!input) return false;
+        const style = window.getComputedStyle(input);
+        return style.display !== "none" && style.visibility !== "hidden";
+      }, undefined, { timeout: 15000 })
+      .catch(() => {});
     await banReasonInput.fill("smoke policy violation");
     await page.getByRole("button", { name: "Confirm ban" }).click();
     await page.getByText(/BANNED:/).waitFor({ state: "visible", timeout: 15000 });

@@ -1,7 +1,7 @@
 import { chromium } from "playwright";
 import { createClient } from "@supabase/supabase-js";
-import { PrismaClient } from "@prisma/client";
 import assert from "node:assert/strict";
+import { connectPrismaWithRetry } from "./lib/prisma-smoke.mjs";
 
 const baseUrl = process.env.BASE_URL ?? "http://localhost:3004";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -12,7 +12,7 @@ if (!supabaseUrl || !anonKey || !serviceRoleKey) {
   throw new Error("Supabase env vars are required");
 }
 
-const prisma = new PrismaClient();
+let prisma;
 const supabase = createClient(supabaseUrl, serviceRoleKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
@@ -283,6 +283,8 @@ async function collectAuditIds(adminId) {
 }
 
 try {
+  prisma = await connectPrismaWithRetry();
+
   const fixture = await buildFixture();
   fixtureResourceIds = fixture.ids;
   const { cookieName, cookieValue } = await loginCookie(
@@ -492,28 +494,28 @@ try {
     });
   }
   if (createdAuditIds.length > 0) {
-    await prisma.auditLog.deleteMany({ where: { id: { in: createdAuditIds } } });
+    await prisma?.auditLog.deleteMany({ where: { id: { in: createdAuditIds } } });
   }
   if (createdPayoutIds.length > 0) {
-    await prisma.payout.deleteMany({ where: { id: { in: createdPayoutIds } } });
+    await prisma?.payout.deleteMany({ where: { id: { in: createdPayoutIds } } });
   }
   if (createdPickIds.length > 0) {
-    await prisma.pick.deleteMany({ where: { id: { in: createdPickIds } } });
+    await prisma?.pick.deleteMany({ where: { id: { in: createdPickIds } } });
   }
   if (createdChallengeIds.length > 0) {
-    await prisma.challenge.deleteMany({ where: { id: { in: createdChallengeIds } } });
+    await prisma?.challenge.deleteMany({ where: { id: { in: createdChallengeIds } } });
   }
   if (createdKycIds.length > 0) {
-    await prisma.kycSubmission.deleteMany({ where: { id: { in: createdKycIds } } });
+    await prisma?.kycSubmission.deleteMany({ where: { id: { in: createdKycIds } } });
   }
   if (createdUserIds.length > 0) {
-    await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } });
+    await prisma?.user.deleteMany({ where: { id: { in: createdUserIds } } });
   }
   if (createdTierIds.length > 0) {
-    await prisma.tier.deleteMany({ where: { id: { in: createdTierIds } } });
+    await prisma?.tier.deleteMany({ where: { id: { in: createdTierIds } } });
   }
   for (const authUserId of createdAuthUserIds) {
     await supabase.auth.admin.deleteUser(authUserId);
   }
-  await prisma.$disconnect();
+  await prisma?.$disconnect();
 }

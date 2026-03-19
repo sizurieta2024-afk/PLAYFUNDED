@@ -1,8 +1,8 @@
 import { chromium } from "playwright";
 import { createClient } from "@supabase/supabase-js";
-import { PrismaClient } from "@prisma/client";
+import { connectPrismaWithRetry } from "./lib/prisma-smoke.mjs";
 
-const prisma = new PrismaClient();
+let prisma;
 
 const baseUrl = process.env.BASE_URL ?? "http://localhost:3002";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -24,6 +24,8 @@ const password = "PlayfundedAdmin!123";
 let userId = null;
 
 try {
+  prisma = await connectPrismaWithRetry();
+
   const { data, error } = await supabase.auth.admin.createUser({
     email,
     password,
@@ -110,8 +112,8 @@ try {
   }
 } finally {
   if (userId) {
-    await prisma.user.deleteMany({ where: { supabaseId: userId } });
+    await prisma?.user.deleteMany({ where: { supabaseId: userId } });
     await supabase.auth.admin.deleteUser(userId);
   }
-  await prisma.$disconnect();
+  await prisma?.$disconnect();
 }

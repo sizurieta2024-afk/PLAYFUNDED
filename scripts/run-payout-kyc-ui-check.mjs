@@ -1,6 +1,6 @@
 import { chromium } from "playwright";
 import { createClient } from "@supabase/supabase-js";
-import { PrismaClient } from "@prisma/client";
+import { connectPrismaWithRetry } from "./lib/prisma-smoke.mjs";
 
 const baseUrl = process.env.BASE_URL ?? "http://localhost:3004";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -11,7 +11,7 @@ if (!supabaseUrl || !anonKey || !serviceRoleKey) {
   throw new Error("Supabase env vars are required");
 }
 
-const prisma = new PrismaClient();
+let prisma;
 const supabase = createClient(supabaseUrl, serviceRoleKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
@@ -199,6 +199,8 @@ async function expectEligibleState(browser, email, password) {
 }
 
 try {
+  prisma = await connectPrismaWithRetry();
+
   const tier = await ensureTier();
 
   const blockedAuth = await createAuthUser("Payout KYC Blocked");
@@ -244,13 +246,13 @@ try {
   }
 } finally {
   if (createdChallengeIds.length > 0) {
-    await prisma.challenge.deleteMany({ where: { id: { in: createdChallengeIds } } });
+    await prisma?.challenge.deleteMany({ where: { id: { in: createdChallengeIds } } });
   }
   if (createdUserIds.length > 0) {
-    await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } });
+    await prisma?.user.deleteMany({ where: { id: { in: createdUserIds } } });
   }
   for (const authUserId of createdAuthUserIds) {
     await supabase.auth.admin.deleteUser(authUserId);
   }
-  await prisma.$disconnect();
+  await prisma?.$disconnect();
 }

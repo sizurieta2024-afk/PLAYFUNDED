@@ -20,6 +20,7 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 const stamp = Date.now();
 const email = `admin-smoke+${stamp}@playfunded.local`;
 const password = "PlayfundedAdmin!123";
+const isSecureBaseUrl = new URL(baseUrl).protocol === "https:";
 
 let userId = null;
 
@@ -90,7 +91,7 @@ try {
         value: cookieValue,
         url: baseUrl,
         httpOnly: false,
-        secure: false,
+        secure: isSecureBaseUrl,
         sameSite: "Lax",
       },
     ]);

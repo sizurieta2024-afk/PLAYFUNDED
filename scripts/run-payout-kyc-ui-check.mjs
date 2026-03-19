@@ -20,6 +20,7 @@ const tierName = "Smoke Test Tier";
 const createdAuthUserIds = [];
 const createdUserIds = [];
 const createdChallengeIds = [];
+const isSecureBaseUrl = new URL(baseUrl).protocol === "https:";
 
 async function ensureTier() {
   const existing = await prisma.tier.findUnique({ where: { name: tierName } });
@@ -130,7 +131,7 @@ async function makeContext(browser, email, password) {
       value: cookieValue,
       url: baseUrl,
       httpOnly: false,
-      secure: false,
+      secure: isSecureBaseUrl,
       sameSite: "Lax",
     },
   ]);

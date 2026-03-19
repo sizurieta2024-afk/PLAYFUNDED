@@ -26,6 +26,7 @@ const createdKycIds = [];
 const createdAuditIds = [];
 const createdTierIds = [];
 let fixtureResourceIds = null;
+const isSecureBaseUrl = new URL(baseUrl).protocol === "https:";
 
 async function waitFor(check, timeoutMs = 15000, intervalMs = 250) {
   const startedAt = Date.now();
@@ -301,7 +302,7 @@ try {
         value: cookieValue,
         url: baseUrl,
         httpOnly: false,
-        secure: false,
+        secure: isSecureBaseUrl,
         sameSite: "Lax",
       },
     ]);
@@ -377,7 +378,9 @@ try {
       waitUntil: "domcontentloaded",
     });
     await page.getByRole("button", { name: "Ban user" }).click();
-    await page.getByPlaceholder("Ban reason (required)").fill("smoke policy violation");
+    const banReasonInput = page.locator('input[placeholder="Ban reason (required)"]').first();
+    await banReasonInput.waitFor({ state: "visible", timeout: 15000 });
+    await banReasonInput.fill("smoke policy violation");
     await page.getByRole("button", { name: "Confirm ban" }).click();
     await page.getByText(/BANNED:/).waitFor({ state: "visible", timeout: 15000 });
 

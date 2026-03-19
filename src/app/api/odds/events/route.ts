@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
     take: 100,
     select: {
       id: true,
+      event: true,
       sport: true,
       league: true,
       eventName: true,

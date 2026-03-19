@@ -21,6 +21,7 @@ interface Market {
 
 interface CachedEvent {
   id: string;
+  event: string;
   sport: string;
   league: string;
   eventName: string | null;
@@ -243,7 +244,7 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
           challengeId: challenge.id,
           sport: selected.event.sport,
           league: selected.event.league,
-          event: selected.event.id,
+          event: selected.event.event,
           eventName: selected.event.eventName,
           marketType: selected.marketType,
           selection: selected.outcome.name,

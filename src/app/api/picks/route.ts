@@ -85,9 +85,14 @@ export async function POST(req: NextRequest) {
   }
 
   const oddsEvent = await prisma.oddsCache.findFirst({
-    where: { sport, league, event },
+    where: {
+      sport,
+      league,
+      OR: [{ event }, { id: event }],
+    },
     orderBy: { fetchedAt: "desc" },
     select: {
+      event: true,
       eventName: true,
       startTime: true,
       isLive: true,
@@ -221,7 +226,7 @@ export async function POST(req: NextRequest) {
       userId: user.id,
       sport,
       league,
-      event,
+      event: oddsEvent.event,
       eventName: oddsEvent.eventName ?? eventName ?? null,
       marketType,
       selection: matchedOutcome.name,

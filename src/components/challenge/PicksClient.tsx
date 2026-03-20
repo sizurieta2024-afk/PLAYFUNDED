@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, X, Zap } from "lucide-react";
+import { EVENT_LOCK_MINUTES } from "@/lib/challenge/event-lock";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -96,6 +97,13 @@ function getPhaseLabel(phase: string, t: Record<string, string>): string {
   return t.funded;
 }
 
+function isEventStillOpen(event: CachedEvent): boolean {
+  if (event.isLive) return false;
+  const eventStart = new Date(event.startTime).getTime();
+  if (Number.isNaN(eventStart)) return false;
+  return eventStart > Date.now() + EVENT_LOCK_MINUTES * 60 * 1000;
+}
+
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-yellow-500/15 text-yellow-500",
   won: "bg-pf-brand/15 text-pf-brand",
@@ -130,23 +138,44 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [justPlaced, setJustPlaced] = useState(false);
+  const [eventsTick, setEventsTick] = useState(() => Date.now());
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchEvents() {
-      setLoadingEvents(true);
+      if (!cancelled) {
+        setLoadingEvents(true);
+      }
       try {
         const res = await fetch("/api/odds/events");
         if (res.ok) {
           const data = (await res.json()) as { events: CachedEvent[] };
-          setEvents(data.events);
+          if (!cancelled) {
+            setEvents(data.events.filter(isEventStillOpen));
+          }
         }
       } catch {
         // silent
       } finally {
-        setLoadingEvents(false);
+        if (!cancelled) {
+          setLoadingEvents(false);
+          setEventsTick(Date.now());
+        }
       }
     }
+
     void fetchEvents();
+    const timer = setInterval(() => void fetchEvents(), 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => setEventsTick(Date.now()), 15_000);
+    return () => clearInterval(timer);
   }, []);
 
   // Keep picks in sync so settled picks move from "Current Bets" to "Past Bets"
@@ -203,10 +232,11 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
   const visibleSportTabs = SPORT_TABS.filter(
     (tab) => tab.key === "all" || availableSports.includes(tab.key),
   );
+  const openEvents = events.filter((event) => isEventStillOpen(event));
   const filteredEvents =
     activeSport === "all"
-      ? events
-      : events.filter((e) => e.sport === activeSport);
+      ? openEvents
+      : openEvents.filter((e) => e.sport === activeSport);
 
   // Group events by league
   const eventsByLeague = filteredEvents.reduce<Record<string, CachedEvent[]>>(
@@ -232,6 +262,16 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
       : stakeCents > 0 && stakeCents < 100
         ? "Min $1.00"
         : null;
+
+  useEffect(() => {
+    if (!selected) return;
+    if (isEventStillOpen(selected.event)) return;
+
+    setSelected(null);
+    setStakeInput("");
+    setExpandedEvent(null);
+    setSubmitError("Event is locked before kickoff. Live betting is not allowed.");
+  }, [selected, eventsTick]);
 
   // ── Submit ────────────────────────────────────────────────────────────────
 

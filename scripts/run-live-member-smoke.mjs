@@ -143,9 +143,11 @@ async function deleteAuthUsersByEmail(email) {
 
 async function loginViaUi(page, loginPath, email, password) {
   await page.goto(`${baseUrl}${loginPath}`, { waitUntil: "domcontentloaded" });
-  await page.locator('input[type="email"]').fill(email);
-  await page.locator('input[type="password"]').fill(password);
-  const submit = page.locator('form button[type="submit"]').first();
+  const form = page.locator("form").filter({ has: page.locator('input[type="email"]') }).first();
+  await form.waitFor({ state: "visible", timeout: 15000 });
+  await form.locator('input[name="email"]').first().fill(email);
+  await form.locator('input[name="password"]').first().fill(password);
+  const submit = form.locator('button[type="submit"]').first();
   await submit.click();
   await page.waitForFunction(
     () => !window.location.pathname.includes("/auth/login"),
@@ -174,10 +176,12 @@ async function signOutIfVisible(page) {
 
 async function runSignupSmoke(page) {
   await page.goto(`${baseUrl}/en/auth/signup`, { waitUntil: "domcontentloaded" });
-  await page.locator('input[name="name"]').fill("Live Signup Smoke");
-  await page.locator('input[type="email"]').fill(signupEmail);
-  await page.locator('input[type="password"]').fill(signupPassword);
-  await page.locator('form button[type="submit"]').click();
+  const form = page.locator("form").filter({ has: page.locator('input[name="name"]') }).first();
+  await form.waitFor({ state: "visible", timeout: 15000 });
+  await form.locator('input[name="name"]').first().fill("Live Signup Smoke");
+  await form.locator('input[name="email"]').first().fill(signupEmail);
+  await form.locator('input[name="password"]').first().fill(signupPassword);
+  await form.locator('button[type="submit"]').first().click();
   try {
     await page.waitForURL(/\/auth\/verify|\/dashboard/, { timeout: 30000 });
   } catch (error) {

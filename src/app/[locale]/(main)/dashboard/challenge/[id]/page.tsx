@@ -203,7 +203,7 @@ export default async function ChallengeDetailPage({
           Math.min(
             100,
             Math.round(
-              ((challenge.balance - phaseStartBalance) / profitRange) * 100,
+              ((effectiveBalance - phaseStartBalance) / profitRange) * 100,
             ),
           ),
         )

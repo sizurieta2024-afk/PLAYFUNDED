@@ -180,6 +180,10 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
 
   const maxStakeCents = Math.floor((challenge.startBalance * 5) / 100);
   const targetCents = getProfitTargetCents(challenge);
+  const pendingStakeCents = picks
+    .filter((pick) => pick.status === "pending")
+    .reduce((sum, pick) => sum + pick.stake, 0);
+  const effectiveBalance = balance + pendingStakeCents;
   const progressPct =
     targetCents === Infinity
       ? 100
@@ -188,7 +192,7 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
           Math.min(
             100,
             Math.round(
-              ((balance - challenge.startBalance) /
+              ((effectiveBalance - challenge.startBalance) /
                 (targetCents - challenge.startBalance)) *
                 100,
             ),

@@ -60,7 +60,7 @@ export function ChallengeCard({
   const effectiveBalance = challenge.balance + pendingStakeCents;
 
   // ── P&L ──────────────────────────────────────────────────────────────────
-  const pnlCents = challenge.balance - challenge.startBalance;
+  const pnlCents = effectiveBalance - challenge.startBalance;
   const pnlPct = ((pnlCents / challenge.startBalance) * 100).toFixed(1);
   const isProfitable = pnlCents >= 0;
 
@@ -81,7 +81,7 @@ export function ChallengeCard({
           0,
           Math.min(
             100,
-            Math.round(((challenge.balance - phaseStartBalance) / range) * 100),
+            Math.round(((effectiveBalance - phaseStartBalance) / range) * 100),
           ),
         )
       : 100;

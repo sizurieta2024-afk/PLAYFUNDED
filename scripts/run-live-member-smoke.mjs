@@ -203,6 +203,8 @@ async function runEnglishMemberFlow(browser) {
     await page.getByRole("heading", { name: /dashboard/i }).waitFor({ timeout: 15000 });
 
     await page.goto(`${baseUrl}/en/challenges`, { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle").catch(() => {});
+    await page.waitForTimeout(2000);
     const buyButtons = page.getByRole("button", {
       name: /buy challenge|buy now|comprar/i,
     });

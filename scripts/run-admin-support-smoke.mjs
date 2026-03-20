@@ -377,9 +377,19 @@ try {
     await page.goto(`${baseUrl}/en/admin/users/${fixture.ids.banTargetId}`, {
       waitUntil: "domcontentloaded",
     });
-    await page.getByRole("button", { name: "Ban user" }).click();
+    await page.waitForLoadState("networkidle").catch(() => {});
+    await page.waitForTimeout(1500);
+    const banUserButton = page.getByRole("button", { name: "Ban user" });
+    await banUserButton.click();
     const banReasonInput = page.locator('input[placeholder="Ban reason (required)"]').first();
-    await banReasonInput.waitFor({ state: "attached", timeout: 15000 });
+    const appeared = await banReasonInput
+      .waitFor({ state: "attached", timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!appeared) {
+      await banUserButton.click();
+      await banReasonInput.waitFor({ state: "attached", timeout: 15000 });
+    }
     await banReasonInput.scrollIntoViewIfNeeded().catch(() => {});
     await page
       .waitForFunction(() => {

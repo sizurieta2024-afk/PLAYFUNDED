@@ -291,6 +291,7 @@ async function runAllowedFlows(browser, tier) {
       const mercado = await postJson(context, "/api/checkout/mercadopago", {
         tierId: tier.id,
         locale: "pt-BR",
+        country: "BR",
       });
       assert.equal(
         mercado.status,
@@ -356,6 +357,7 @@ async function runBlockedCountryFlow(browser, tier) {
     const mercadoBlocked = await postJson(context, "/api/checkout/mercadopago", {
       tierId: tier.id,
       locale: "en",
+      country: "US",
     });
     // MP route resolves country from geo/user state, so a US profile should still block.
     assert.equal(mercadoBlocked.status, 403);

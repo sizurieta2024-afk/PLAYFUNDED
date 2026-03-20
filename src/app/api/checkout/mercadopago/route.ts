@@ -33,8 +33,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const body = (await request.json()) as { tierId?: string; locale?: string };
-  const { tierId, locale = "es-419" } = body;
+  const body = (await request.json()) as {
+    tierId?: string;
+    locale?: string;
+    country?: string;
+  };
+  const { tierId, locale = "es-419", country } = body;
 
   if (!tierId) {
     return NextResponse.json(
@@ -110,6 +114,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const checkoutCountry = resolveCountry(
+      country,
       request.headers.get("x-vercel-ip-country"),
       request.headers.get("cf-ipcountry"),
       user.country,

@@ -1,14 +1,14 @@
 # Playfunded Proof-Based Validation Report
 
-Generated: 2026-03-18T13:10:02.363Z
+Generated: 2026-03-20T21:36:16.720Z
 
 This report follows a Shannon-style rule: claims must be backed by executable or source-level proof. Anything not proven is listed as unverified.
 
 ## Summary
 
-- Verified checks: 33
+- Verified checks: 51
 - Failed checks: 0
-- Unverified claims: 5
+- Unverified claims: 3
 
 ## Verified And Failed Checks
 
@@ -305,10 +305,182 @@ Evidence:
 - Winning payout: 1950
 - Losing payout: 0
 
+### VERIFIED db.rls-user-self-scope
+Area: auth and session handling
+Claim: The live User table has RLS enabled with an own-row policy tied to auth.uid().
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- User table RLS: true
+- Own-row policy: users_own_row
+
+### VERIFIED db.rls-sensitive-public-tables
+Area: auth and session handling
+Claim: Sensitive public tables have RLS enabled before app-level access control is trusted.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Affiliate rls=true
+- AffiliateClick rls=true
+- AuditLog rls=true
+- Challenge rls=true
+- CountryPolicyOverride rls=true
+- Follow rls=true
+- KycSubmission rls=true
+- MarketRequest rls=true
+- OpsEventLog rls=true
+- ParlayLeg rls=true
+- Payment rls=true
+- Payout rls=true
+- PayoutProfile rls=true
+- Pick rls=true
+- User rls=true
+
+### VERIFIED db.rls-owner-policies
+Area: auth and session handling
+Claim: Owner-scoped read policies exist on the user-facing tables that should remain visible to the authenticated user.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Affiliate:users_select_own_affiliate
+- AffiliateClick:users_select_own_affiliate_clicks
+- Challenge:users_select_own_challenges
+- Follow:users_select_own_follows
+- KycSubmission:users_select_own_kyc_submission
+- MarketRequest:users_select_own_market_requests
+- ParlayLeg:users_select_own_parlay_legs
+- Payment:users_select_own_payments
+- Payout:users_select_own_payouts
+- PayoutProfile:users_select_own_payout_profile
+- Pick:users_select_own_picks
+
+### VERIFIED db.payout-persistence-and-pending-guard
+Area: payout flows
+Claim: Persisted payout requests debit balance once and block a second pending request on the same challenge.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Created payout amount: 800
+- Challenge balance after request: 11000
+- Second request rejection: PENDING_EXISTS
+
+### VERIFIED db.webhook-lock-duplicate-fulfillment
+Area: payments and webhooks
+Claim: Concurrent duplicate webhook fulfillment creates only one payment and one challenge.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Outcomes: created, duplicate
+- Payment count: 1
+- Challenge count: 1
+
+### VERIFIED db.nowpayments-checkout-provisioning-success
+Area: payments and webhooks
+Claim: A completed NOWPayments webhook upgrades the pending checkout payment in place and provisions one challenge.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Outcome: created
+- Pending payment upgraded: true
+- Challenge count: 1
+
+### VERIFIED db.nowpayments-checkout-provisioning-rollback
+Area: payments and webhooks
+Claim: If NOWPayments provisioning fails after payment upgrade, the transaction rolls back and the checkout payment stays pending.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Payment status after rollback: pending
+- Challenge count after rollback: 0
+
+### VERIFIED db.nowpayments-webhook-replay-race
+Area: payments and webhooks
+Claim: Concurrent replay of the same NOWPayments completion upgrades the checkout payment once and provisions only one challenge.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Statuses: created, duplicate
+- Payment count: 1
+- Challenge count: 1
+
+### VERIFIED db.webhook-lock-rolls-back-failed-fulfillment
+Area: payments and webhooks
+Claim: Webhook fulfillment rolls back partial writes when provisioning fails inside the transaction.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Payment count after rollback: 0
+- Challenge count after rollback: 0
+
+### VERIFIED db.admin-payout-review-audit
+Area: admin authorization
+Claim: Admin payout review persists both the payout status change and the audit log entry.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Reviewed payout status: paid
+- Audit action: approve_payout
+
+### VERIFIED db.admin-payout-review-race
+Area: admin authorization
+Claim: Concurrent payout reviews never throw; one succeeds and the competing review returns a stable non-500 result.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Success count: 1
+- Competing review count: 1
+
+### VERIFIED db.admin-payout-reject-audit
+Area: admin authorization
+Claim: Rejecting a payout restores challenge balance and persists the audit log entry.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Rejected payout status: failed
+- Restored balance: 12000
+- Audit action: reject_payout
+
+### VERIFIED db.admin-kyc-review-audit
+Area: admin authorization
+Claim: Admin KYC review persists both the submission status change and the audit log entry.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Reviewed KYC status: approved
+- Audit action: approve_kyc
+
+### VERIFIED db.admin-kyc-reject-audit
+Area: admin authorization
+Claim: Rejecting KYC persists rejected status and the audit log entry.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Rejected KYC status: rejected
+- Audit action: reject_kyc
+
+### VERIFIED db.pick-placement-concurrency
+Area: challenge risk rules
+Claim: Concurrent pick placement only debits one pick when both requests race on the same balance snapshot.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Success count: 1
+- Blocked count: 1
+- Final balance: 10000
+- Pick count: 1
+
+### VERIFIED db.settlement-sequential-ordering
+Area: pick settlement logic
+Claim: Sequential settlement of multiple pending picks on the same challenge preserves cumulative balance updates.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- First result balance: 9000
+- Second result balance: 10000
+- Final balance: 10000
+
+### VERIFIED db.admin-manual-settlement-override
+Area: pick settlement logic
+Claim: Manual settlement override persists the chosen outcome and challenge balance update.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Settled pick status: void
+- Challenge balance: 10000
+
+### VERIFIED db.admin-user-ban-cycle
+Area: admin authorization
+Claim: Admin ban and unban mutations persist user restriction state and audit entries.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Ban audit action: ban_user
+- Unban audit action: unban_user
+
 ## Unverified Claims
 
 - payments and webhooks: Provider console settings, secret rotation, and callback allowlists are configured safely. -- Unverified because those controls live outside this repository.
 - geo-blocking and rate limiting: Rate limiting is effective across all production instances and regions. -- Unverified under real production traffic across regions, even though the implementation now uses shared Postgres state.
 - geo-blocking and rate limiting: Geo-IP derivation always reflects the user's real jurisdiction. -- Unverified because it depends on provider headers and external IP lookup behavior at runtime.
-- auth and session handling: Live RLS coverage for public tables was inspected against the development database. -- Unverified because VALIDATE_PROOF_DB=1 was not set. SQL artifacts found: prisma/migrations/20260307030536_baseline/migration.sql, prisma/migrations/20260311153205_shared_rate_limit/migration.sql.
-- database-backed validation: DB-backed payout and admin mutation proofs were executed against a disposable Postgres database. -- Unverified because VALIDATE_PROOF_DB=1 was not set.

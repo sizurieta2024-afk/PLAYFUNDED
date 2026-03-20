@@ -68,6 +68,9 @@ Recovery:
   - If `Payment.providerRef` exists with `status = pending`, confirm whether the webhook upgraded that row or rolled back entirely before replaying.
   - If no `Payment.providerRef` exists, confirm the provider event payload still maps to the expected `tierId` and `userId`.
 
+Launch note:
+- A launch-ready checkout should pass `npm run smoke:payments`, which proves initiation on the enabled rails and confirms that checkout creation alone does not grant a challenge.
+
 ## 4. Payout Queue Blockage
 
 Signal:
@@ -116,6 +119,7 @@ Mode note:
 - Production currently defaults to `require_clean` if `KYC_SCAN_MODE` is unset.
 - Staging, preview, and internal environments default to `best_effort` unless `KYC_SCAN_MODE` or `APP_ENV` overrides that behavior.
 - If `CLAMAV_*` is not configured in production, KYC uploads are expected to block, not degrade silently.
+- `npm run smoke:kyc-strict` is the quickest proof that this blocking behavior still holds on a production-like runtime.
 
 ## 6. Alerting Disabled Or Misconfigured
 

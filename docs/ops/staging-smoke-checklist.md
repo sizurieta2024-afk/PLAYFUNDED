@@ -25,7 +25,11 @@ Use this before a release candidate or production deploy.
 ## 4. Payments And Webhooks
 
 - Stripe checkout route returns a session for an allowed country
+- Stripe Pix checkout returns a session for an allowed Brazil flow
+- NOWPayments checkout returns an invoice and persists exactly one pending `Payment`
+- Mercado Pago checkout is either intentionally hidden by policy/UI or returns the expected country-policy block
 - Blocked country cannot create checkout
+- Users without a paid fulfillment still have `0` accessible challenges after checkout initiation
 - Webhook signature failures are rejected
 - Duplicate webhook replay does not create a second challenge
 
@@ -40,6 +44,7 @@ Use this before a release candidate or production deploy.
 
 - KYC upload accepts a safe PDF/JPG/PNG file
 - If scanner is enabled, malware test file is blocked and quarantined
+- If production scanning is not armed, uploads block with `scan_unavailable`
 - First payout request is blocked without approved KYC
 - Allowed payout methods match country policy
 
@@ -50,6 +55,8 @@ Use this before a release candidate or production deploy.
 - Launch checklist page loads
 - Manual settlement endpoint rate limit still applies
 - `npm run smoke:admin` passes
+- `npm run smoke:payments` passes
+- `npm run smoke:kyc-strict` passes for production-like strict mode
 - `npm run smoke:payout-kyc` passes
 - `npm run smoke:admin-support` passes
 

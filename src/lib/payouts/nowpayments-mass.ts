@@ -78,14 +78,8 @@ function normalizePayoutCurrency(currency: "btc" | "usdt" | "usdc") {
   return "btc";
 }
 
-function centsToCryptoAmount(currency: "btc" | "usdt" | "usdc", amountCents: number) {
-  // NOWPayments payout API expects crypto-denominated amounts. For launch,
-  // we keep payout records in USD cents and rely on custody balances in
-  // stablecoins or BTC-equivalent handled operationally.
-  if (currency === "usdt" || currency === "usdc") {
-    return Number((amountCents / 100).toFixed(6));
-  }
-  return Number((amountCents / 100).toFixed(6));
+function centsToUsdAmount(amountCents: number) {
+  return Number((amountCents / 100).toFixed(2));
 }
 
 function mapWithdrawal(payload: unknown) {
@@ -127,7 +121,8 @@ export async function executeNowPaymentsCryptoPayout(
           {
             address: input.address,
             currency: normalizePayoutCurrency(input.currency),
-            amount: centsToCryptoAmount(input.currency, input.amountCents),
+            fiat_amount: centsToUsdAmount(input.amountCents),
+            fiat_currency: "usd",
           },
         ],
       }),

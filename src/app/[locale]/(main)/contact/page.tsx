@@ -1,27 +1,41 @@
 import type { Metadata } from "next";
+import { getDiscordInviteUrl } from "@/lib/public-links";
 
 type LocaleKey = "es-419" | "en" | "pt-BR";
 
 const COPY: Record<
   LocaleKey,
-  { title: string; subtitle: string; emailLabel: string; response: string }
+  {
+    title: string;
+    subtitle: string;
+    emailLabel: string;
+    discordLabel: string;
+    discordCta: string;
+    response: string;
+  }
 > = {
   "es-419": {
     title: "Contacto",
     subtitle: "Estamos aquí para ayudarte",
     emailLabel: "Correo de soporte",
+    discordLabel: "Discord",
+    discordCta: "Unirse al Discord",
     response: "Tiempo de respuesta estimado: 24 a 48 horas hábiles.",
   },
   en: {
     title: "Contact",
     subtitle: "We are here to help",
     emailLabel: "Support email",
+    discordLabel: "Discord",
+    discordCta: "Join Discord",
     response: "Estimated response time: 24 to 48 business hours.",
   },
   "pt-BR": {
     title: "Contato",
     subtitle: "Estamos aqui para ajudar",
     emailLabel: "E-mail de suporte",
+    discordLabel: "Discord",
+    discordCta: "Entrar no Discord",
     response: "Tempo estimado de resposta: 24 a 48 horas úteis.",
   },
 };
@@ -53,6 +67,7 @@ export default async function ContactPage({
 }) {
   const { locale } = await params;
   const copy = getCopy(locale);
+  const discordInviteUrl = getDiscordInviteUrl();
 
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-12">
@@ -68,6 +83,19 @@ export default async function ContactPage({
             support@playfunded.com
           </a>
         </div>
+        {discordInviteUrl ? (
+          <div className="pt-2">
+            <p className="text-sm font-medium">{copy.discordLabel}</p>
+            <a
+              href={discordInviteUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-pf-brand hover:underline"
+            >
+              {copy.discordCta}
+            </a>
+          </div>
+        ) : null}
         <p className="text-sm text-muted-foreground">{copy.response}</p>
       </div>
     </div>

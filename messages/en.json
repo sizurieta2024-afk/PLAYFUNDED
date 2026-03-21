@@ -25,6 +25,7 @@
     "responsibleGambling": "Responsible Gambling",
     "support": "Support",
     "contact": "Contact",
+    "discord": "Discord",
     "affiliate": "Affiliate Program",
     "disclaimer": "PlayFunded is an educational sports trading platform. We are not a gambling service. Profits are simulated and payouts are based on demonstrated performance.",
     "rights": "All rights reserved"
@@ -614,7 +615,8 @@
     "countryPolicyReview": "Country availability, payout methods, affiliate access, and gift purchases can change while compliance review is still open.",
     "contact_title": "Still have questions?",
     "contact_desc": "Our support team typically responds within a few hours.",
-    "contact_cta": "Contact support"
+    "contact_cta": "Contact support",
+    "discord_cta": "Join Discord"
   },
   "settings": {
     "pageTitle": "Settings",

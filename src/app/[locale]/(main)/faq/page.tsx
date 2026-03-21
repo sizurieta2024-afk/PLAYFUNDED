@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { resolveCountry } from "@/lib/country-policy";
 import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
 import { PLATFORM_POLICY, getPayoutWindowLabel } from "@/lib/platform-policy";
+import { getDiscordInviteUrl } from "@/lib/public-links";
 
 export default async function FaqPage({
   params,
@@ -19,6 +20,7 @@ export default async function FaqPage({
   );
   const policy = await getResolvedCountryPolicy(country);
   const hasExactCommercialTerms = policy.marketing.showExactCommercialTerms;
+  const discordInviteUrl = getDiscordInviteUrl();
 
   const categories = [
     {
@@ -135,12 +137,24 @@ export default async function FaqPage({
       <div className="text-center rounded-xl border border-border bg-card/50 p-8 space-y-3">
         <p className="font-semibold">{t("contact_title")}</p>
         <p className="text-sm text-muted-foreground">{t("contact_desc")}</p>
-        <Link
-          href="mailto:support@playfunded.com"
-          className="inline-block px-5 py-2 rounded-lg bg-pf-brand text-white text-sm font-semibold hover:bg-pf-brand/90 transition-colors"
-        >
-          {t("contact_cta")}
-        </Link>
+        <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <Link
+            href="mailto:support@playfunded.com"
+            className="inline-block px-5 py-2 rounded-lg bg-pf-brand text-white text-sm font-semibold hover:bg-pf-brand/90 transition-colors"
+          >
+            {t("contact_cta")}
+          </Link>
+          {discordInviteUrl ? (
+            <a
+              href={discordInviteUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block px-5 py-2 rounded-lg border border-border text-sm font-semibold text-foreground hover:bg-secondary transition-colors"
+            >
+              {t("discord_cta")}
+            </a>
+          ) : null}
+        </div>
       </div>
     </div>
   );

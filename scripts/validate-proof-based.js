@@ -653,9 +653,9 @@ const runtimeCases = [
   {
     id: "risk.minimum-stake-breach",
     area: "challenge risk rules",
-    claim: "Minimum stake tracks current balance with a $1 floor.",
+    claim: "Minimum stake is always 1% of the challenge start balance, with a $1 floor.",
     run() {
-      const result = checkMinStake({ balance: 20_000 }, 150, RISK_POLICY);
+      const result = checkMinStake({ startBalance: 20_000 }, 150, RISK_POLICY);
       assert.equal(result?.code, "STAKE_MIN_VIOLATED");
       return [`Violation code: ${result.code}`, `Message: ${result.error}`];
     },

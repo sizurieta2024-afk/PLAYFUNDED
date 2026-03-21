@@ -75,13 +75,13 @@ export function checkStakeCap(
 }
 
 export function checkMinStake(
-  challenge: Pick<RiskChallengeSnapshot, "balance">,
+  challenge: Pick<RiskChallengeSnapshot, "startBalance">,
   proposedStakeCents: number,
   policy: Pick<RiskPolicy, "minStakePct" | "minStakeFloorCents">,
 ): RiskViolation | null {
   const minStake = Math.max(
     policy.minStakeFloorCents,
-    Math.floor((challenge.balance * policy.minStakePct) / 100),
+    Math.floor((challenge.startBalance * policy.minStakePct) / 100),
   );
   if (proposedStakeCents < minStake) {
     return {

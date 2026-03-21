@@ -207,7 +207,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Stake minimum: 1% of current balance
+  // Stake minimum: 1% of original challenge balance
   const minStakeViolation = checkMinStake(challenge, stake);
   if (minStakeViolation) {
     return NextResponse.json(

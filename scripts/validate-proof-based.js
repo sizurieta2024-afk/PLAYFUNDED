@@ -2106,6 +2106,7 @@ async function withDbFixture(db, run) {
         profitSplitPct: 80,
         minPicks: 15,
         guideIncluded: false,
+        isActive: false,
         sortOrder: 99,
       },
     });

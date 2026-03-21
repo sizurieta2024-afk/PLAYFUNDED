@@ -40,9 +40,15 @@ export function AdminPayoutsQueue({ payouts }: { payouts: PayoutRow[] }) {
         return;
       }
       if (result.error) {
+        const message =
+          result.code === "CRYPTO_DESTINATION_REQUIRED"
+            ? "Crypto payout is missing the destination wallet address."
+            : result.code === "PROVIDER_ERROR"
+              ? result.error ?? "Crypto payout provider request failed."
+              : "Review failed. Refresh the queue and try again.";
         setMessages((prev) => ({
           ...prev,
-          [id]: "Review failed. Refresh the queue and try again.",
+          [id]: message,
         }));
         return;
       }

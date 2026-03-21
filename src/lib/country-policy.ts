@@ -114,29 +114,6 @@ const COUNTRY_NAMES: Record<string, string> = {
 
 const PIX_COUNTRIES = new Set(["BR"]);
 
-const DLOCAL_PAYOUT_COUNTRIES = new Set([
-  "AR",
-  "BO",
-  "BR",
-  "CL",
-  "CO",
-  "CR",
-  "DO",
-  "EC",
-  "ES",
-  "GB",
-  "GT",
-  "HN",
-  "MX",
-  "NI",
-  "PA",
-  "PE",
-  "PY",
-  "SV",
-  "UY",
-  "VE",
-]);
-
 const DEFAULT_REVIEW_NOTE =
   "Country remains in compliance review. Do not treat pricing, payouts, affiliate claims, or payment rails as fully approved.";
 
@@ -195,14 +172,8 @@ function getDefaultCheckoutMethods(country: string | null): CheckoutMethod[] {
   return methods;
 }
 
-function getDefaultPayoutMethods(country: string | null): PayoutMethod[] {
-  const methods: PayoutMethod[] = ["usdt", "usdc", "btc"];
-
-  if (country && DLOCAL_PAYOUT_COUNTRIES.has(country)) {
-    methods.unshift("bank_wire");
-  }
-
-  return methods;
+function getDefaultPayoutMethods(): PayoutMethod[] {
+  return ["usdt", "usdc", "btc"];
 }
 
 export function normalizeCountry(country?: string | null): string | null {
@@ -255,7 +226,7 @@ export function getCountryPolicy(country?: string | null): CountryPolicy {
   const checkoutMethods = challengePurchasesEnabled
     ? getDefaultCheckoutMethods(normalized)
     : [];
-  const payoutMethods = payoutsEnabled ? getDefaultPayoutMethods(normalized) : [];
+  const payoutMethods = payoutsEnabled ? getDefaultPayoutMethods() : [];
 
   return {
     country: normalized,

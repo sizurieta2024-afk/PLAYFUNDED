@@ -4,6 +4,7 @@ import { verifyNowPaymentsSignature } from "@/lib/nowpayments";
 import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 import { recordOpsEvent } from "@/lib/ops-events";
 import { fulfillNowPaymentsPayment } from "@/lib/payments/nowpayments-fulfillment";
+import { attributeAffiliatePurchase } from "@/lib/affiliate/attribution";
 
 // NOWPayments IPN: fires on every status change.
 // We only act on "finished" (fully confirmed) payments.
@@ -68,6 +69,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Tier not found" }, { status: 404 });
   }
 
+  const pendingPayment = await prisma.payment.findFirst({
+    where: { providerRef, status: "pending" },
+    select: {
+      discountCode: true,
+      discountAmount: true,
+      discountPct: true,
+      listPriceAmount: true,
+    },
+  });
+
   const outcome = await fulfillNowPaymentsPayment({
     db: prisma,
     providerRef,
@@ -78,6 +89,10 @@ export async function POST(request: NextRequest) {
     priceCurrency: data.price_currency,
     payCurrency: data.pay_currency,
     payAmount: data.pay_amount,
+    discountCode: pendingPayment?.discountCode ?? null,
+    discountAmount: pendingPayment?.discountAmount ?? 0,
+    discountPct: pendingPayment?.discountPct ?? 0,
+    listPriceAmount: pendingPayment?.listPriceAmount ?? Math.round(data.price_amount * 100),
   });
 
   if (outcome.status === "duplicate") {
@@ -108,6 +123,21 @@ export async function POST(request: NextRequest) {
       payCurrency: data.pay_currency,
     },
   });
+
+  if (outcome.status === "created") {
+    void attributeAffiliatePurchase({
+      userId,
+      paymentId: outcome.paymentId,
+      paidAmount: Math.round(data.price_amount * 100),
+      listPriceAmount:
+        pendingPayment?.listPriceAmount ?? Math.round(data.price_amount * 100),
+      discountAmount: pendingPayment?.discountAmount ?? 0,
+      discountPct: pendingPayment?.discountPct ?? 0,
+      code: pendingPayment?.discountCode ?? null,
+    }).catch((error) =>
+      console.error("[NOWPayments webhook] affiliate attribution error", error),
+    );
+  }
 
   return NextResponse.json({ ok: true });
 }

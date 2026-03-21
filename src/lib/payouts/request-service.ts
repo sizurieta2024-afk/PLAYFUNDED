@@ -1,5 +1,6 @@
 import { Prisma, type PayoutMethod, type PrismaClient } from "@prisma/client";
 import { evaluatePayoutRequest } from "../proof/payout-rules";
+import { validateCryptoDestination } from "./crypto-address";
 
 export interface CreatePayoutRequestInput {
   db: PrismaClient;
@@ -7,6 +8,7 @@ export interface CreatePayoutRequestInput {
   challengeId: string;
   method: PayoutMethod;
   requestedProfitAmount: number;
+  destinationAddress?: string | null;
   payoutsEnabled: boolean;
   methodAllowed: boolean;
   kycApproved: boolean;
@@ -31,6 +33,18 @@ export type CreatePayoutRequestResult =
 export async function createPayoutRequest(
   input: CreatePayoutRequestInput,
 ): Promise<CreatePayoutRequestResult> {
+  const destinationCheck = validateCryptoDestination(
+    input.method,
+    input.destinationAddress,
+  );
+  if (!destinationCheck.ok) {
+    return {
+      ok: false,
+      error: destinationCheck.error,
+      code: "INVALID_DESTINATION",
+    };
+  }
+
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       return await input.db.$transaction(
@@ -89,12 +103,14 @@ export async function createPayoutRequest(
               splitPct: challenge.tier.profitSplitPct,
               method: input.method,
               status: "pending",
+              destinationAddress: destinationCheck.normalized || null,
               isRollover: false,
               providerData: {
                 requestedProfitAmount: input.requestedProfitAmount,
                 grossProfit: decision.grossProfit,
                 priorBalance: challenge.balance,
                 newBalance: decision.newBalance,
+                destinationAddress: destinationCheck.normalized || null,
               },
             },
             select: { id: true },

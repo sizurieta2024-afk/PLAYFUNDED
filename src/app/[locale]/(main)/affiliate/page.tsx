@@ -1,7 +1,4 @@
-import { Link } from "@/i18n/navigation";
-import { headers } from "next/headers";
-import { resolveCountry } from "@/lib/country-policy";
-import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
 type LocaleKey = "es-419" | "en" | "pt-BR";
@@ -67,37 +64,6 @@ export default async function AffiliatePage({
 }: {
   params: Promise<{ locale: string }>;
 }) {
-  const { locale } = await params;
-  const copy = getCopy(locale);
-  const headersList = await headers();
-  const country = resolveCountry(
-    headersList.get("x-vercel-ip-country"),
-    headersList.get("cf-ipcountry"),
-  );
-  const policy = await getResolvedCountryPolicy(country);
-  const affiliateEnabled = policy.marketing.affiliateProgramEnabled;
-
-  return (
-    <div className="mx-auto max-w-3xl px-4 sm:px-6 py-12">
-      <div className="rounded-2xl border border-border bg-card p-8 space-y-4">
-        <h1 className="text-3xl font-bold">{copy.title}</h1>
-        <p className="text-muted-foreground">{copy.subtitle}</p>
-        {policy.requiresReviewNotice && (
-          <p className="text-sm text-amber-500">{policy.reviewNote}</p>
-        )}
-        <p className="text-sm text-muted-foreground">{copy.p1}</p>
-        <p className="text-sm text-muted-foreground">
-          {affiliateEnabled ? copy.p2 : copy.review}
-        </p>
-        {affiliateEnabled ? (
-          <Link
-            href="/dashboard/affiliate"
-            className="inline-flex items-center rounded-lg bg-pf-brand px-4 py-2 text-sm font-semibold text-white hover:bg-pf-brand/90 transition-colors"
-          >
-            Dashboard
-          </Link>
-        ) : null}
-      </div>
-    </div>
-  );
+  await params;
+  redirect("/");
 }

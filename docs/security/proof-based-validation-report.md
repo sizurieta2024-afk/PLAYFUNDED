@@ -1,12 +1,12 @@
 # Playfunded Proof-Based Validation Report
 
-Generated: 2026-03-21T01:33:03.690Z
+Generated: 2026-03-21T03:18:31.075Z
 
 This report follows a Shannon-style rule: claims must be backed by executable or source-level proof. Anything not proven is listed as unverified.
 
 ## Summary
 
-- Verified checks: 52
+- Verified checks: 53
 - Failed checks: 0
 - Unverified claims: 3
 
@@ -35,30 +35,30 @@ Area: payments and webhooks
 Claim: Stripe fulfillment only runs after signature verification and duplicate-safe locking.
 Detail: All required proof points were found in source.
 Evidence:
-- Stripe signature header is required: L222: const sig = req.headers.get("stripe-signature");
-- constructEvent verifies the webhook body: L234: event = stripe.webhooks.constructEvent(
-- Invalid signatures are rejected: L242: { error: "Invalid webhook signature" },
-- Fulfillment is wrapped in a webhook duplicate lock: L81: const fulfillment = await withWebhookLock(prisma, "stripe", session.id, async (tx) => {
+- Stripe signature header is required: L219: const sig = req.headers.get("stripe-signature");
+- constructEvent verifies the webhook body: L231: event = stripe.webhooks.constructEvent(
+- Invalid signatures are rejected: L239: { error: "Invalid webhook signature" },
+- Fulfillment is wrapped in a webhook duplicate lock: L59: const fulfillment = await withWebhookLock(prisma, "stripe", session.id, async (tx) => {
 
 ### VERIFIED payments.nowpayments-signature
 Area: payments and webhooks
 Claim: NOWPayments callbacks require a verified provider signature, reject malformed payloads, and deduplicate fulfillment.
 Detail: All required proof points were found in source.
 Evidence:
-- NOWPayments signature header is read: L21: const signature = request.headers.get("x-nowpayments-sig") ?? "";
-- Signature verifier is called: L25: isValid = await verifyNowPaymentsSignature(body, signature);
-- Invalid signatures are rejected: L31: console.error("[NOWPayments webhook] Invalid signature");
-- Malformed payloads are rejected: L47: data = JSON.parse(body) as typeof data;
-- Fulfillment is delegated to the shared NOWPayments payment service: L71: const outcome = await fulfillNowPaymentsPayment({
+- NOWPayments signature header is read: L22: const signature = request.headers.get("x-nowpayments-sig") ?? "";
+- Signature verifier is called: L26: isValid = await verifyNowPaymentsSignature(body, signature);
+- Invalid signatures are rejected: L32: console.error("[NOWPayments webhook] Invalid signature");
+- Malformed payloads are rejected: L48: data = JSON.parse(body) as typeof data;
+- Fulfillment is delegated to the shared NOWPayments payment service: L82: const outcome = await fulfillNowPaymentsPayment({
 
 ### VERIFIED payments.nowpayments-fulfillment-service
 Area: payments and webhooks
 Claim: NOWPayments fulfillment upgrades pending checkout payments and creates the challenge inside one locked transaction.
 Detail: All required proof points were found in source.
 Evidence:
-- Fulfillment is wrapped in a webhook lock: L58: return withWebhookLock(
-- Pending checkout payments are upgraded in place: L79: status: "completed",
-- Challenge provisioning happens in the same transaction: L114: await tx.challenge.create({
+- Fulfillment is wrapped in a webhook lock: L62: return withWebhookLock(
+- Pending checkout payments are upgraded in place: L83: status: "completed",
+- Challenge provisioning happens in the same transaction: L126: await tx.challenge.create({
 
 ### VERIFIED ops.launch-smokes-dispatchable
 Area: payments and webhooks
@@ -101,18 +101,18 @@ Area: payout flows
 Claim: Payout creation rechecks pending state inside a serializable transaction before debiting balance.
 Detail: All required proof points were found in source.
 Evidence:
-- Payout flow runs inside an interactive transaction: L36: return await input.db.$transaction(
-- Transaction isolation is serializable: L117: isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-- Pending payouts are checked inside the transaction: L51: status: "pending",
-- Challenge balance is updated inside the transaction: L103: await tx.challenge.update({
+- Payout flow runs inside an interactive transaction: L50: return await input.db.$transaction(
+- Transaction isolation is serializable: L133: isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+- Pending payouts are checked inside the transaction: L65: status: "pending",
+- Challenge balance is updated inside the transaction: L119: await tx.challenge.update({
 
 ### VERIFIED payout.owner-scoped-query
 Area: payout flows
 Claim: Payout eligibility is scoped to the requesting user and funded challenges only.
 Detail: All required proof points were found in source.
 Evidence:
-- Payout flow is delegated to the shared payout service: L51: const decision = await createPayoutRequest({
-- Authenticated user is still required before payout request: L37: const user = await getAuthenticatedUser();
+- Payout flow is delegated to the shared payout service: L52: const decision = await createPayoutRequest({
+- Authenticated user is still required before payout request: L38: const user = await getAuthenticatedUser();
 
 ### VERIFIED admin.payout-audit
 Area: admin authorization
@@ -121,8 +121,8 @@ Detail: All required proof points were found in source.
 Evidence:
 - Transactional review service is called: L68: const updated = await reviewPayoutByAdmin({
 - Conflict responses return 409 from the admin payouts route: L80: { status: 409 },
-- Payout approval email is available: L87: const { subject, html } = payoutPaidEmail(
-- Payout rejection email is available: L95: const { subject, html } = payoutRejectedEmail(
+- Payout approval email is available: L102: const { subject, html } = payoutPaidEmail(
+- Payout rejection email is available: L110: const { subject, html } = payoutRejectedEmail(
 
 ### VERIFIED admin.payout-ui-conflict-message
 Area: admin authorization
@@ -138,11 +138,11 @@ Area: admin authorization
 Claim: Admin payout review writes payout status and audit log in one serializable transaction.
 Detail: All required proof points were found in source.
 Evidence:
-- Pending payouts are updated with compare-and-set semantics: L82: const updated = await tx.payout.updateMany({
-- Pending status is part of the write guard: L85: status: "pending",
-- Payout review creates an audit log entry: L103: targetType: "payout",
-- Serializable conflicts are normalized instead of leaking 500s: L134: error.code === "P2034"
-- Transaction isolation is serializable: L122: isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+- Pending payouts are updated with compare-and-set semantics: L152: const updated = await tx.payout.updateMany({
+- Pending status is part of the write guard: L155: status: "pending",
+- Payout review creates an audit log entry: L173: targetType: "payout",
+- Serializable conflicts are normalized instead of leaking 500s: L356: error.code === "P2034"
+- Transaction isolation is serializable: L192: isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
 
 ### VERIFIED admin.kyc-audit
 Area: admin authorization
@@ -158,10 +158,10 @@ Area: admin authorization
 Claim: Admin KYC review writes submission status and audit log in one serializable transaction.
 Detail: All required proof points were found in source.
 Evidence:
-- Pending submissions are updated with compare-and-set semantics: L159: const updated = await tx.kycSubmission.updateMany({
-- Pending status is part of the write guard: L85: status: "pending",
-- KYC review creates an audit log entry: L178: targetType: "kyc",
-- Transaction isolation is serializable: L122: isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+- Pending submissions are updated with compare-and-set semantics: L381: const updated = await tx.kycSubmission.updateMany({
+- Pending status is part of the write guard: L155: status: "pending",
+- KYC review creates an audit log entry: L400: targetType: "kyc",
+- Transaction isolation is serializable: L192: isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
 
 ### VERIFIED settlement.admin-role-gate
 Area: pick settlement logic
@@ -399,6 +399,15 @@ Evidence:
 - Statuses: created, duplicate
 - Payment count: 1
 - Challenge count: 1
+
+### VERIFIED db.affiliate-code-conversion-attribution
+Area: payments and webhooks
+Claim: A paid purchase with an affiliate code records one conversion row and updates affiliate totals exactly once.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Conversion code: PF-3375F5
+- Affiliate conversions: 1
+- Affiliate pending payout: 85
 
 ### VERIFIED db.webhook-lock-rolls-back-failed-fulfillment
 Area: payments and webhooks

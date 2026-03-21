@@ -7,6 +7,7 @@ import { resolveCountry } from "@/lib/country-policy";
 import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
 import { recordOpsEvent } from "@/lib/ops-events";
 import { PLATFORM_POLICY } from "@/lib/platform-policy";
+import { resolveAffiliateDiscountCode } from "@/lib/affiliate/codes";
 
 const VALID_CURRENCIES: CryptoCurrency[] = ["usdttrc20", "usdcerc20", "btc"];
 
@@ -40,8 +41,15 @@ export async function POST(request: NextRequest) {
     currency?: string;
     locale?: string;
     country?: string;
+    discountCode?: string;
   };
-  const { tierId, currency = "usdttrc20", locale = "es-419", country } = body;
+  const {
+    tierId,
+    currency = "usdttrc20",
+    locale = "es-419",
+    country,
+    discountCode,
+  } = body;
 
   if (!tierId) {
     return NextResponse.json(
@@ -149,10 +157,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const discount = await resolveAffiliateDiscountCode(
+      prisma,
+      tier.fee,
+      discountCode,
+    );
+    if (discountCode && !discount) {
+      return NextResponse.json(
+        {
+          error: "Discount code is invalid or inactive.",
+          code: "INVALID_DISCOUNT_CODE",
+        },
+        { status: 400 },
+      );
+    }
+    if (discount && discount.affiliate.userId === user.id) {
+      return NextResponse.json(
+        {
+          error: "You cannot use your own partner code.",
+          code: "OWN_DISCOUNT_CODE",
+        },
+        { status: 400 },
+      );
+    }
+
     const invoice = await createCryptoInvoice({
       tierId: tier.id,
       tierName: tier.name,
-      feeInCents: tier.fee,
+      feeInCents: discount?.discountedAmount ?? tier.fee,
       userId: user.id,
       userEmail: user.email,
       currency: currency as CryptoCurrency,
@@ -164,7 +196,11 @@ export async function POST(request: NextRequest) {
       data: {
         userId: user.id,
         tierId: tier.id,
-        amount: tier.fee,
+        amount: discount?.discountedAmount ?? tier.fee,
+        listPriceAmount: tier.fee,
+        discountAmount: discount?.discountAmount ?? 0,
+        discountPct: discount?.affiliate.discountPct ?? 0,
+        discountCode: discount?.affiliate.code ?? null,
         currency: "USD",
         method:
           currency === "btc"
@@ -183,6 +219,10 @@ export async function POST(request: NextRequest) {
           network: invoice.network,
           checkoutCountry,
           policyVersion: PLATFORM_POLICY.policyVersion,
+          affiliateCode: discount?.affiliate.code ?? null,
+          listPriceAmount: tier.fee,
+          discountAmount: discount?.discountAmount ?? 0,
+          discountPct: discount?.affiliate.discountPct ?? 0,
         },
       },
     });
@@ -200,6 +240,8 @@ export async function POST(request: NextRequest) {
         tierId: tier.id,
         paymentMethod: currency,
         checkoutCountry,
+        discountCode: discount?.affiliate.code ?? null,
+        discountAmount: discount?.discountAmount ?? 0,
       },
     });
 

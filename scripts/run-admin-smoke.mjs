@@ -98,7 +98,12 @@ try {
 
     const page = await context.newPage();
     const checks = [];
-    for (const route of ["/en/admin", "/en/admin/kyc", "/en/admin/launch"]) {
+    for (const route of [
+      "/en/admin",
+      "/en/admin/kyc",
+      "/en/admin/launch",
+      "/en/admin/affiliates",
+    ]) {
       const response = await page.goto(`${baseUrl}${route}`, { waitUntil: "domcontentloaded" });
       checks.push({
         route,

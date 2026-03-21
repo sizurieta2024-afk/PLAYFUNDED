@@ -7,6 +7,7 @@ import { KycForm } from "@/components/kyc/KycForm";
 import type { PayoutMethod } from "@prisma/client";
 import { Link } from "@/i18n/navigation";
 import type { KycPayoutEligibilityCode } from "@/lib/kyc/eligibility";
+import { requiresCryptoDestination } from "@/lib/payouts/crypto-address";
 
 type KycStatus = "not_required" | "pending" | "approved" | "rejected" | null;
 
@@ -76,6 +77,7 @@ export function PayoutsClient({
   );
   const [loading, setLoading] = useState(false);
   const [rolloverLoading, setRolloverLoading] = useState(false);
+  const [destinationAddress, setDestinationAddress] = useState("");
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -140,6 +142,16 @@ export function PayoutsClient({
 
   async function handlePayout() {
     if (!selectedChallenge || !isValidAmount) return;
+    const requiresDestination = requiresCryptoDestination(method);
+    if (requiresDestination && !destinationAddress.trim()) {
+      setMessage({
+        type: "error",
+        text:
+          t.destinationRequired ??
+          "Enter your crypto wallet address before requesting payout.",
+      });
+      return;
+    }
     if (!availableMethods.includes(method)) {
       setMessage({
         type: "error",
@@ -155,6 +167,7 @@ export function PayoutsClient({
       selectedChallenge.id,
       method,
       requestedAmountCents,
+      destinationAddress.trim(),
     );
     setLoading(false);
     if (result.error) {
@@ -168,6 +181,15 @@ export function PayoutsClient({
         method_unavailable:
           t.methodUnavailable ??
           "This payout method is not available in your country right now.",
+        destination_required:
+          t.destinationRequired ??
+          "Enter your crypto wallet address before requesting payout.",
+        invalid_btc_address:
+          t.invalidBtcAddress ?? "Enter a valid Bitcoin wallet address.",
+        invalid_usdt_address:
+          t.invalidUsdtAddress ?? "Enter a valid TRC-20 USDT wallet address.",
+        invalid_usdc_address:
+          t.invalidUsdcAddress ?? "Enter a valid ERC-20 USDC wallet address.",
       };
       setMessage({
         type: "error",
@@ -456,6 +478,40 @@ export function PayoutsClient({
                   </p>
                 )}
               </div>
+
+              {requiresCryptoDestination(method) && (
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    {t.destinationLabel ?? "Wallet address"}
+                  </label>
+                  <input
+                    type="text"
+                    value={destinationAddress}
+                    onChange={(e) => setDestinationAddress(e.target.value)}
+                    placeholder={
+                      method === "btc"
+                        ? (t.destinationPlaceholderBtc ??
+                          "bc1... or 1... Bitcoin address")
+                        : method === "usdt"
+                          ? (t.destinationPlaceholderUsdt ??
+                            "TRC-20 USDT address starting with T")
+                          : (t.destinationPlaceholderUsdc ??
+                            "ERC-20 USDC address starting with 0x")
+                    }
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-pf-brand/40"
+                  />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {method === "btc"
+                      ? (t.destinationHelpBtc ??
+                        "Use a Bitcoin address you control.")
+                      : method === "usdt"
+                        ? (t.destinationHelpUsdt ??
+                          "Use a TRC-20 wallet address. Sending to the wrong network can permanently lose funds.")
+                        : (t.destinationHelpUsdc ??
+                          "Use an ERC-20 wallet address. Sending to the wrong network can permanently lose funds.")}
+                  </p>
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex gap-3 flex-wrap">

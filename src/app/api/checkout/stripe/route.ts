@@ -10,6 +10,7 @@ import {
 import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
 import { recordOpsEvent } from "@/lib/ops-events";
 import { PLATFORM_POLICY } from "@/lib/platform-policy";
+import { resolveAffiliateDiscountCode } from "@/lib/affiliate/codes";
 import { z } from "zod";
 
 const bodySchema = z.object({
@@ -19,6 +20,7 @@ const bodySchema = z.object({
   giftRecipientEmail: z.string().email().optional(),
   country: z.string().length(2).optional(), // ISO 3166-1 alpha-2 country code
   paymentMethod: z.enum(["card", "pix"]).optional(),
+  discountCode: z.string().min(2).max(32).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -57,7 +59,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { tierId, locale, isGift, giftRecipientEmail, country } = body;
+  const { tierId, locale, isGift, giftRecipientEmail, country, discountCode } = body;
   const paymentMethod: CheckoutMethod = body.paymentMethod ?? "card";
   const headerCountry = resolveCountry(
     req.headers.get("x-vercel-ip-country"),
@@ -167,10 +169,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const discount = await resolveAffiliateDiscountCode(
+      prisma,
+      tier.fee,
+      discountCode,
+    );
+    if (discountCode && !discount) {
+      return NextResponse.json(
+        {
+          error: "Discount code is invalid or inactive.",
+          code: "INVALID_DISCOUNT_CODE",
+        },
+        { status: 400 },
+      );
+    }
+    if (discount && discount.affiliate.userId === user.id) {
+      return NextResponse.json(
+        {
+          error: "You cannot use your own partner code.",
+          code: "OWN_DISCOUNT_CODE",
+        },
+        { status: 400 },
+      );
+    }
+
     const checkoutUrl = await createCheckoutSession({
       tierId: tier.id,
       tierName: tier.name,
-      feeInCents: tier.fee,
+      feeInCents: discount?.discountedAmount ?? tier.fee,
       userId: user.id,
       userEmail: user.email,
       locale,
@@ -179,6 +205,11 @@ export async function POST(req: NextRequest) {
       enablePix: paymentMethod === "pix",
       country: checkoutCountry ?? undefined,
       policyVersion: PLATFORM_POLICY.policyVersion,
+      paymentMethodKind: paymentMethod,
+      affiliateCode: discount?.affiliate.code ?? null,
+      listPriceAmount: tier.fee,
+      discountAmount: discount?.discountAmount ?? 0,
+      discountPct: discount?.affiliate.discountPct ?? 0,
     });
     await recordOpsEvent({
       type: "checkout_created",
@@ -194,6 +225,8 @@ export async function POST(req: NextRequest) {
         paymentMethod,
         checkoutCountry,
         isGift: Boolean(isGift),
+        discountCode: discount?.affiliate.code ?? null,
+        discountAmount: discount?.discountAmount ?? 0,
       },
     });
     return NextResponse.json({ url: checkoutUrl });

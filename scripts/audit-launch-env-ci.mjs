@@ -23,6 +23,8 @@ const requiredRuntime =
         "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
         "NOWPAYMENTS_API_KEY",
         "NOWPAYMENTS_IPN_SECRET",
+        "NOWPAYMENTS_PAYOUT_EMAIL",
+        "NOWPAYMENTS_PAYOUT_PASSWORD",
         "ODDS_API_KEY",
         "API_FOOTBALL_KEY",
         "RESEND_API_KEY",

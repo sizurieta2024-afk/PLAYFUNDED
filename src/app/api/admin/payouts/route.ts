@@ -80,10 +80,25 @@ export async function PATCH(req: NextRequest) {
         { status: 409 },
       );
     }
+    if (updated.code === "CRYPTO_DESTINATION_REQUIRED") {
+      return NextResponse.json(
+        { error: updated.error ?? "Crypto destination is required", code: updated.code },
+        { status: 400 },
+      );
+    }
+    if (updated.code === "PROVIDER_ERROR") {
+      return NextResponse.json(
+        {
+          error: updated.error ?? "Payout provider failed. The payout was left pending.",
+          code: updated.code,
+        },
+        { status: 502 },
+      );
+    }
     return NextResponse.json({ error: "Payout not found or not pending" }, { status: 404 });
   }
 
-  if (action === "approve") {
+  if (action === "approve" && updated.payout.status === "paid") {
     const { subject, html } = payoutPaidEmail(
       updated.payout.user.name,
       updated.payout.amount,

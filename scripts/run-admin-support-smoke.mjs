@@ -158,7 +158,7 @@ async function buildFixture() {
       challengeId: payoutChallenge.id,
       amount: 800,
       splitPct: 80,
-      method: "usdt",
+      method: "bank_wire",
       status: "pending",
       providerData: {
         requestedProfitAmount: 1_000,
@@ -342,7 +342,7 @@ try {
         challengeId: fixture.ids.payoutChallengeId,
         amount: 1_200,
         splitPct: 80,
-        method: "usdt",
+        method: "bank_wire",
         status: "pending",
         providerData: {
           requestedProfitAmount: 1_500,

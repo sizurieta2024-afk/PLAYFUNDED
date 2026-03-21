@@ -8,7 +8,6 @@ import {
   Zap,
   BarChart2,
   Wallet,
-  Users,
   Settings,
   ChevronRight,
   TrendingUp,
@@ -26,7 +25,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/picks", icon: Zap, label: "Picks" },
   { href: "/dashboard/analytics", icon: BarChart2, label: "Analytics" },
   { href: "/dashboard/payouts", icon: Wallet, label: "Payouts" },
-  { href: "/dashboard/affiliate", icon: Users, label: "Affiliate" },
   { href: "/dashboard/settings", icon: Settings, label: "Settings" },
 ];
 

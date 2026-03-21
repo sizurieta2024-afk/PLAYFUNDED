@@ -33,6 +33,7 @@ export async function requestPayout(
   challengeId: string,
   method: PayoutMethod,
   requestedProfitAmount: number, // in cents — the portion of gross profit to pay out
+  destinationAddress?: string,
 ): Promise<{ error?: string; code?: string }> {
   const user = await getAuthenticatedUser();
 
@@ -54,6 +55,7 @@ export async function requestPayout(
     challengeId,
     method,
     requestedProfitAmount,
+    destinationAddress,
     payoutsEnabled: policy.payoutsEnabled,
     methodAllowed: true,
     kycApproved: !!user.kycSubmission && user.kycSubmission.status === "approved",
@@ -81,9 +83,10 @@ export async function requestPayout(
     details: {
       userId: user.id,
       challengeId,
-      method,
-      payoutCountry,
-      requestedProfitAmount,
+        method,
+        destinationAddress: destinationAddress ?? null,
+        payoutCountry,
+        requestedProfitAmount,
       payoutAmount: decision.payoutAmount,
     },
   });

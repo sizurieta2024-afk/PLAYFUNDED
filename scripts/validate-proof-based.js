@@ -19,6 +19,9 @@ const {
   fulfillNowPaymentsPayment,
 } = require("../src/lib/payments/nowpayments-fulfillment.ts");
 const {
+  attributeAffiliatePurchase,
+} = require("../src/lib/affiliate/attribution.ts");
+const {
   evaluateKycPayoutEligibility,
 } = require("../src/lib/proof/kyc-rules.ts");
 const { withWebhookLock } = require("../src/lib/payments/webhook-lock.ts");
@@ -996,6 +999,7 @@ const dbCases = [
           userId: trader.id,
           challengeId: challenge.id,
           method: "usdt",
+          destinationAddress: "TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE",
           requestedProfitAmount: 1_000,
           payoutsEnabled: true,
           methodAllowed: true,
@@ -1025,6 +1029,7 @@ const dbCases = [
           userId: trader.id,
           challengeId: challenge.id,
           method: "usdt",
+          destinationAddress: "TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE",
           requestedProfitAmount: 1_000,
           payoutsEnabled: true,
           methodAllowed: true,
@@ -1064,6 +1069,7 @@ const dbCases = [
                 userId: trader.id,
                 tierId: tier.id,
                 amount: tier.fee,
+                listPriceAmount: tier.fee,
                 currency: "USD",
                 method: "card",
                 status: "completed",
@@ -1125,6 +1131,7 @@ const dbCases = [
             userId: trader.id,
             tierId: tier.id,
             amount: tier.fee,
+            listPriceAmount: tier.fee,
             currency: "USD",
             method: "usdt",
             status: "pending",
@@ -1202,6 +1209,7 @@ const dbCases = [
             userId: trader.id,
             tierId: tier.id,
             amount: tier.fee,
+            listPriceAmount: tier.fee,
             currency: "USD",
             method: "usdt",
             status: "pending",
@@ -1266,6 +1274,7 @@ const dbCases = [
             userId: trader.id,
             tierId: tier.id,
             amount: tier.fee,
+            listPriceAmount: tier.fee,
             currency: "USD",
             method: "usdt",
             status: "pending",
@@ -1322,6 +1331,103 @@ const dbCases = [
     },
   },
   {
+    id: "db.affiliate-code-conversion-attribution",
+    area: "payments and webhooks",
+    claim: "A paid purchase with an affiliate code records one conversion row and updates affiliate totals exactly once.",
+    async run(db) {
+      return withDbFixture(db, async ({ trader, tier, created }) => {
+        const affiliateUser = await db.user.create({
+          data: {
+            email: `affiliate-${crypto.randomUUID().slice(0, 8)}@example.com`,
+            supabaseId: `affiliate-${crypto.randomUUID().slice(0, 8)}`,
+            name: "Affiliate User",
+            country: "BR",
+          },
+        });
+        created.userIds.push(affiliateUser.id);
+
+        const affiliate = await db.affiliate.create({
+          data: {
+            userId: affiliateUser.id,
+            code: `PF-${crypto.randomUUID().slice(0, 6).toUpperCase()}`,
+            discountPct: 15,
+            commissionRate: "five",
+            isActive: true,
+          },
+        });
+        created.affiliateIds.push(affiliate.id);
+
+        const providerRef = `proof-now-aff-${crypto.randomUUID().slice(0, 8)}`;
+        const pendingPayment = await db.payment.create({
+          data: {
+            userId: trader.id,
+            tierId: tier.id,
+            amount: tier.fee - Math.floor((tier.fee * 15) / 100),
+            listPriceAmount: tier.fee,
+            discountAmount: Math.floor((tier.fee * 15) / 100),
+            discountPct: 15,
+            discountCode: affiliate.code,
+            currency: "USD",
+            method: "usdt",
+            status: "pending",
+            providerRef,
+            metadata: {
+              currency: "usdttrc20",
+              affiliateCode: affiliate.code,
+            },
+          },
+        });
+        created.paymentIds.push(pendingPayment.id);
+
+        const fulfilled = await fulfillNowPaymentsPayment({
+          db,
+          providerRef,
+          userId: trader.id,
+          tierId: tier.id,
+          tierFundedBankroll: tier.fundedBankroll,
+          priceAmount: pendingPayment.amount / 100,
+          priceCurrency: "usd",
+          payCurrency: "usdttrc20",
+          payAmount: 25.5,
+          discountCode: affiliate.code,
+          listPriceAmount: tier.fee,
+          discountAmount: pendingPayment.discountAmount,
+          discountPct: 15,
+        });
+
+        assert.equal(fulfilled.status, "created");
+
+        const attributed = await attributeAffiliatePurchase({
+          userId: trader.id,
+          paymentId: fulfilled.paymentId,
+          paidAmount: pendingPayment.amount,
+          listPriceAmount: tier.fee,
+          discountAmount: pendingPayment.discountAmount,
+          discountPct: 15,
+          code: affiliate.code,
+        });
+        assert.equal(attributed.status, "created");
+
+        const conversion = await db.affiliateConversion.findUnique({
+          where: { paymentId: fulfilled.paymentId },
+        });
+        const storedAffiliate = await db.affiliate.findUnique({
+          where: { id: affiliate.id },
+        });
+        assert.ok(conversion, "Affiliate conversion row missing");
+        assert.ok(storedAffiliate, "Affiliate row missing");
+        assert.equal(storedAffiliate.totalConversions, 1);
+        assert.equal(storedAffiliate.pendingPayout, conversion.commissionEarned);
+
+        return [
+          `Conversion code: ${conversion.code}`,
+          `Affiliate conversions: ${storedAffiliate.totalConversions}`,
+          `Affiliate pending payout: ${storedAffiliate.pendingPayout}`,
+        ];
+      });
+    },
+  },
+  {
     id: "db.webhook-lock-rolls-back-failed-fulfillment",
     area: "payments and webhooks",
     claim: "Webhook fulfillment rolls back partial writes when provisioning fails inside the transaction.",
@@ -1336,6 +1442,7 @@ const dbCases = [
                 userId: trader.id,
                 tierId: tier.id,
                 amount: tier.fee,
+                listPriceAmount: tier.fee,
                 currency: "USD",
                 method: "card",
                 status: "completed",
@@ -1377,6 +1484,7 @@ const dbCases = [
           userId: trader.id,
           challengeId: challenge.id,
           method: "usdt",
+          destinationAddress: "TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE",
           requestedProfitAmount: 1_500,
           payoutsEnabled: true,
           methodAllowed: true,
@@ -1393,7 +1501,13 @@ const dbCases = [
           adminId: admin.id,
           payoutId: request.payoutId,
           action: "approve",
-          txRef: `proof-tx-${crypto.randomUUID().slice(0, 8)}`,
+        }, {
+          executeCryptoPayout: async () => ({
+            providerPayoutId: `np-${crypto.randomUUID().slice(0, 8)}`,
+            providerStatus: "finished",
+            txRef: `hash-${crypto.randomUUID().slice(0, 8)}`,
+            providerData: { provider: "mock-nowpayments" },
+          }),
         });
 
         assert.equal(reviewed.ok, true);
@@ -1429,6 +1543,7 @@ const dbCases = [
           userId: trader.id,
           challengeId: challenge.id,
           method: "usdt",
+          destinationAddress: "TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE",
           requestedProfitAmount: 1_500,
           payoutsEnabled: true,
           methodAllowed: true,
@@ -1446,14 +1561,26 @@ const dbCases = [
             adminId: admin.id,
             payoutId: request.payoutId,
             action: "approve",
-            txRef: `proof-race-a-${crypto.randomUUID().slice(0, 8)}`,
+          }, {
+            executeCryptoPayout: async () => ({
+              providerPayoutId: `np-${crypto.randomUUID().slice(0, 8)}`,
+              providerStatus: "finished",
+              txRef: `hash-${crypto.randomUUID().slice(0, 8)}`,
+              providerData: { provider: "mock-nowpayments" },
+            }),
           }),
           reviewPayoutByAdmin({
             db,
             adminId: admin.id,
             payoutId: request.payoutId,
             action: "approve",
-            txRef: `proof-race-b-${crypto.randomUUID().slice(0, 8)}`,
+          }, {
+            executeCryptoPayout: async () => ({
+              providerPayoutId: `np-${crypto.randomUUID().slice(0, 8)}`,
+              providerStatus: "finished",
+              txRef: `hash-${crypto.randomUUID().slice(0, 8)}`,
+              providerData: { provider: "mock-nowpayments" },
+            }),
           }),
         ]);
 
@@ -1485,6 +1612,7 @@ const dbCases = [
           userId: trader.id,
           challengeId: challenge.id,
           method: "usdt",
+          destinationAddress: "TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE",
           requestedProfitAmount: 1_500,
           payoutsEnabled: true,
           methodAllowed: true,
@@ -1960,6 +2088,7 @@ async function withDbFixture(db, run) {
   const suffix = crypto.randomUUID().slice(0, 8);
   const created = {
     auditIds: [],
+    affiliateIds: [],
     paymentIds: [],
     payoutIds: [],
     challengeIds: [],
@@ -2094,6 +2223,15 @@ async function withDbFixture(db, run) {
           ].filter(Boolean),
         },
       });
+    }
+    if (created.affiliateIds.length > 0) {
+      await db.affiliateConversion.deleteMany({
+        where: { affiliateId: { in: created.affiliateIds } },
+      });
+      await db.affiliateClick.deleteMany({
+        where: { affiliateId: { in: created.affiliateIds } },
+      });
+      await db.affiliate.deleteMany({ where: { id: { in: created.affiliateIds } } });
     }
     if (created.payoutIds.length > 0) {
       await db.payout.deleteMany({ where: { id: { in: created.payoutIds } } });

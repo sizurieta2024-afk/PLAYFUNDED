@@ -11,6 +11,10 @@ export interface FulfillNowPaymentsPaymentInput {
   priceCurrency: string;
   payCurrency: string;
   payAmount: number;
+  discountCode?: string | null;
+  listPriceAmount?: number | null;
+  discountAmount?: number | null;
+  discountPct?: number | null;
   beforeChallengeCreate?: (
     tx: Prisma.TransactionClient,
   ) => Promise<void> | void;
@@ -93,6 +97,13 @@ export async function fulfillNowPaymentsPayment(
             userId: input.userId,
             tierId: input.tierId,
             amount: Math.round(input.priceAmount * 100),
+            listPriceAmount:
+              input.listPriceAmount !== null && input.listPriceAmount !== undefined
+                ? input.listPriceAmount
+                : Math.round(input.priceAmount * 100),
+            discountAmount: input.discountAmount ?? 0,
+            discountPct: input.discountPct ?? 0,
+            discountCode: input.discountCode ?? null,
             currency: input.priceCurrency.toUpperCase(),
             method: resolvePayMethod(input.payCurrency),
             status: "completed",
@@ -101,6 +112,7 @@ export async function fulfillNowPaymentsPayment(
               paymentId: input.providerRef,
               payCurrency: input.payCurrency,
               payAmount: input.payAmount,
+              affiliateCode: input.discountCode ?? null,
               policyVersion: null,
             },
           },

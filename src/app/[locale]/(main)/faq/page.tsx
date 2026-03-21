@@ -85,15 +85,7 @@ export default async function FaqPage({
           { payoutWindow: getPayoutWindowLabel() },
         );
       case "q_affiliate":
-        return t(
-          policy.marketing.affiliateProgramEnabled
-            ? "q_affiliate_a"
-            : "q_affiliate_a_review",
-          {
-            basePct: PLATFORM_POLICY.commercial.affiliateBaseRatePct,
-            topPct: PLATFORM_POLICY.commercial.affiliateTopRatePct,
-          },
-        );
+        return t("q_affiliate_a_review");
       case "q_gift":
         return t(
           policy.marketing.giftsEnabled ? "q_gift_a" : "q_gift_a_review",

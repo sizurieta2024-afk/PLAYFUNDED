@@ -46,6 +46,13 @@ interface TierTranslations {
   giftRecipientEmailPlaceholder: string;
   giftStripeOnly: string;
   paymentMethodUnavailable?: string;
+  discountCodeLabel?: string;
+  discountCodePlaceholder?: string;
+  applyDiscount?: string;
+  discountApplied?: string;
+  invalidDiscountCode?: string;
+  discountSummary?: string;
+  finalPriceLabel?: string;
 }
 
 interface TierCardProps {
@@ -151,6 +158,14 @@ export function TierCard({
     useState<CryptoCurrency>("usdttrc20");
   const [isGift, setIsGift] = useState(false);
   const [giftEmail, setGiftEmail] = useState("");
+  const [discountCode, setDiscountCode] = useState("");
+  const [discountState, setDiscountState] = useState<{
+    code: string;
+    discountPct: number;
+    discountAmount: number;
+    discountedAmount: number;
+  } | null>(null);
+  const [discountLoading, setDiscountLoading] = useState(false);
   const router = useRouter();
   const config = TIER_CONFIG[tier.name] ?? DEFAULT_CONFIG;
 
@@ -168,6 +183,48 @@ export function TierCard({
     }
     setError(null);
     setShowMethodSelector(true);
+  }
+
+  async function handleApplyDiscount() {
+    const normalized = discountCode.trim().toUpperCase();
+    if (!normalized) {
+      setDiscountState(null);
+      return;
+    }
+    setDiscountLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/checkout/discounts/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tierId: tier.id, code: normalized }),
+      });
+      const data = (await response.json()) as {
+        code?: string;
+        discountPct?: number;
+        discountAmount?: number;
+        discountedAmount?: number;
+      };
+      if (!response.ok || !data.code) {
+        setDiscountState(null);
+        setError(
+          t.invalidDiscountCode ?? "Discount code is invalid or inactive.",
+        );
+        return;
+      }
+      setDiscountCode(data.code);
+      setDiscountState({
+        code: data.code,
+        discountPct: data.discountPct ?? 0,
+        discountAmount: data.discountAmount ?? 0,
+        discountedAmount: data.discountedAmount ?? tier.fee,
+      });
+    } catch {
+      setDiscountState(null);
+      setError("Unable to validate discount code right now.");
+    } finally {
+      setDiscountLoading(false);
+    }
   }
 
   async function handlePayment(method: PaymentMethod) {
@@ -200,6 +257,7 @@ export function TierCard({
         isGift?: boolean;
         giftRecipientEmail?: string;
         paymentMethod?: "card" | "pix";
+        discountCode?: string;
       } = { tierId: tier.id, locale };
       if (method === "crypto") body.currency = selectedCrypto;
       if (method === "pix" && country) body.country = country;
@@ -208,6 +266,9 @@ export function TierCard({
       if (isGift) {
         body.isGift = true;
         body.giftRecipientEmail = giftEmail.trim();
+      }
+      if (discountState?.code) {
+        body.discountCode = discountState.code;
       }
 
       const res = await fetch(endpoint, {
@@ -370,8 +431,59 @@ export function TierCard({
               {t.selectPaymentMethod}
             </h3>
             <p className="text-sm text-muted-foreground mb-5">
-              {tier.name} — {formatUSD(tier.fee, locale, 2)} USD
+              {tier.name} —{" "}
+              {formatUSD(discountState?.discountedAmount ?? tier.fee, locale, 2)} USD
             </p>
+
+            <div className="mb-4 rounded-xl border border-border p-4 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  {t.discountCodeLabel ?? "Discount code"}
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={discountCode}
+                    onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                    placeholder={
+                      t.discountCodePlaceholder ?? "Enter your code"
+                    }
+                    className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-pf-brand"
+                  />
+                  <button
+                    onClick={handleApplyDiscount}
+                    disabled={discountLoading}
+                    className="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+                  >
+                    {discountLoading
+                      ? t.redirecting
+                      : t.applyDiscount ?? "Apply"}
+                  </button>
+                </div>
+              </div>
+              {discountState ? (
+                <div className="rounded-lg bg-pf-brand/10 border border-pf-brand/20 px-3 py-2 text-xs text-pf-brand space-y-1">
+                  <p>
+                    {t.discountApplied ?? "Discount applied"}:{" "}
+                    <span className="font-semibold">
+                      {discountState.code} · {discountState.discountPct}% off
+                    </span>
+                  </p>
+                  <p>
+                    {(t.discountSummary ?? "You save {amount}.").replace(
+                      "{amount}",
+                      formatUSD(discountState.discountAmount, locale, 2),
+                    )}
+                  </p>
+                  <p>
+                    {t.finalPriceLabel ?? "Final price"}:{" "}
+                    <span className="font-semibold">
+                      {formatUSD(discountState.discountedAmount, locale, 2)}
+                    </span>
+                  </p>
+                </div>
+              ) : null}
+            </div>
 
             {giftsEnabled && (
               <div className="mb-4">

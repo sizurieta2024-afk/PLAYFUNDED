@@ -21,6 +21,7 @@ const stamp = Date.now();
 const createdAuthUserIds = [];
 const createdUserIds = [];
 const createdPaymentIds = [];
+const createdAffiliateIds = [];
 let prisma;
 
 async function createAuthUser(label) {
@@ -49,6 +50,20 @@ async function createAppUser({ email, supabaseId, name, country }) {
   });
   createdUserIds.push(user.id);
   return user;
+}
+
+async function createAffiliateForUser(userId, discountPct = 15) {
+  const affiliate = await prisma.affiliate.create({
+    data: {
+      userId,
+      code: `PF-${String(stamp).slice(-6)}`,
+      commissionRate: "five",
+      discountPct,
+      isActive: true,
+    },
+  });
+  createdAffiliateIds.push(affiliate.id);
+  return affiliate;
 }
 
 async function loginCookie(email, password) {
@@ -172,6 +187,15 @@ async function countUserState(userId) {
 }
 
 async function runAllowedFlows(browser, tier) {
+  const affiliateAuth = await createAuthUser("Payment Smoke Affiliate");
+  const affiliateUser = await createAppUser({
+    email: affiliateAuth.email,
+    supabaseId: affiliateAuth.supabaseId,
+    name: "Payment Smoke Affiliate",
+    country: "BR",
+  });
+  const affiliate = await createAffiliateForUser(affiliateUser.id, 15);
+
   const auth = await createAuthUser("Payment Smoke Brazil");
   const user = await createAppUser({
     email: auth.email,
@@ -223,6 +247,39 @@ async function runAllowedFlows(browser, tier) {
         status: card.status,
         domain: new URL(card.json.url).hostname,
       };
+    });
+
+    await capture("discountValidation", async () => {
+      const validation = await postJson(context, "/api/checkout/discounts/validate", {
+        tierId: tier.id,
+        code: affiliate.code,
+      });
+      assert.equal(validation.status, 200);
+      assert.equal(validation.json?.code, affiliate.code);
+      assert.equal(validation.json?.discountPct, 15);
+      assert.equal(validation.json?.listPriceAmount, tier.fee);
+      assert.equal(
+        validation.json?.discountedAmount,
+        tier.fee - Math.floor((tier.fee * 15) / 100),
+      );
+      return { ok: true, status: validation.status };
+    });
+
+    await capture("cardDiscount", async () => {
+      const card = await postJson(context, "/api/checkout/stripe", {
+        tierId: tier.id,
+        locale: "en",
+        country: "BR",
+        paymentMethod: "card",
+        discountCode: affiliate.code,
+      });
+      assert.equal(
+        card.status,
+        200,
+        `Stripe discounted checkout failed: ${JSON.stringify(card.json)}`,
+      );
+      assert.match(card.json?.url ?? "", /^https:\/\/checkout\.stripe\.com\//);
+      return { ok: true, status: card.status };
     });
 
     await capture("pix", async () => {
@@ -285,6 +342,35 @@ async function runAllowedFlows(browser, tier) {
         paymentId: crypto.json.paymentId,
         pendingPaymentPersisted: true,
       };
+    });
+
+    await capture("cryptoDiscount", async () => {
+      const crypto = await postJson(context, "/api/checkout/nowpayments", {
+        tierId: tier.id,
+        locale: "en",
+        country: "BR",
+        currency: "usdttrc20",
+        discountCode: affiliate.code,
+      });
+      assert.equal(
+        crypto.status,
+        200,
+        `NOWPayments discounted checkout failed: ${JSON.stringify(crypto.json)}`,
+      );
+      const storedPending = await prisma.payment.findFirst({
+        where: { userId: user.id, providerRef: crypto.json.paymentId },
+        orderBy: { createdAt: "desc" },
+      });
+      assert.ok(storedPending, "Discounted NOWPayments pending payment missing");
+      createdPaymentIds.push(storedPending.id);
+      assert.equal(storedPending.discountCode, affiliate.code);
+      assert.equal(storedPending.discountPct, 15);
+      assert.equal(storedPending.listPriceAmount, tier.fee);
+      assert.equal(
+        storedPending.discountAmount,
+        Math.floor((tier.fee * 15) / 100),
+      );
+      return { ok: true, status: crypto.status };
     });
 
     await capture("mercadopago", async () => {
@@ -367,6 +453,15 @@ async function runBlockedCountryFlow(browser, tier) {
 }
 
 async function cleanup() {
+  if (createdAffiliateIds.length > 0) {
+    await prisma.affiliateConversion.deleteMany({
+      where: { affiliateId: { in: createdAffiliateIds } },
+    });
+    await prisma.affiliateClick.deleteMany({
+      where: { affiliateId: { in: createdAffiliateIds } },
+    });
+    await prisma.affiliate.deleteMany({ where: { id: { in: createdAffiliateIds } } });
+  }
   if (createdPaymentIds.length > 0) {
     await prisma.payment.deleteMany({ where: { id: { in: createdPaymentIds } } });
   }

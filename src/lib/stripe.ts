@@ -143,6 +143,11 @@ interface CreateCheckoutSessionParams {
   enablePix?: boolean; // true for Brazil users — charges in BRL via Pix
   country?: string;
   policyVersion?: string;
+  paymentMethodKind?: "card" | "pix";
+  affiliateCode?: string | null;
+  listPriceAmount?: number;
+  discountAmount?: number;
+  discountPct?: number;
 }
 
 export async function createCheckoutSession({
@@ -157,6 +162,11 @@ export async function createCheckoutSession({
   enablePix = false,
   country,
   policyVersion,
+  paymentMethodKind = "card",
+  affiliateCode,
+  listPriceAmount,
+  discountAmount = 0,
+  discountPct = 0,
 }: CreateCheckoutSessionParams): Promise<string> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
   const localePath =
@@ -212,6 +222,11 @@ export async function createCheckoutSession({
       giftRecipientEmail: giftRecipientEmail ?? "",
       country: country ?? "",
       policyVersion: policyVersion ?? "",
+      paymentMethodKind,
+      affiliateCode: affiliateCode ?? "",
+      listPriceAmount: String(listPriceAmount ?? feeInCents),
+      discountAmount: String(discountAmount),
+      discountPct: String(discountPct),
     },
     productName: isGift
       ? `PlayFunded — ${tierName} (Gift)`

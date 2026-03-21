@@ -32,7 +32,6 @@ export function Footer() {
       heading: t("support"),
       links: [
         { label: t("contact"), href: "/contact" as const },
-        { label: t("affiliate"), href: "/affiliate" as const },
       ],
     },
   ] as const;

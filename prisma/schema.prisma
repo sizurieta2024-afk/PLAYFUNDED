@@ -156,6 +156,7 @@ model User {
   payments         Payment[]
   payouts          Payout[]
   affiliate        Affiliate?
+  affiliateConversions AffiliateConversion[]
   marketRequests   MarketRequest[]
   kycSubmission    KycSubmission?
   payoutProfile    PayoutProfile?
@@ -320,6 +321,10 @@ model Payment {
   userId      String
   tierId      String
   amount      Int           // USD cents
+  listPriceAmount Int
+  discountAmount Int        @default(0)
+  discountPct   Int         @default(0)
+  discountCode  String?
   currency    String        @default("USD")
   method      PaymentMethod
   status      PaymentStatus @default(pending)
@@ -343,10 +348,12 @@ model Payment {
 
   user User @relation(fields: [userId], references: [id])
   tier Tier @relation(fields: [tierId], references: [id])
+  affiliateConversion AffiliateConversion?
 
   @@index([userId])
   @@index([status])
   @@index([providerRef])
+  @@index([discountCode])
 }
 
 // ============================================================
@@ -365,6 +372,8 @@ model Payout {
   // Admin
   adminNote   String?
   txRef       String?      // payment reference / transaction ID
+  providerPayoutId String?
+  destinationAddress String?
   providerData Json?       // provider-specific metadata (e.g. dLocal recipient snapshot)
 
   // Rollover
@@ -455,6 +464,8 @@ model Affiliate {
   userId         String                  @unique
   code           String                  @unique // PF-XXXXXX format
   commissionRate AffiliateCommissionRate @default(five) // 5% or 10%
+  discountPct    Int                     @default(0)
+  isActive       Boolean                 @default(true)
 
   // Aggregate stats (updated on each conversion for fast reads)
   totalClicks      Int @default(0)
@@ -467,6 +478,7 @@ model Affiliate {
 
   user   User             @relation(fields: [userId], references: [id])
   clicks AffiliateClick[]
+  conversions AffiliateConversion[]
 
   @@index([code])
 }
@@ -490,6 +502,31 @@ model AffiliateClick {
 
   @@index([affiliateId])
   @@index([convertedToUserId])
+}
+
+// ============================================================
+// AFFILIATE CONVERSION
+// ============================================================
+
+model AffiliateConversion {
+  id             String   @id @default(uuid())
+  affiliateId     String
+  userId          String
+  paymentId       String   @unique
+  code            String
+  listPriceAmount Int
+  paidAmount      Int
+  discountAmount  Int      @default(0)
+  discountPct     Int      @default(0)
+  commissionEarned Int     @default(0)
+  createdAt       DateTime @default(now())
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+  payment   Payment   @relation(fields: [paymentId], references: [id])
+
+  @@index([affiliateId])
+  @@index([userId])
 }
 
 // ============================================================

@@ -10,61 +10,32 @@ import {
 } from "@/lib/email";
 import { recordOpsEvent } from "@/lib/ops-events";
 import { withWebhookLock } from "@/lib/payments/webhook-lock";
+import { attributeAffiliatePurchase } from "@/lib/affiliate/attribution";
 
-async function attributeAffiliateCommission(
-  userId: string,
-  feeInCents: number,
-): Promise<void> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { referredByCode: true },
-  });
-  if (!user?.referredByCode) return;
-
-  const affiliate = await prisma.affiliate.findUnique({
-    where: { code: user.referredByCode },
-  });
-  if (!affiliate) return;
-
-  // Guard: don't double-attribute if already commissioned for this user
-  const alreadyConverted = await prisma.affiliateClick.findFirst({
-    where: { affiliateId: affiliate.id, convertedToUserId: userId },
-  });
-  if (alreadyConverted) return;
-
-  const ratePct = affiliate.commissionRate === "five" ? 5 : 10;
-  const commission = Math.floor((feeInCents * ratePct) / 100);
-
-  const ip = "conversion";
-  await prisma.$transaction([
-    prisma.affiliateClick.create({
-      data: {
-        affiliateId: affiliate.id,
-        ip,
-        convertedToUserId: userId,
-        conversionAmount: feeInCents,
-        commissionEarned: commission,
-      },
-    }),
-    prisma.affiliate.update({
-      where: { id: affiliate.id },
-      data: {
-        totalConversions: { increment: 1 },
-        totalEarned: { increment: commission },
-        pendingPayout: { increment: commission },
-      },
-    }),
-  ]);
-
-  console.log(
-    `[affiliate] Commission $${(commission / 100).toFixed(2)} → affiliate ${affiliate.code} for user ${userId}`,
-  );
+function parseMetadataInt(value: unknown, fallback: number) {
+  const parsed =
+    typeof value === "string" || typeof value === "number"
+      ? Number(value)
+      : NaN;
+  return Number.isFinite(parsed) ? Math.floor(parsed) : fallback;
 }
 
 async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
-): Promise<{ status: "created" | "duplicate" }> {
-  const { tierId, userId, isGift, giftRecipientEmail, country, policyVersion } =
+): Promise<{ status: "created" | "duplicate"; paymentId?: string | null }> {
+  const {
+    tierId,
+    userId,
+    isGift,
+    giftRecipientEmail,
+    country,
+    policyVersion,
+    paymentMethodKind,
+    affiliateCode,
+    listPriceAmount,
+    discountAmount,
+    discountPct,
+  } =
     session.metadata ?? {};
 
   if (!tierId || !userId) {
@@ -78,12 +49,23 @@ async function handleCheckoutCompleted(
     return { status: "duplicate" };
   }
 
+  const normalizedListPriceAmount = parseMetadataInt(listPriceAmount, tier.fee);
+  const normalizedDiscountAmount = parseMetadataInt(discountAmount, 0);
+  const chargedAmount = Math.max(
+    0,
+    normalizedListPriceAmount - normalizedDiscountAmount,
+  );
+
   const fulfillment = await withWebhookLock(prisma, "stripe", session.id, async (tx) => {
     const existing = await tx.payment.findFirst({
       where: { providerRef: session.id },
     });
     if (existing) {
-      return { status: "duplicate" as const, giftToken: null as string | null };
+      return {
+        status: "duplicate" as const,
+        giftToken: null as string | null,
+        paymentId: existing.id,
+      };
     }
 
     const giftToken =
@@ -91,11 +73,15 @@ async function handleCheckoutCompleted(
         ? `GFT-${Math.random().toString(36).slice(2, 10).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
         : null;
 
-    await tx.payment.create({
+    const payment = await tx.payment.create({
       data: {
         userId,
         tierId,
-        amount: tier.fee,
+        amount: chargedAmount,
+        listPriceAmount: normalizedListPriceAmount,
+        discountAmount: normalizedDiscountAmount,
+        discountPct: parseMetadataInt(discountPct, 0),
+        discountCode: affiliateCode || null,
         currency: "USD",
         method: "card",
         status: "completed",
@@ -109,10 +95,12 @@ async function handleCheckoutCompleted(
               ? session.payment_intent
               : (session.payment_intent?.id ?? null),
           customerEmail: session.customer_email,
+          paymentMethodKind: paymentMethodKind ?? "card",
           checkoutCountry: country ?? null,
           policyVersion: policyVersion ?? null,
         },
       },
+      select: { id: true },
     });
 
     if (isGift !== "true") {
@@ -132,7 +120,7 @@ async function handleCheckoutCompleted(
       });
     }
 
-    return { status: "created" as const, giftToken };
+    return { status: "created" as const, giftToken, paymentId: payment.id };
   });
 
   if (fulfillment.status === "duplicate") {
@@ -149,7 +137,7 @@ async function handleCheckoutCompleted(
         providerRef: session.id,
       },
     });
-    return { status: "duplicate" };
+    return { status: "duplicate", paymentId: fulfillment.paymentId };
   }
 
   await recordOpsEvent({
@@ -168,10 +156,19 @@ async function handleCheckoutCompleted(
     },
   });
 
-  // Affiliate commission — fire-and-forget
-  void attributeAffiliateCommission(userId, tier.fee).catch((err) =>
-    console.error("[webhook/stripe] affiliate commission error:", err),
-  );
+  if (fulfillment.paymentId) {
+    void attributeAffiliatePurchase({
+      userId,
+      paymentId: fulfillment.paymentId,
+      paidAmount: chargedAmount,
+      listPriceAmount: normalizedListPriceAmount,
+      discountAmount: normalizedDiscountAmount,
+      discountPct: parseMetadataInt(discountPct, 0),
+      code: affiliateCode ?? null,
+    }).catch((err) =>
+      console.error("[webhook/stripe] affiliate attribution error:", err),
+    );
+  }
 
   // Transactional emails
   const buyer = await prisma.user.findUnique({
@@ -200,7 +197,7 @@ async function handleCheckoutCompleted(
   console.log(
     `[webhook/stripe] Challenge created — userId: ${userId}, tier: ${tier.name}`,
   );
-  return { status: "created" };
+  return { status: "created", paymentId: fulfillment.paymentId };
 }
 
 export async function POST(req: NextRequest) {

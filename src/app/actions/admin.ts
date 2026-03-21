@@ -52,6 +52,15 @@ type CountryPolicyStatus = (typeof COUNTRY_MARKET_STATUSES)[number];
 type MarketRequestStatus = "pending" | "reviewed" | "approved" | "rejected";
 type AffiliateCommissionRate = "five" | "ten";
 
+function generateAffiliateCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "PF-";
+  for (let i = 0; i < 6; i += 1) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
 function parseBooleanInput(value: FormDataEntryValue | null): boolean {
   return value === "true" || value === "on";
 }
@@ -129,7 +138,11 @@ export async function adminUpdatePayout(
       error:
         result.code === "RETRYABLE_CONFLICT"
           ? "payout_review_conflict"
-          : "payout_not_found_or_not_pending",
+          : result.code === "CRYPTO_DESTINATION_REQUIRED"
+            ? "crypto_destination_required"
+            : result.code === "PROVIDER_ERROR"
+              ? result.error ?? "payout_provider_error"
+              : "payout_not_found_or_not_pending",
       code: result.code,
     };
   }
@@ -147,7 +160,7 @@ export async function adminUpdatePayout(
       txRef: txRef ?? null,
     },
   });
-  if (action === "approve") {
+  if (action === "approve" && payout.status === "paid") {
     const { subject, html } = payoutPaidEmail(
       payout.user.name,
       payout.amount,
@@ -221,6 +234,100 @@ export async function setAffiliateRate(
     affiliateId,
     `rate → ${rate}`,
   );
+  revalidatePath("/[locale]/admin/affiliates", "page");
+}
+
+export async function setAffiliateDiscountPct(
+  affiliateId: string,
+  discountPct: number,
+) {
+  const admin = await requireAdmin();
+  await prisma.affiliate.update({
+    where: { id: affiliateId },
+    data: {
+      discountPct: Math.max(0, Math.min(100, Math.floor(discountPct))),
+    },
+  });
+  await audit(
+    admin.id,
+    "set_affiliate_discount_pct",
+    "affiliate",
+    affiliateId,
+    `discountPct → ${discountPct}`,
+  );
+  revalidatePath("/[locale]/admin/affiliates", "page");
+}
+
+export async function setAffiliateActive(
+  affiliateId: string,
+  isActive: boolean,
+) {
+  const admin = await requireAdmin();
+  await prisma.affiliate.update({
+    where: { id: affiliateId },
+    data: { isActive },
+  });
+  await audit(
+    admin.id,
+    isActive ? "activate_affiliate" : "deactivate_affiliate",
+    "affiliate",
+    affiliateId,
+  );
+  revalidatePath("/[locale]/admin/affiliates", "page");
+}
+
+export async function adminCreateAffiliate(
+  userEmail: string,
+  rate: AffiliateCommissionRate,
+  discountPct: number,
+): Promise<{ error?: string; code?: string }> {
+  const admin = await requireAdmin();
+  const email = userEmail.trim().toLowerCase();
+  if (!email) {
+    return { error: "missing_email" };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+  if (!user) {
+    return { error: "user_not_found" };
+  }
+
+  const existing = await prisma.affiliate.findUnique({
+    where: { userId: user.id },
+    select: { code: true },
+  });
+  if (existing) {
+    return { error: "affiliate_exists", code: existing.code };
+  }
+
+  let code = generateAffiliateCode();
+  for (let i = 0; i < 5; i += 1) {
+    const collision = await prisma.affiliate.findUnique({ where: { code } });
+    if (!collision) break;
+    code = generateAffiliateCode();
+  }
+
+  const affiliate = await prisma.affiliate.create({
+    data: {
+      userId: user.id,
+      code,
+      commissionRate: rate,
+      discountPct: Math.max(0, Math.min(100, Math.floor(discountPct))),
+      isActive: true,
+    },
+  });
+  await audit(
+    admin.id,
+    "create_affiliate",
+    "affiliate",
+    affiliate.id,
+    `${email} · ${code}`,
+  );
+  revalidatePath("/[locale]/admin/affiliates", "page");
+  return { code };
 }
 
 export async function adminMarkAffiliatePaid(
@@ -239,6 +346,7 @@ export async function adminMarkAffiliatePaid(
     data: { status: "paid", paidAt: new Date(), adminNote: note ?? null },
   });
   await audit(admin.id, "affiliate_paid", "affiliate", affiliateId, note);
+  revalidatePath("/[locale]/admin/affiliates", "page");
 }
 
 // ── Market Requests ───────────────────────────────────────────────────

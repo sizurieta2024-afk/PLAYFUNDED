@@ -5,11 +5,19 @@ function uniqueUrls(...urls) {
 }
 
 function buildCandidates() {
-  return uniqueUrls(process.env.DIRECT_URL, process.env.DATABASE_URL);
+  if (process.env.DATABASE_URL) {
+    return [process.env.DATABASE_URL];
+  }
+  return uniqueUrls(process.env.DIRECT_URL);
 }
 
 export function createPrismaSmokeClient(url) {
-  return url ? new PrismaClient({ datasourceUrl: url }) : new PrismaClient();
+  if (url) {
+    process.env.DATABASE_URL = url;
+    process.env.DIRECT_URL = url;
+    return new PrismaClient({ datasourceUrl: url });
+  }
+  return new PrismaClient();
 }
 
 async function tryConnect(url, attempts, delayMs) {

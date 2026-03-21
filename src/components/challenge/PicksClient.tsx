@@ -569,7 +569,7 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
                       <input
                         id="stake-input"
                         type="number"
-                        min="1"
+                        min={(minStakeCents / 100).toFixed(2)}
                         step="0.01"
                         value={stakeInput}
                         onChange={(e) => {
@@ -619,7 +619,7 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
 
                   <button
                     onClick={() => void handleSubmit()}
-                    disabled={isSubmitting || !!stakeError || stakeCents < 100}
+                    disabled={isSubmitting || !!stakeError || stakeCents < minStakeCents}
                     className="w-full py-3 rounded-lg bg-pf-brand text-white text-sm font-semibold disabled:opacity-50 hover:bg-pf-brand-dark transition-colors"
                   >
                     {isSubmitting ? t.placing : t.confirmPick}

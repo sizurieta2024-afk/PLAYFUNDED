@@ -208,6 +208,7 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
   // ── Derived ───────────────────────────────────────────────────────────────
 
   const maxStakeCents = Math.floor((challenge.startBalance * 5) / 100);
+  const minStakeCents = Math.max(100, Math.floor((challenge.startBalance * 1) / 100));
   const targetCents = getProfitTargetCents(challenge);
   const pendingStakeCents = picks
     .filter((pick) => pick.status === "pending")
@@ -259,8 +260,8 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
   const stakeError =
     stakeCents > 0 && stakeCents > maxStakeCents
       ? `Max ${formatCents(maxStakeCents)}`
-      : stakeCents > 0 && stakeCents < 100
-        ? "Min $1.00"
+      : stakeCents > 0 && stakeCents < minStakeCents
+        ? `Min ${formatCents(minStakeCents)}`
         : null;
 
   useEffect(() => {
@@ -276,7 +277,7 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
   // ── Submit ────────────────────────────────────────────────────────────────
 
   const handleSubmit = useCallback(async () => {
-    if (!selected || stakeCents < 100 || stakeCents > maxStakeCents) return;
+    if (!selected || stakeCents < minStakeCents || stakeCents > maxStakeCents) return;
     setIsSubmitting(true);
     setSubmitError(null);
 
@@ -322,7 +323,7 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selected, stakeCents, maxStakeCents, challenge.id, router]);
+  }, [selected, stakeCents, minStakeCents, maxStakeCents, challenge.id, router]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 

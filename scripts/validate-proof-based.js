@@ -299,30 +299,34 @@ const sourceCases = [
     ],
   },
   {
-    id: "payments.mercadopago-verification",
+    id: "payments.mercadopago-checkout-disabled",
     area: "payments and webhooks",
-    claim: "Mercado Pago notifications are gated, reconciled against provider data with a timeout, and deduplicate fulfillment.",
+    claim: "Mercado Pago checkout is explicitly disabled for launch rather than left half-available.",
+    file: "src/app/api/checkout/mercadopago/route.ts",
+    checks: [
+      {
+        description: "Checkout route returns an explicit disabled code",
+        matcher: /PAYMENT_METHOD_DISABLED/,
+      },
+      {
+        description: "Checkout route records the disabled-provider event",
+        matcher: /Mercado Pago has been disabled for launch/,
+      },
+    ],
+  },
+  {
+    id: "payments.mercadopago-webhook-disabled",
+    area: "payments and webhooks",
+    claim: "Mercado Pago webhook handling is explicitly disabled for launch.",
     file: "src/app/api/webhooks/mercadopago/route.ts",
     checks: [
       {
-        description: "Webhook secret token is checked when configured",
-        matcher: /MERCADOPAGO_WEBHOOK_SECRET/,
+        description: "Webhook route returns an explicit disabled code",
+        matcher: /PAYMENT_METHOD_DISABLED/,
       },
       {
-        description: "Provider payment details are fetched server-side",
-        matcher: /fetchMpPayment\(/,
-      },
-      {
-        description: "Mercado Pago API is queried directly",
-        matcher: /api\.mercadopago\.com\/v1\/payments\//,
-      },
-      {
-        description: "Provider fetches use a bounded timeout",
-        matcher: /fetchWithTimeout\(/,
-      },
-      {
-        description: "Fulfillment is wrapped in a webhook duplicate lock",
-        matcher: /withWebhookLock\(/,
+        description: "Webhook route records the disabled-provider event",
+        matcher: /Mercado Pago webhook received after provider was disabled/,
       },
     ],
   },

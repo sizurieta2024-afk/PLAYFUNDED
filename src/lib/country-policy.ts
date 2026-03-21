@@ -8,7 +8,6 @@ export const ALL_CHECKOUT_METHODS: CheckoutMethod[] = [
   "card",
   "crypto",
   "pix",
-  "mercadopago",
 ];
 
 export const ALL_MARKET_STATUSES: CountryMarketStatus[] = [
@@ -115,16 +114,6 @@ const COUNTRY_NAMES: Record<string, string> = {
 
 const PIX_COUNTRIES = new Set(["BR"]);
 
-const MERCADOPAGO_COUNTRIES = new Set([
-  "AR",
-  "BR",
-  "CL",
-  "CO",
-  "MX",
-  "PE",
-  "UY",
-]);
-
 const DLOCAL_PAYOUT_COUNTRIES = new Set([
   "AR",
   "BO",
@@ -191,10 +180,6 @@ const COUNTRY_CONFIG: Record<string, CountryPolicyConfig> = {
   UY: { reviewNote: DEFAULT_REVIEW_NOTE },
 };
 
-function isMercadoPagoEnabled(): boolean {
-  return Boolean(process.env.MERCADOPAGO_ACCESS_TOKEN);
-}
-
 function getDisplayName(country: string | null): string {
   if (!country) return "Unknown";
   return COUNTRY_NAMES[country] ?? country;
@@ -205,14 +190,6 @@ function getDefaultCheckoutMethods(country: string | null): CheckoutMethod[] {
 
   if (country && PIX_COUNTRIES.has(country)) {
     methods.push("pix");
-  }
-
-  if (
-    country &&
-    MERCADOPAGO_COUNTRIES.has(country) &&
-    isMercadoPagoEnabled()
-  ) {
-    methods.push("mercadopago");
   }
 
   return methods;
@@ -316,6 +293,13 @@ export function getAvailableCheckoutMethods(
   return getCountryPolicy(country).checkoutMethods;
 }
 
+export function sanitizeCheckoutMethods(
+  methods: CheckoutMethod[] | null | undefined,
+): CheckoutMethod[] {
+  if (!methods) return [];
+  return methods.filter((method) => method !== "mercadopago");
+}
+
 export function getAvailablePayoutMethods(
   country?: string | null,
 ): PayoutMethod[] {
@@ -365,7 +349,7 @@ export function applyCountryPolicyOverride(
     reviewNote:
       override.reviewNote === undefined ? base.reviewNote : override.reviewNote,
     checkoutMethods: override.overrideCheckoutMethods
-      ? override.checkoutMethods ?? []
+      ? sanitizeCheckoutMethods(override.checkoutMethods)
       : base.checkoutMethods,
     payoutMethods: override.overridePayoutMethods
       ? override.payoutMethods ?? []

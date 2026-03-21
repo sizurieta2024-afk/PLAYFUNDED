@@ -1,6 +1,6 @@
 # Live Validation Status
 
-Updated: 2026-03-17
+Updated: 2026-03-21
 
 ## Proven Live
 
@@ -23,6 +23,11 @@ Updated: 2026-03-17
     - `Admin smoke`
     - `Payout KYC smoke`
     - `Admin support smoke`
+- Payment checkout guardrails on `playfunded.lat`:
+  - blocked countries cannot create Stripe or NOWPayments checkouts
+  - starting checkout does not create a `Challenge`
+  - live NOWPayments checkout returns a real invoice and persists one pending `Payment`
+  - Mercado Pago is intentionally disabled for launch
 
 ## Proven By Archive Validation
 
@@ -39,6 +44,7 @@ Updated: 2026-03-17
   - `cron_failures` reported `1`
 - Permanent Slack/Discord alert destination, because no real `PF_ALERT_WEBHOOK_URL` / `PF_ALERT_WEBHOOK_KIND` is configured in GitHub
 - Production Vercel KYC scanning, because production runtime still lacks `CLAMAV_*` and `KYC_*` scan env vars
+- Live Stripe checkout on Vercel, because the local production build can create Stripe card/Pix sessions but the live Vercel runtime still reports Stripe connection failures
 - Full Supabase platform restore outside the application `public` schema
 - Exact end-user browser copy for the KYC malware rejection, even though the route-level rejection path was proven
 

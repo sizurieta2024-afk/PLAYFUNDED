@@ -1,12 +1,12 @@
 # Playfunded Proof-Based Validation Report
 
-Generated: 2026-03-20T21:36:16.720Z
+Generated: 2026-03-21T01:33:03.690Z
 
 This report follows a Shannon-style rule: claims must be backed by executable or source-level proof. Anything not proven is listed as unverified.
 
 ## Summary
 
-- Verified checks: 51
+- Verified checks: 52
 - Failed checks: 0
 - Unverified claims: 3
 
@@ -67,7 +67,7 @@ Detail: All required proof points were found in source.
 Evidence:
 - CI supports workflow_dispatch: L8: workflow_dispatch:
 - Launch smokes are not limited to push-only events: L112: if: ${{ github.event_name != 'pull_request' }}
-- Launch smokes run the admin support smoke: L200: run: BASE_URL=http://localhost:3004 node scripts/run-admin-support-smoke.mjs
+- Launch smokes run the admin support smoke: L198: run: BASE_URL=http://localhost:3004 node scripts/run-admin-support-smoke.mjs
 
 ### VERIFIED ops.admin-launch-kyc-status
 Area: payout flows
@@ -80,16 +80,21 @@ Evidence:
 - The page shows the scanner configured vs unconfigured state: L78: {clamavConfigured ? "ClamAV configured" : "Scanner not configured"}
 - The page shows the deploy environment alongside the mode: L81: {kycDeployEnvironment} · mode {kycScanMode}
 
-### VERIFIED payments.mercadopago-verification
+### VERIFIED payments.mercadopago-checkout-disabled
 Area: payments and webhooks
-Claim: Mercado Pago notifications are gated, reconciled against provider data with a timeout, and deduplicate fulfillment.
+Claim: Mercado Pago checkout is explicitly disabled for launch rather than left half-available.
 Detail: All required proof points were found in source.
 Evidence:
-- Webhook secret token is checked when configured: L61: const expectedToken = process.env.MERCADOPAGO_WEBHOOK_SECRET;
-- Provider payment details are fetched server-side: L12: async function fetchMpPayment(paymentId: string): Promise<{
-- Mercado Pago API is queried directly: L30: const res = await fetchWithTimeout(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-- Provider fetches use a bounded timeout: L30: const res = await fetchWithTimeout(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-- Fulfillment is wrapped in a webhook duplicate lock: L110: const outcome = await withWebhookLock(
+- Checkout route returns an explicit disabled code: L26: code: "PAYMENT_METHOD_DISABLED",
+- Checkout route records the disabled-provider event: L27: reason: "Mercado Pago has been disabled for launch.",
+
+### VERIFIED payments.mercadopago-webhook-disabled
+Area: payments and webhooks
+Claim: Mercado Pago webhook handling is explicitly disabled for launch.
+Detail: All required proof points were found in source.
+Evidence:
+- Webhook route returns an explicit disabled code: L23: code: "PAYMENT_METHOD_DISABLED",
+- Webhook route records the disabled-provider event: L24: reason: "Mercado Pago webhook received after provider was disabled.",
 
 ### VERIFIED payout.transactional-request
 Area: payout flows

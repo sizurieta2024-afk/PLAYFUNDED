@@ -5,6 +5,7 @@ import {
   getCountryPolicy,
   listCountryPolicies,
   normalizeCountry,
+  sanitizeCheckoutMethods,
   type CountryPolicy,
   type CountryPolicyOverrideInput,
 } from "@/lib/country-policy";
@@ -30,8 +31,10 @@ function mapOverride(
     requiresReviewNotice: override.requiresReviewNotice,
     reviewNote: override.reviewNote,
     overrideCheckoutMethods: override.overrideCheckoutMethods,
-    checkoutMethods: override.checkoutMethods.map((method) =>
-      method === "crypto" ? "crypto" : method,
+    checkoutMethods: sanitizeCheckoutMethods(
+      override.checkoutMethods.map((method) =>
+        method === "crypto" ? "crypto" : method,
+      ),
     ),
     overridePayoutMethods: override.overridePayoutMethods,
     payoutMethods: override.payoutMethods,

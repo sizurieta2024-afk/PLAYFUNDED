@@ -293,24 +293,11 @@ async function runAllowedFlows(browser, tier) {
         locale: "pt-BR",
         country: "BR",
       });
-      assert.equal(
-        mercado.status,
-        200,
-        `Mercado Pago checkout failed: ${JSON.stringify(mercado.json)}`,
-      );
-      assert.match(
-        mercado.json?.url ?? "",
-        /^https:\/\/(www\.)?mercadopago\./,
-        `Unexpected Mercado Pago URL: ${mercado.json?.url}`,
-      );
-
-      const afterMp = await countUserState(user.id);
-      assert.equal(afterMp.challengeCount, 0);
       return {
-        ok: true,
+        ok: mercado.status === 410,
         status: mercado.status,
-        domain: new URL(mercado.json.url).hostname,
-        uiExposed: false,
+        code: mercado.json?.code ?? null,
+        disabled: mercado.status === 410,
       };
     });
 
@@ -359,9 +346,8 @@ async function runBlockedCountryFlow(browser, tier) {
       locale: "en",
       country: "US",
     });
-    // MP route resolves country from geo/user state, so a US profile should still block.
-    assert.equal(mercadoBlocked.status, 403);
-    assert.equal(mercadoBlocked.json?.code, "COUNTRY_NOT_AVAILABLE");
+    assert.equal(mercadoBlocked.status, 410);
+    assert.equal(mercadoBlocked.json?.code, "PAYMENT_METHOD_DISABLED");
 
     const finalState = await countUserState(user.id);
     assert.equal(finalState.challengeCount, 0);

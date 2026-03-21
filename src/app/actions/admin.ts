@@ -45,7 +45,7 @@ async function audit(
   });
 }
 
-const CHECKOUT_METHODS = ["card", "crypto", "pix", "mercadopago"] as const;
+const CHECKOUT_METHODS = ["card", "crypto", "pix"] as const;
 const PAYOUT_METHODS = ["bank_wire", "usdt", "usdc", "btc", "paypal"] as const;
 const COUNTRY_MARKET_STATUSES = ["blocked", "review", "enabled"] as const;
 type CountryPolicyStatus = (typeof COUNTRY_MARKET_STATUSES)[number];

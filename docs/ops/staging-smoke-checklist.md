@@ -27,7 +27,7 @@ Use this before a release candidate or production deploy.
 - Stripe checkout route returns a session for an allowed country
 - Stripe Pix checkout returns a session for an allowed Brazil flow
 - NOWPayments checkout returns an invoice and persists exactly one pending `Payment`
-- Mercado Pago checkout is either intentionally hidden by policy/UI or returns the expected country-policy block
+- Mercado Pago checkout returns the explicit disabled-provider response (`410 PAYMENT_METHOD_DISABLED`) and is not exposed as a launch payment rail
 - Blocked country cannot create checkout
 - Users without a paid fulfillment still have `0` accessible challenges after checkout initiation
 - Webhook signature failures are rejected

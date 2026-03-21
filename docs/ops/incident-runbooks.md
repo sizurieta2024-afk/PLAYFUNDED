@@ -51,7 +51,7 @@ Signal:
 - `OpsEventLog` contains `webhook_handler_failed` or many `webhook_duplicate`
 
 First checks:
-- Identify provider: Stripe, NOWPayments, or Mercado Pago.
+- Identify provider: Stripe or NOWPayments. Mercado Pago is disabled for launch, so any live Mercado Pago traffic should be treated as unexpected and investigated.
 - Check signature verification, provider fetch errors, and duplicate lock behavior.
 - Confirm provider dashboard delivery status.
 - For NOWPayments, check whether the original checkout already created a `pending` `Payment` row for the same `providerRef`.

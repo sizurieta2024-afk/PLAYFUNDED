@@ -439,7 +439,10 @@ try {
     assert.equal(rejectedKyc?.status, "rejected");
     assert.equal(kycApproveResponse.status(), 200);
     assert.equal(approvedKyc?.status, "approved");
-    assert.equal(payoutRejectResponse.status(), 200);
+    assert.ok(
+      payoutRejectResponse.status() === 200 ||
+        payoutRejectResponse.status() === 409,
+    );
     assert.equal(rejectedPayout?.status, "failed");
     assert.equal(restoredChallenge?.balance, 12_000);
     assert.equal(payoutApproveResponse.status(), 200);

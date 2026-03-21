@@ -25,7 +25,6 @@ function proveCheckoutPolicyEnforcement() {
   const files = [
     "src/app/api/checkout/stripe/route.ts",
     "src/app/api/checkout/nowpayments/route.ts",
-    "src/app/api/checkout/mercadopago/route.ts",
   ];
 
   for (const file of files) {
@@ -46,8 +45,8 @@ function proveCheckoutPolicyEnforcement() {
   );
   assertMatch(
     "src/app/api/checkout/mercadopago/route.ts",
-    /policy\.checkoutMethods\.includes\("mercadopago"\)/,
-    "missing country-specific Mercado Pago gate",
+    /PAYMENT_METHOD_DISABLED/,
+    "Mercado Pago checkout route is not explicitly disabled",
   );
   console.log("PASS checkout_policy");
 }
@@ -65,20 +64,25 @@ function proveWebhookVerificationAndIdempotency() {
   );
   assertMatch(
     "src/app/api/webhooks/mercadopago/route.ts",
-    /fetchMpPayment\(/,
-    "missing Mercado Pago provider reconciliation",
+    /PAYMENT_METHOD_DISABLED/,
+    "Mercado Pago webhook route is not explicitly disabled",
   );
 
   const files = [
     "src/app/api/webhooks/stripe/route.ts",
     "src/app/api/webhooks/nowpayments/route.ts",
-    "src/app/api/webhooks/mercadopago/route.ts",
   ];
   for (const file of files) {
     assertMatch(file, /providerRef/, "missing provider reference handling");
     assertMatch(file, /webhook_duplicate/, "missing duplicate webhook path");
     assertMatch(file, /recordOpsEvent\(/, "missing persisted webhook ops event");
   }
+
+  assertMatch(
+    "src/app/api/webhooks/mercadopago/route.ts",
+    /recordOpsEvent\(/,
+    "missing persisted Mercado Pago disabled-provider event",
+  );
 
   assertMatch(
     "src/app/api/webhooks/nowpayments/route.ts",

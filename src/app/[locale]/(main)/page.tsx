@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { resolveCountry } from "@/lib/country-policy";
 import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
 import { formatLocalPrice, getCurrencyForCountry } from "@/lib/exchangerates";
-import { LEAGUE_CONFIG } from "@/lib/odds/types";
 import { BackgroundBeams } from "@/components/landing/BackgroundBeams";
 import { GlowingCard } from "@/components/landing/GlowingCard";
 import { TestimonialsMarquee } from "@/components/landing/TestimonialsMarquee";
@@ -145,31 +144,17 @@ export default async function HomePage({
   const hasExactCommercialTerms =
     countryPolicy.marketing.showExactCommercialTerms;
 
-  const now = new Date();
-  const endOfTomorrow = new Date(now);
-  endOfTomorrow.setDate(endOfTomorrow.getDate() + 1);
-  endOfTomorrow.setHours(23, 59, 59, 999);
-
-  const [tiers, activeSports] = await Promise.all([
-    prisma.tier.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: "asc" },
-      select: {
-        id: true,
-        name: true,
-        fee: true,
-        fundedBankroll: true,
-        profitSplitPct: true,
-      },
-    }),
-    prisma.oddsCache.findMany({
-      where: {
-        OR: [{ isLive: true }, { startTime: { gte: now, lte: endOfTomorrow } }],
-      },
-      distinct: ["sport"],
-      select: { sport: true },
-    }),
-  ]);
+  const tiers = await prisma.tier.findMany({
+    where: { isActive: true },
+    orderBy: { sortOrder: "asc" },
+    select: {
+      id: true,
+      name: true,
+      fee: true,
+      fundedBankroll: true,
+      profitSplitPct: true,
+    },
+  });
 
   const localCurrencyCode = getCurrencyForCountry(country);
   const localFeeByTier = new Map<string, string>();
@@ -187,57 +172,8 @@ export default async function HomePage({
 
   const steps = [
     { num: "01", key: "step1", color: "amber" },
-    { num: "02", key: "step2", color: "blue" },
+    { num: "02", key: "step2", color: "amber" },
     { num: "03", key: "step3", color: "green" },
-  ] as const;
-
-  const splitPcts = tiers.map((t) => t.profitSplitPct);
-  const minSplit = splitPcts.length > 0 ? Math.min(...splitPcts) : null;
-  const maxSplit = splitPcts.length > 0 ? Math.max(...splitPcts) : null;
-  const splitValue =
-    minSplit == null || maxSplit == null
-      ? "—"
-      : minSplit === maxSplit
-        ? `${minSplit}%`
-        : `${minSplit}–${maxSplit}%`;
-
-  const bankrolls = tiers.map((t) => t.fundedBankroll);
-  const minBankroll = bankrolls.length > 0 ? Math.min(...bankrolls) : null;
-  const maxBankroll = bankrolls.length > 0 ? Math.max(...bankrolls) : null;
-  const bankrollValue =
-    minBankroll == null || maxBankroll == null
-      ? "—"
-      : minBankroll === maxBankroll
-        ? formatUsd(minBankroll, numberLocale)
-        : `${formatUsd(minBankroll, numberLocale)}–${formatUsd(maxBankroll, numberLocale)}`;
-
-  const configuredSportsCount = new Set(LEAGUE_CONFIG.map((c) => c.sport)).size;
-  const sportsCount =
-    activeSports.length > 0 ? activeSports.length : configuredSportsCount;
-
-  const stats = [
-    {
-      value: splitValue,
-      key: "stat_split",
-      icon: <DollarSign className="w-4 h-4" />,
-    },
-    {
-      value: bankrollValue,
-      key: "stat_bankroll",
-      icon: <Trophy className="w-4 h-4" />,
-    },
-    {
-      value: hasExactCommercialTerms
-        ? t("stat_payout_value")
-        : t("stat_payout_value_review"),
-      key: "stat_payout",
-      icon: <Zap className="w-4 h-4" />,
-    },
-    {
-      value: t("stat_sports_value_dynamic", { count: sportsCount }),
-      key: "stat_sports",
-      icon: <Shield className="w-4 h-4" />,
-    },
   ] as const;
 
   const sports = [
@@ -675,7 +611,7 @@ export default async function HomePage({
       </section>
 
       {/* ━━ TIER CARDS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <section className="py-24 bg-background border-t border-border relative overflow-hidden">
+      <section className="py-24 bg-card border-t border-border relative overflow-hidden">
         {/* Lamp effect */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[220px] bg-[conic-gradient(from_270deg_at_50%_0%,transparent_40deg,rgba(255,45,120,0.08)_90deg,rgba(255,45,120,0.04)_180deg,transparent_220deg)] pointer-events-none" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[350px] h-[140px] bg-[radial-gradient(ellipse,rgba(255,45,120,0.12)_0%,transparent_70%)] blur-xl pointer-events-none" />
@@ -859,7 +795,7 @@ export default async function HomePage({
       </section>
 
       {/* ━━ BENTO FEATURES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <section className="py-20 bg-card border-t border-white/[0.04]">
+      <section className="py-20 bg-background border-t border-border">
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
           <div className="text-center mb-12">
             <div className="flex items-center justify-center gap-3 mb-4">

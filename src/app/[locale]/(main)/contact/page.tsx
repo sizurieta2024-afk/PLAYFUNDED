@@ -72,7 +72,7 @@ export default async function ContactPage({
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-12">
       <div className="rounded-2xl border border-border bg-card p-8 space-y-4">
-        <h1 className="text-3xl font-bold">{copy.title}</h1>
+        <h1 className="text-3xl font-display font-bold">{copy.title}</h1>
         <p className="text-muted-foreground">{copy.subtitle}</p>
         <div className="pt-2">
           <p className="text-sm font-medium">{copy.emailLabel}</p>

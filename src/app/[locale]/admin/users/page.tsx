@@ -53,18 +53,20 @@ export default async function AdminUsersPage({
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Users</h1>
-          <p className="text-sm text-muted-foreground">{total.toLocaleString()} total</p>
+          <p className="text-sm text-muted-foreground">
+            {total.toLocaleString()} total
+          </p>
         </div>
         <form method="GET" className="flex gap-2">
           <input
             name="q"
             defaultValue={q}
             placeholder="Search email or name…"
-            className="px-3 py-2 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-pf-brand/40 w-64"
+            className="px-3 py-2 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-pf-pink/40 w-64"
           />
           <button
             type="submit"
-            className="px-4 py-2 rounded-xl bg-pf-brand text-white text-sm font-semibold hover:bg-pf-brand/90 transition-colors"
+            className="px-4 py-2 rounded-xl bg-pf-pink text-white text-sm font-semibold hover:bg-pf-pink-dark transition-colors"
           >
             Search
           </button>

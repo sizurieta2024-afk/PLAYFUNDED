@@ -28,10 +28,11 @@ export default async function ChallengesPage({
 
   // Detect country for geo-specific payment methods (e.g. Pix for Brazil)
   const headersList = await headers();
-  const country = resolveCountry(
-    headersList.get("x-vercel-ip-country"),
-    headersList.get("cf-ipcountry"),
-  ) ?? undefined;
+  const country =
+    resolveCountry(
+      headersList.get("x-vercel-ip-country"),
+      headersList.get("cf-ipcountry"),
+    ) ?? undefined;
   const countryPolicy = await getResolvedCountryPolicy(country);
   const availablePaymentMethods = countryPolicy.checkoutMethods.reduce<
     Array<"stripe" | "crypto" | "pix">
@@ -87,7 +88,7 @@ export default async function ChallengesPage({
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
       {/* Header */}
       <div className="text-center space-y-4 mb-14">
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground">
+        <h1 className="font-display font-bold font-serif italic text-4xl sm:text-5xl tracking-tight text-foreground">
           {t("pageTitle")}
         </h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">

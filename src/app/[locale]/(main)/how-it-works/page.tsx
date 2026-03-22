@@ -66,7 +66,9 @@ export default async function HowItWorksPage({
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-12 space-y-16">
       {/* Header */}
       <div className="text-center space-y-3">
-        <h1 className="text-4xl font-bold">{t("pageTitle")}</h1>
+        <h1 className="font-display font-bold font-serif italic text-4xl">
+          {t("pageTitle")}
+        </h1>
         <p className="text-muted-foreground text-lg max-w-xl mx-auto">
           {hasExactCommercialTerms
             ? t("pageSubtitle")
@@ -81,13 +83,12 @@ export default async function HowItWorksPage({
 
       {/* Phase journey */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold">{t("journey_title")}</h2>
+        <h2 className="font-display font-bold text-xl font-semibold">
+          {t("journey_title")}
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {phases.map(({ phase, target, color, bg, key }) => (
-            <div
-              key={key}
-              className={`rounded-xl border p-6 space-y-2 ${bg}`}
-            >
+            <div key={key} className={`rounded-xl border p-6 space-y-2 ${bg}`}>
               <p className={`font-bold text-lg ${color}`}>{phase}</p>
               <p className={`text-3xl font-extrabold ${color}`}>{target}</p>
               <p className="text-sm text-muted-foreground">
@@ -102,7 +103,9 @@ export default async function HowItWorksPage({
 
       {/* Rules */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold">{t("rules_title")}</h2>
+        <h2 className="font-display font-bold text-xl font-semibold">
+          {t("rules_title")}
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {rules.map(({ icon, key, value }) => (
             <div
@@ -125,15 +128,25 @@ export default async function HowItWorksPage({
 
       {/* Payouts */}
       <section className="rounded-xl border border-border bg-card p-8 space-y-4">
-        <h2 className="text-xl font-semibold">{t("payout_title")}</h2>
+        <h2 className="font-display font-bold text-xl font-semibold">
+          {t("payout_title")}
+        </h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
           {hasExactCommercialTerms
             ? t("payout_desc", { payoutWindow: getPayoutWindowLabel() })
             : t("payout_desc_review")}
         </p>
         <ul className="space-y-2">
-          {["payout_kyc", "payout_methods", "payout_timing", "payout_split"].map((k) => (
-            <li key={k} className="flex items-start gap-2 text-sm text-muted-foreground">
+          {[
+            "payout_kyc",
+            "payout_methods",
+            "payout_timing",
+            "payout_split",
+          ].map((k) => (
+            <li
+              key={k}
+              className="flex items-start gap-2 text-sm text-muted-foreground"
+            >
               <span className="text-pf-brand mt-0.5">✓</span>
               {k === "payout_methods" && !policy.marketing.showProcessorNames
                 ? t("payout_methods_review")
@@ -160,17 +173,30 @@ export default async function HowItWorksPage({
 
       {/* Sports */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold">{t("sports_title")}</h2>
+        <h2 className="font-display font-bold text-xl font-semibold">
+          {t("sports_title")}
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
-            { emoji: "⚽", name: "Soccer", detail: "Liga MX · Libertadores · Premier League" },
+            {
+              emoji: "⚽",
+              name: "Soccer",
+              detail: "Liga MX · Libertadores · Premier League",
+            },
             { emoji: "🏀", name: "Basketball", detail: "NBA" },
             { emoji: "🏈", name: "NFL", detail: "American Football" },
             { emoji: "🎾", name: "Tennis", detail: "ATP · WTA" },
             { emoji: "🥊", name: "MMA", detail: "UFC · Bellator" },
-            { emoji: "📊", name: "Markets", detail: "Moneyline · Spread · Totals" },
+            {
+              emoji: "📊",
+              name: "Markets",
+              detail: "Moneyline · Spread · Totals",
+            },
           ].map(({ emoji, name, detail }) => (
-            <div key={name} className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
+            <div
+              key={name}
+              className="rounded-xl border border-border bg-card p-4 flex items-center gap-3"
+            >
               <span className="text-2xl">{emoji}</span>
               <div>
                 <p className="font-medium text-sm">{name}</p>
@@ -185,7 +211,7 @@ export default async function HowItWorksPage({
       <div className="text-center">
         <Link
           href="/challenges"
-          className="px-8 py-3 rounded-xl bg-pf-brand hover:bg-pf-brand/90 text-white font-semibold transition-colors"
+          className="px-8 py-3 rounded-xl bg-pf-pink hover:bg-pf-pink-dark text-white font-semibold transition-colors"
         >
           {t("cta")}
         </Link>

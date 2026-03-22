@@ -96,8 +96,7 @@ export function PayoutsClient({
     parseFloat(requestedAmountInput || "0") * 100,
   );
   const isValidAmount =
-    requestedAmountCents >= 1000 &&
-    requestedAmountCents <= grossProfit;
+    requestedAmountCents >= 1000 && requestedAmountCents <= grossProfit;
 
   const payoutAmount =
     isValidAmount && selectedChallenge
@@ -175,7 +174,9 @@ export function PayoutsClient({
         kyc_required: t.kycRequired,
         profit_zero: t.profitZero,
         pending_exists: t.pendingExists,
-        window_closed: t.windowClosed ?? "Payouts are only available on the 1st–3rd of each month.",
+        window_closed:
+          t.windowClosed ??
+          "Payouts are only available on the 1st–3rd of each month.",
         below_minimum: t.belowMinimum ?? "Minimum payout is $10.",
         exceeds_profit: t.exceedsProfit ?? "Amount exceeds available profit.",
         method_unavailable:
@@ -215,7 +216,9 @@ export function PayoutsClient({
 
   const canShowKycForm =
     kycEligibilityCode === "eligible" &&
-    (kycStatus === null || kycStatus === "not_required" || kycStatus === "rejected");
+    (kycStatus === null ||
+      kycStatus === "not_required" ||
+      kycStatus === "rejected");
 
   if (!canShowKycForm && (kycStatus === null || kycStatus === "not_required")) {
     return (
@@ -234,7 +237,7 @@ export function PayoutsClient({
         {fundedChallenges.length === 0 && (
           <Link
             href="/challenges"
-            className="inline-block px-6 py-2.5 rounded-lg bg-pf-brand text-white text-sm font-semibold hover:bg-pf-brand/90 transition-colors"
+            className="inline-block px-6 py-2.5 rounded-lg bg-pf-pink text-white text-sm font-semibold hover:bg-pf-pink-dark transition-colors"
           >
             {t.buyChallenge}
           </Link>
@@ -251,9 +254,7 @@ export function PayoutsClient({
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-foreground">
-                {t.kycRequired}
-              </p>
+              <p className="font-semibold text-foreground">{t.kycRequired}</p>
               <p className="text-sm text-muted-foreground mt-1">
                 {t.kycRequiredDesc}
               </p>
@@ -342,7 +343,8 @@ export function PayoutsClient({
       <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 flex items-start gap-3">
         <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
         <p className="text-sm text-muted-foreground">
-          {t.windowNotice ?? "Payouts are available on the 1st–3rd of each month."}
+          {t.windowNotice ??
+            "Payouts are available on the 1st–3rd of each month."}
         </p>
       </div>
 
@@ -411,7 +413,7 @@ export function PayoutsClient({
                     step="0.01"
                     value={requestedAmountInput}
                     onChange={(e) => setRequestedAmountInput(e.target.value)}
-                    className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-pf-brand/40"
+                    className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-pf-pink/40"
                   />
                   <button
                     type="button"
@@ -439,7 +441,8 @@ export function PayoutsClient({
                     <span className="text-pf-brand font-semibold">
                       {formatUSD(payoutAmount)}
                     </span>{" "}
-                    ({selectedChallenge.tier.profitSplitPct}% of your requested amount)
+                    ({selectedChallenge.tier.profitSplitPct}% of your requested
+                    amount)
                   </p>
                 )}
               </div>
@@ -498,7 +501,7 @@ export function PayoutsClient({
                           : (t.destinationPlaceholderUsdc ??
                             "ERC-20 USDC address starting with 0x")
                     }
-                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-pf-brand/40"
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-pf-pink/40"
                   />
                   <p className="mt-2 text-xs text-muted-foreground">
                     {method === "btc"
@@ -517,8 +520,10 @@ export function PayoutsClient({
               <div className="flex gap-3 flex-wrap">
                 <button
                   onClick={handlePayout}
-                  disabled={loading || !isValidAmount || availableMethods.length === 0}
-                  className="flex-1 rounded-xl bg-pf-brand hover:bg-pf-brand/90 disabled:opacity-60 text-white font-semibold py-3 text-sm transition-colors"
+                  disabled={
+                    loading || !isValidAmount || availableMethods.length === 0
+                  }
+                  className="flex-1 rounded-xl bg-pf-pink hover:bg-pf-pink-dark disabled:opacity-60 text-white font-semibold py-3 text-sm transition-colors"
                 >
                   {loading ? t.submitting : t.requestPayout}
                 </button>
@@ -587,7 +592,10 @@ export function PayoutsClient({
               </thead>
               <tbody>
                 {pastPayouts.map((p) => (
-                  <tr key={p.id} className="border-b border-border last:border-0">
+                  <tr
+                    key={p.id}
+                    className="border-b border-border last:border-0"
+                  >
                     <td className="px-4 py-3 text-muted-foreground">
                       {new Date(p.requestedAt).toLocaleDateString()}
                     </td>

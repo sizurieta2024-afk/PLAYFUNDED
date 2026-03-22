@@ -42,7 +42,10 @@ export function AdminAffiliatesTable({
   const [createMessage, setCreateMessage] = useState<string>("");
   const [discountInputs, setDiscountInputs] = useState<Record<string, string>>(
     Object.fromEntries(
-      affiliates.map((affiliate) => [affiliate.id, String(affiliate.discountPct)]),
+      affiliates.map((affiliate) => [
+        affiliate.id,
+        String(affiliate.discountPct),
+      ]),
     ),
   );
 
@@ -164,7 +167,9 @@ export function AdminAffiliatesTable({
                   <p className="font-medium text-foreground text-xs">
                     {a.user.name ?? "—"}
                   </p>
-                  <p className="text-xs text-muted-foreground">{a.user.email}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {a.user.email}
+                  </p>
                 </td>
                 <td className="px-4 py-3 font-mono text-xs text-pf-brand">
                   {a.code}
@@ -247,7 +252,7 @@ export function AdminAffiliatesTable({
                       <button
                         onClick={() => markPaid(a.id)}
                         disabled={pending}
-                        className="text-xs px-2.5 py-1.5 rounded-lg bg-pf-brand/10 text-pf-brand border border-pf-brand/30 hover:bg-pf-brand/20 transition-colors disabled:opacity-50"
+                        className="text-xs px-2.5 py-1.5 rounded-lg bg-pf-pink/10 text-pf-pink border border-pf-pink/30 hover:bg-pf-pink/20 transition-colors disabled:opacity-50"
                       >
                         Mark Paid
                       </button>
@@ -287,7 +292,9 @@ function CreateAffiliateCard({
   return (
     <div className="rounded-xl border border-border bg-card p-5 space-y-4">
       <div>
-        <h2 className="text-sm font-semibold text-foreground">Create affiliate</h2>
+        <h2 className="text-sm font-semibold text-foreground">
+          Create affiliate
+        </h2>
         <p className="text-xs text-muted-foreground mt-1">
           Affiliate codes are admin-managed only. Use an existing user email.
         </p>
@@ -320,7 +327,7 @@ function CreateAffiliateCard({
         <button
           onClick={createAffiliate}
           disabled={pending}
-          className="rounded-lg bg-pf-brand text-white px-4 py-2 text-sm font-semibold hover:bg-pf-brand/90 disabled:opacity-50"
+          className="rounded-lg bg-pf-pink text-white px-4 py-2 text-sm font-semibold hover:bg-pf-pink-dark disabled:opacity-50"
         >
           Create
         </button>

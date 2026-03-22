@@ -32,7 +32,7 @@ export function FollowButton({
         className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 ${
           isFollowing
             ? "border border-border text-muted-foreground hover:text-foreground hover:bg-secondary"
-            : "bg-pf-brand text-white hover:bg-pf-brand/90"
+            : "bg-pf-pink text-white hover:bg-pf-pink-dark"
         }`}
       >
         {isFollowing ? "Following" : "Follow"}

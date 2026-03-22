@@ -44,7 +44,7 @@ export function AdminPayoutsQueue({ payouts }: { payouts: PayoutRow[] }) {
           result.code === "CRYPTO_DESTINATION_REQUIRED"
             ? "Crypto payout is missing the destination wallet address."
             : result.code === "PROVIDER_ERROR"
-              ? result.error ?? "Crypto payout provider request failed."
+              ? (result.error ?? "Crypto payout provider request failed.")
               : "Review failed. Refresh the queue and try again.";
         setMessages((prev) => ({
           ...prev,
@@ -100,7 +100,7 @@ export function AdminPayoutsQueue({ payouts }: { payouts: PayoutRow[] }) {
               onChange={(e) =>
                 setTxRefs((prev) => ({ ...prev, [p.id]: e.target.value }))
               }
-              className="flex-1 min-w-40 text-xs px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-pf-brand/40"
+              className="flex-1 min-w-40 text-xs px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-pf-pink/40"
             />
             <input
               type="text"
@@ -114,7 +114,7 @@ export function AdminPayoutsQueue({ payouts }: { payouts: PayoutRow[] }) {
             <button
               onClick={() => handle(p.id, "approve")}
               disabled={pending}
-              className="text-xs px-4 py-2 rounded-lg bg-pf-brand text-white font-semibold hover:bg-pf-brand/90 transition-colors disabled:opacity-50"
+              className="text-xs px-4 py-2 rounded-lg bg-pf-pink text-white font-semibold hover:bg-pf-pink-dark transition-colors disabled:opacity-50"
             >
               Approve & Pay
             </button>

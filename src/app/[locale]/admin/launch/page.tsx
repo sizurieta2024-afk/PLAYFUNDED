@@ -364,7 +364,7 @@ export default async function AdminLaunchPage() {
                 </div>
               </div>
 
-              <button className="px-4 py-2 rounded-lg bg-pf-brand text-white text-sm font-semibold hover:bg-pf-brand/90 transition-colors">
+              <button className="px-4 py-2 rounded-lg bg-pf-pink text-white text-sm font-semibold hover:bg-pf-pink-dark transition-colors">
                 Save override
               </button>
             </form>

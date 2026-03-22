@@ -208,7 +208,10 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
   // ── Derived ───────────────────────────────────────────────────────────────
 
   const maxStakeCents = Math.floor((challenge.startBalance * 5) / 100);
-  const minStakeCents = Math.max(100, Math.floor((challenge.startBalance * 1) / 100));
+  const minStakeCents = Math.max(
+    100,
+    Math.floor((challenge.startBalance * 1) / 100),
+  );
   const targetCents = getProfitTargetCents(challenge);
   const pendingStakeCents = picks
     .filter((pick) => pick.status === "pending")
@@ -271,13 +274,16 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
     setSelected(null);
     setStakeInput("");
     setExpandedEvent(null);
-    setSubmitError("Event is locked before kickoff. Live betting is not allowed.");
+    setSubmitError(
+      "Event is locked before kickoff. Live betting is not allowed.",
+    );
   }, [selected, eventsTick]);
 
   // ── Submit ────────────────────────────────────────────────────────────────
 
   const handleSubmit = useCallback(async () => {
-    if (!selected || stakeCents < minStakeCents || stakeCents > maxStakeCents) return;
+    if (!selected || stakeCents < minStakeCents || stakeCents > maxStakeCents)
+      return;
     setIsSubmitting(true);
     setSubmitError(null);
 
@@ -323,7 +329,14 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selected, stakeCents, minStakeCents, maxStakeCents, challenge.id, router]);
+  }, [
+    selected,
+    stakeCents,
+    minStakeCents,
+    maxStakeCents,
+    challenge.id,
+    router,
+  ]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -423,8 +436,8 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
                 onClick={() => setActiveSport(tab.key)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
                   activeSport === tab.key
-                    ? "bg-pf-brand text-white shadow-sm"
-                    : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-pf-brand/40"
+                    ? "bg-pf-pink text-white shadow-sm"
+                    : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-pf-pink/40"
                 }`}
               >
                 <span>{tab.icon}</span>
@@ -577,7 +590,7 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
                           setSubmitError(null);
                         }}
                         placeholder="0.00"
-                        className="w-full pl-7 pr-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-pf-brand/40 transition-shadow"
+                        className="w-full pl-7 pr-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-pf-pink/40 transition-shadow"
                       />
                     </div>
                     {stakeError ? (
@@ -619,8 +632,10 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
 
                   <button
                     onClick={() => void handleSubmit()}
-                    disabled={isSubmitting || !!stakeError || stakeCents < minStakeCents}
-                    className="w-full py-3 rounded-lg bg-pf-brand text-white text-sm font-semibold disabled:opacity-50 hover:bg-pf-brand-dark transition-colors"
+                    disabled={
+                      isSubmitting || !!stakeError || stakeCents < minStakeCents
+                    }
+                    className="w-full py-3 rounded-lg bg-pf-pink text-white text-sm font-semibold disabled:opacity-50 hover:bg-pf-pink-dark transition-colors"
                   >
                     {isSubmitting ? t.placing : t.confirmPick}
                   </button>
@@ -823,8 +838,8 @@ function EventRow({
                   onClick={() => onSelectOutcome(outcome, topMarket)}
                   className={`flex flex-col items-center px-2 py-1.5 rounded-lg text-xs transition-colors min-w-[52px] ${
                     isSelected
-                      ? "bg-pf-brand text-white font-semibold"
-                      : "bg-secondary hover:bg-pf-brand/10 hover:text-pf-brand border border-border"
+                      ? "bg-pf-pink text-white font-semibold"
+                      : "bg-secondary hover:bg-pf-pink/10 hover:text-pf-pink border border-border"
                   }`}
                 >
                   <span className="truncate max-w-[48px] text-center leading-tight">
@@ -888,8 +903,8 @@ function EventRow({
                           onClick={() => onSelectOutcome(outcome, market)}
                           className={`flex flex-col items-center justify-center p-2 rounded-lg border text-xs transition-colors ${
                             isSelected
-                              ? "border-pf-brand bg-pf-brand/10 text-pf-brand font-semibold"
-                              : "border-border hover:border-pf-brand/40 hover:bg-muted/60"
+                              ? "border-pf-pink bg-pf-pink/10 text-pf-pink font-semibold"
+                              : "border-border hover:border-pf-pink/40 hover:bg-muted/60"
                           }`}
                         >
                           <span className="truncate max-w-full text-center leading-tight">

@@ -48,12 +48,9 @@ export default async function FaqPage({
   function getAnswer(key: string): string {
     switch (key) {
       case "q_what":
-        return t(
-          hasExactCommercialTerms ? "q_what_a" : "q_what_a_review",
-          {
-            payoutWindow: getPayoutWindowLabel(),
-          },
-        );
+        return t(hasExactCommercialTerms ? "q_what_a" : "q_what_a_review", {
+          payoutWindow: getPayoutWindowLabel(),
+        });
       case "q_latam":
         return t("q_latam_a_review");
       case "q_real_money":
@@ -82,10 +79,9 @@ export default async function FaqPage({
             : "q_methods_a_review",
         );
       case "q_time":
-        return t(
-          hasExactCommercialTerms ? "q_time_a" : "q_time_a_review",
-          { payoutWindow: getPayoutWindowLabel() },
-        );
+        return t(hasExactCommercialTerms ? "q_time_a" : "q_time_a_review", {
+          payoutWindow: getPayoutWindowLabel(),
+        });
       case "q_affiliate":
         return t("q_affiliate_a_review");
       case "q_gift":
@@ -100,7 +96,9 @@ export default async function FaqPage({
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-12 space-y-12">
       <div className="text-center space-y-2">
-        <h1 className="text-4xl font-bold">{t("pageTitle")}</h1>
+        <h1 className="font-display font-bold font-serif italic text-4xl">
+          {t("pageTitle")}
+        </h1>
         <p className="text-muted-foreground">{t("pageSubtitle")}</p>
         {policy.requiresReviewNotice && (
           <p className="text-sm text-amber-500">{t("countryPolicyReview")}</p>
@@ -140,7 +138,7 @@ export default async function FaqPage({
         <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link
             href="mailto:support@playfunded.com"
-            className="inline-block px-5 py-2 rounded-lg bg-pf-brand text-white text-sm font-semibold hover:bg-pf-brand/90 transition-colors"
+            className="inline-block px-5 py-2 rounded-lg bg-pf-pink hover:bg-pf-pink-dark text-white text-sm font-semibold transition-colors"
           >
             {t("contact_cta")}
           </Link>

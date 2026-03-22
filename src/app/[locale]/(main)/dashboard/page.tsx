@@ -137,7 +137,7 @@ export default async function DashboardPage({
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between border-b border-border pb-5">
         <div>
-          <h1 className="text-xl font-bold text-foreground">
+          <h1 className="text-xl font-display font-bold text-foreground">
             {t("pageTitle")}
           </h1>
           <p className="text-muted-foreground text-xs mt-0.5">
@@ -151,7 +151,7 @@ export default async function DashboardPage({
         </div>
         <Link
           href="/dashboard/picks"
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-pf-brand hover:bg-pf-brand-dark text-white text-xs font-bold transition-all duration-200 shadow-pf-glow-sm hover:shadow-pf-glow hover:-translate-y-0.5"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-pf-pink hover:bg-pf-pink-dark text-white text-xs font-bold transition-all duration-200 shadow-pf-pink-glow-sm hover:shadow-pf-pink-glow hover:-translate-y-0.5"
         >
           <span>+</span>
           {t("placePick")}
@@ -223,7 +223,7 @@ export default async function DashboardPage({
           <p className="text-muted-foreground">{t("noActiveChallenges")}</p>
           <Link
             href="/challenges"
-            className="inline-block px-5 py-2.5 rounded-lg bg-pf-brand text-white text-sm font-semibold hover:bg-pf-brand/90 transition-colors"
+            className="inline-block px-5 py-2.5 rounded-lg bg-pf-pink text-white text-sm font-semibold hover:bg-pf-pink-dark transition-colors"
           >
             {t("buyFirstChallenge")}
           </Link>

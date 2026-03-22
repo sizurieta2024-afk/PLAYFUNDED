@@ -89,8 +89,8 @@ const TIER_CONFIG: Record<
   Elite: {
     icon: <Star className="w-5 h-5" />,
     gradient:
-      "from-purple-500/10 to-transparent border-purple-500/30 hover:border-purple-500/50",
-    badge: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+      "from-pf-pink/10 to-transparent border-pf-pink/30 hover:border-pf-pink/50",
+    badge: "bg-pf-pink/10 text-pf-pink border-pf-pink/20",
     isPopular: true,
   },
   Master: {
@@ -406,7 +406,7 @@ export function TierCard({
         <button
           onClick={handleBuy}
           disabled={loading}
-          className="w-full rounded-xl bg-pf-brand hover:bg-pf-brand-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 text-sm transition-colors"
+          className="w-full rounded-xl bg-pf-pink hover:bg-pf-pink-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 text-sm transition-colors"
         >
           {loading
             ? t.redirecting
@@ -432,7 +432,12 @@ export function TierCard({
             </h3>
             <p className="text-sm text-muted-foreground mb-5">
               {tier.name} —{" "}
-              {formatUSD(discountState?.discountedAmount ?? tier.fee, locale, 2)} USD
+              {formatUSD(
+                discountState?.discountedAmount ?? tier.fee,
+                locale,
+                2,
+              )}{" "}
+              USD
             </p>
 
             <div className="mb-4 rounded-xl border border-border p-4 space-y-3">
@@ -444,10 +449,10 @@ export function TierCard({
                   <input
                     type="text"
                     value={discountCode}
-                    onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                    placeholder={
-                      t.discountCodePlaceholder ?? "Enter your code"
+                    onChange={(e) =>
+                      setDiscountCode(e.target.value.toUpperCase())
                     }
+                    placeholder={t.discountCodePlaceholder ?? "Enter your code"}
                     className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-pf-brand"
                   />
                   <button
@@ -457,7 +462,7 @@ export function TierCard({
                   >
                     {discountLoading
                       ? t.redirecting
-                      : t.applyDiscount ?? "Apply"}
+                      : (t.applyDiscount ?? "Apply")}
                   </button>
                 </div>
               </div>
@@ -540,24 +545,26 @@ export function TierCard({
               )}
 
               {/* Pix — Brazil only, hidden when gift mode is on */}
-              {availablePaymentMethods.includes("pix") && country === "BR" && !isGift && (
-                <button
-                  onClick={() => handlePayment("pix")}
-                  className="w-full flex items-center gap-3 p-4 rounded-xl border border-border hover:border-pf-brand/40 hover:bg-pf-brand/5 transition-all text-left"
-                >
-                  <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20 shrink-0 text-xs font-bold">
-                    PIX
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground text-sm">
-                      {t.pix ?? "Pix"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {t.pixDesc ?? "Pagamento instantâneo via Pix (BRL)"}
-                    </p>
-                  </div>
-                </button>
-              )}
+              {availablePaymentMethods.includes("pix") &&
+                country === "BR" &&
+                !isGift && (
+                  <button
+                    onClick={() => handlePayment("pix")}
+                    className="w-full flex items-center gap-3 p-4 rounded-xl border border-border hover:border-pf-brand/40 hover:bg-pf-brand/5 transition-all text-left"
+                  >
+                    <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-pf-brand/10 text-pf-brand border border-pf-brand/20 shrink-0 text-xs font-bold">
+                      PIX
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground text-sm">
+                        {t.pix ?? "Pix"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t.pixDesc ?? "Pagamento instantâneo via Pix (BRL)"}
+                      </p>
+                    </div>
+                  </button>
+                )}
 
               {/* Crypto — hidden when gift mode is on */}
               {availablePaymentMethods.includes("crypto") && !isGift && (

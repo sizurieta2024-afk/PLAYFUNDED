@@ -11,8 +11,15 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "Fira Code", "monospace"],
+        sans: ["var(--font-manrope)", "system-ui", "sans-serif"],
+        serif: ["var(--font-dm-serif)", "Georgia", "serif"],
+        display: ["var(--font-syne)", "system-ui", "sans-serif"],
+        mono: [
+          "var(--font-dm-mono)",
+          "var(--font-geist-mono)",
+          "Fira Code",
+          "monospace",
+        ],
       },
       colors: {
         // shadcn/ui CSS variable tokens (auto-switch with .dark class)
@@ -58,48 +65,73 @@ const config: Config = {
         },
         // PlayFunded brand tokens
         pf: {
-          brand: "#22C55E", // vibrant green — primary CTA, funded, gains
-          "brand-dark": "#16A34A", // darker green — hover states
-          gold: "#f4a261", // gold — champion tier, streak bonus
-          "gold-dark": "#e8894a", // darker gold — hover
-          danger: "#ef4444", // losses, failed, errors
+          // Gold — brand accent, profit, success, funded states, checkmarks
+          brand: "#c9a84c",
+          "brand-dark": "#b8962e",
+          gold: "#c9a84c",
+          "gold-light": "#e8d5a0",
+          "gold-dark": "#b8962e",
+          // Pink — all primary action CTAs (buy, submit, place pick, approve)
+          pink: "#ff2d78",
+          "pink-dark": "#e8185a",
+          // Legacy gold (warm orange) kept for backward-compat if referenced
+          "gold-warm": "#f4a261",
+          "gold-warm-dark": "#e8894a",
+          // Danger
+          danger: "#ef4444",
           "danger-dark": "#dc2626",
-          // Dark mode surfaces
-          dark: "#020617", // OLED black — hero sections
-          "dark-surface": "#030911", // dashboard sidebar bg
-          "dark-card": "#0d1520", // card bg in dark sections
-          "dark-elevated": "#111827",
-          "dark-border": "#1e293b",
-          // Light mode surfaces
-          light: "#f1f5f9",
+          // Dark mode surfaces — pure black family
+          dark: "#000000",
+          "dark-surface": "#080808",
+          "dark-card": "#0f0f0f",
+          "dark-elevated": "#1a1a1a",
+          "dark-border": "#1f1f1f",
+          // Light mode surfaces — warm off-white family
+          light: "#fafaf8",
           "light-surface": "#ffffff",
-          "light-elevated": "#f8fafc",
-          "light-border": "#e2e8f0",
+          "light-elevated": "#f5f4f0",
+          "light-border": "#e5e3dc",
         },
       },
       backgroundImage: {
-        // Challenge tier gradients (FTMO-inspired, updated to spec green)
-        "tier-starter": "linear-gradient(135deg, #2d6a4f 0%, #235a40 100%)",
-        "tier-pro": "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-        "tier-elite": "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
-        "tier-champion": "linear-gradient(135deg, #f4a261 0%, #e8894a 100%)",
+        // Challenge tier card tints
+        "tier-starter":
+          "linear-gradient(135deg, rgba(201,168,76,0.10) 0%, transparent 100%)",
+        "tier-pro":
+          "linear-gradient(135deg, rgba(59,130,246,0.10) 0%, transparent 100%)",
+        "tier-elite":
+          "linear-gradient(135deg, rgba(255,45,120,0.10) 0%, transparent 100%)",
+        "tier-champion":
+          "linear-gradient(135deg, rgba(201,168,76,0.18) 0%, transparent 100%)",
+        "tier-legend":
+          "linear-gradient(135deg, rgba(255,45,120,0.18) 0%, transparent 100%)",
       },
       boxShadow: {
         "pf-sm": "0 1px 3px 0 rgba(0,0,0,0.4), 0 1px 2px -1px rgba(0,0,0,0.4)",
         "pf-md": "0 4px 12px 0 rgba(0,0,0,0.35)",
         "pf-lg": "0 8px 24px 0 rgba(0,0,0,0.4)",
-        "pf-brand": "0 0 0 3px rgba(34,197,94,0.35)",
-        "pf-glow-sm": "0 0 20px rgba(34,197,94,0.25)",
-        "pf-glow": "0 0 35px rgba(34,197,94,0.35)",
-        "pf-glow-lg": "0 0 60px rgba(34,197,94,0.45)",
-        "tier-elite": "0 0 40px rgba(139,92,246,0.25)",
+        // Gold glows
+        "pf-brand": "0 0 0 3px rgba(201,168,76,0.35)",
+        "pf-glow-sm": "0 0 20px rgba(201,168,76,0.25)",
+        "pf-glow": "0 0 35px rgba(201,168,76,0.35)",
+        "pf-glow-lg": "0 0 60px rgba(201,168,76,0.45)",
+        // Pink glows
+        "pf-pink-glow-sm": "0 0 20px rgba(255,45,120,0.30)",
+        "pf-pink-glow": "0 0 35px rgba(255,45,120,0.40)",
+        "pf-pink-glow-lg": "0 0 60px rgba(255,45,120,0.50)",
+        // Tier-specific
+        "tier-elite": "0 0 40px rgba(255,45,120,0.20)",
         "tier-master": "0 0 40px rgba(249,115,22,0.25)",
-        "tier-legend": "0 0 40px rgba(234,179,8,0.25)",
+        "tier-legend": "0 0 40px rgba(201,168,76,0.25)",
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      transitionTimingFunction: {
+        "expo-out": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "expo-in-out": "cubic-bezier(0.87, 0, 0.13, 1)",
       },
     },
   },

@@ -190,8 +190,7 @@ export default async function ChallengeDetailPage({
     challenge.phase === "phase1"
       ? (challenge.phase1StartBalance ?? challenge.startBalance)
       : (challenge.phase2StartBalance ?? challenge.startBalance);
-  const targetPct =
-    challenge.phase === "funded" ? 0 : 20;
+  const targetPct = challenge.phase === "funded" ? 0 : 20;
   const profitTargetBalance = Math.floor(
     phaseStartBalance * (1 + targetPct / 100),
   );
@@ -323,7 +322,9 @@ export default async function ChallengeDetailPage({
       {/* ── Challenge header ────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">{challenge.tier.name}</h1>
+          <h1 className="text-2xl font-display font-bold">
+            {challenge.tier.name}
+          </h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             {t("startedAt")}:{" "}
             {challenge.startedAt.toLocaleDateString("en-US", {
@@ -336,7 +337,7 @@ export default async function ChallengeDetailPage({
         </div>
         <Link
           href="/dashboard/picks"
-          className="px-4 py-2 rounded-lg bg-pf-brand text-white text-sm font-semibold hover:bg-pf-brand/90 transition-colors shrink-0"
+          className="px-4 py-2 rounded-lg bg-pf-pink text-white text-sm font-semibold hover:bg-pf-pink-dark transition-colors shrink-0"
         >
           {t("placePick")}
         </Link>

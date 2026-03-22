@@ -69,8 +69,7 @@ export function ChallengeCard({
     challenge.phase === "phase1"
       ? (challenge.phase1StartBalance ?? challenge.startBalance)
       : (challenge.phase2StartBalance ?? challenge.startBalance);
-  const targetPct =
-    challenge.phase === "funded" ? 0 : 20;
+  const targetPct = challenge.phase === "funded" ? 0 : 20;
   const profitTargetBalance = Math.floor(
     phaseStartBalance * (1 + targetPct / 100),
   );
@@ -227,7 +226,7 @@ export function ChallengeCard({
         <div className="flex gap-2 pt-1">
           <Link
             href={`/dashboard/picks`}
-            className="flex-1 text-center py-2 rounded-lg bg-pf-brand text-white text-xs font-semibold hover:bg-pf-brand/90 transition-colors"
+            className="flex-1 text-center py-2 rounded-lg bg-pf-pink text-white text-xs font-semibold hover:bg-pf-pink-dark transition-colors"
           >
             {t.placePick}
           </Link>

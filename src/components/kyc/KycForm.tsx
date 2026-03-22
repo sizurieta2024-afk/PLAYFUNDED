@@ -39,7 +39,10 @@ interface FileState {
   error?: string;
 }
 
-function mapUploadError(code: string | undefined, t: Record<string, string>): string {
+function mapUploadError(
+  code: string | undefined,
+  t: Record<string, string>,
+): string {
   switch (code) {
     case "file_empty":
       return t.fileEmpty;
@@ -172,7 +175,7 @@ export function KycForm({ t }: KycFormProps) {
           onChange={(e) => setFullName(e.target.value)}
           placeholder={t.fullNamePlaceholder}
           required
-          className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-pf-brand/40"
+          className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-pf-pink/40"
         />
       </div>
 
@@ -186,7 +189,7 @@ export function KycForm({ t }: KycFormProps) {
             value={dateOfBirth}
             onChange={(e) => setDateOfBirth(e.target.value)}
             required
-            className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-pf-brand/40"
+            className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-pf-pink/40"
           />
         </div>
         <div>
@@ -197,7 +200,7 @@ export function KycForm({ t }: KycFormProps) {
             value={country}
             onChange={(e) => setCountry(e.target.value)}
             required
-            className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-pf-brand/40"
+            className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-pf-pink/40"
           >
             <option value="">{t.countryPlaceholder}</option>
             {COUNTRIES.map((c) => (
@@ -270,7 +273,7 @@ export function KycForm({ t }: KycFormProps) {
       <button
         type="submit"
         disabled={submitting || frontFile.uploading || backFile.uploading}
-        className="w-full rounded-xl bg-pf-brand hover:bg-pf-brand/90 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 text-sm transition-colors"
+        className="w-full rounded-xl bg-pf-pink hover:bg-pf-pink-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 text-sm transition-colors"
       >
         {submitting ? t.submitting : t.submit}
       </button>

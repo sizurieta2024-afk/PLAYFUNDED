@@ -29,13 +29,20 @@ export function AdminKycQueue({ submissions }: { submissions: KycRow[] }) {
   }
 
   if (submissions.length === 0) {
-    return <p className="text-sm text-muted-foreground py-8 text-center">No submissions in this status.</p>;
+    return (
+      <p className="text-sm text-muted-foreground py-8 text-center">
+        No submissions in this status.
+      </p>
+    );
   }
 
   return (
     <div className="space-y-4">
       {submissions.map((s) => (
-        <div key={s.id} className="rounded-xl border border-border bg-card p-5 space-y-4">
+        <div
+          key={s.id}
+          className="rounded-xl border border-border bg-card p-5 space-y-4"
+        >
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="font-semibold text-foreground">{s.fullName}</p>
@@ -46,14 +53,22 @@ export function AdminKycQueue({ submissions }: { submissions: KycRow[] }) {
                 {new Date(s.createdAt).toLocaleDateString()}
               </p>
               {s.reviewNote && (
-                <p className="text-xs text-amber-400 mt-1">Note: {s.reviewNote}</p>
+                <p className="text-xs text-amber-400 mt-1">
+                  Note: {s.reviewNote}
+                </p>
               )}
             </div>
-            <span className={`px-2 py-0.5 rounded-md text-xs font-semibold ${
-              s.status === "approved" ? "bg-pf-brand/15 text-pf-brand" :
-              s.status === "rejected" ? "bg-red-500/15 text-red-400" :
-              "bg-amber-500/15 text-amber-400"
-            }`}>{s.status}</span>
+            <span
+              className={`px-2 py-0.5 rounded-md text-xs font-semibold ${
+                s.status === "approved"
+                  ? "bg-pf-brand/15 text-pf-brand"
+                  : s.status === "rejected"
+                    ? "bg-red-500/15 text-red-400"
+                    : "bg-amber-500/15 text-amber-400"
+              }`}
+            >
+              {s.status}
+            </span>
           </div>
 
           {/* Document links */}
@@ -88,13 +103,15 @@ export function AdminKycQueue({ submissions }: { submissions: KycRow[] }) {
                 type="text"
                 placeholder="Review note (optional)"
                 value={notes[s.id] ?? ""}
-                onChange={(e) => setNotes((prev) => ({ ...prev, [s.id]: e.target.value }))}
+                onChange={(e) =>
+                  setNotes((prev) => ({ ...prev, [s.id]: e.target.value }))
+                }
                 className="flex-1 min-w-48 text-xs px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none"
               />
               <button
                 onClick={() => handle(s.id, "approve")}
                 disabled={pending}
-                className="text-xs px-4 py-2 rounded-lg bg-pf-brand text-white font-semibold hover:bg-pf-brand/90 transition-colors disabled:opacity-50"
+                className="text-xs px-4 py-2 rounded-lg bg-pf-pink text-white font-semibold hover:bg-pf-pink-dark transition-colors disabled:opacity-50"
               >
                 Approve
               </button>

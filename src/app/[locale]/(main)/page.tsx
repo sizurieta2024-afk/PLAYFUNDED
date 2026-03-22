@@ -6,6 +6,17 @@ import { resolveCountry } from "@/lib/country-policy";
 import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
 import { formatLocalPrice, getCurrencyForCountry } from "@/lib/exchangerates";
 import { LEAGUE_CONFIG } from "@/lib/odds/types";
+import { BackgroundBeams } from "@/components/landing/BackgroundBeams";
+import { GlowingCard } from "@/components/landing/GlowingCard";
+import { TestimonialsMarquee } from "@/components/landing/TestimonialsMarquee";
+import { AnimatedCounter } from "@/components/landing/AnimatedCounter";
+import { Spotlight } from "@/components/landing/Spotlight";
+import { TextGenerateEffect } from "@/components/landing/TextGenerateEffect";
+import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
+import { HeroSparkles } from "@/components/landing/HeroSparkles";
+import { BorderBeam } from "@/components/landing/BorderBeam";
+import { GrainOverlay } from "@/components/landing/GrainOverlay";
+import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import {
   TrendingUp,
   Zap,
@@ -80,7 +91,7 @@ const TIER_CONFIG: Record<
 
 const DEFAULT_CONFIG = {
   icon: <TrendingUp className="w-4 h-4" />,
-  glowColor: "rgba(34,197,94,0.25)",
+  glowColor: "rgba(201,168,76,0.25)",
   borderColor: "border-pf-brand/20 hover:border-pf-brand/50",
   badgeClass: "bg-pf-brand/10 text-pf-brand border-pf-brand/20",
   isPopular: false,
@@ -243,119 +254,286 @@ export default async function HomePage({
     icon: React.ReactNode;
   }[] = [
     {
-      value: "247+",
+      value: "80%",
       key: "proof_traders",
-      icon: <Users className="w-5 h-5" />,
+      icon: <TrendingUp className="w-5 h-5" />,
     },
     {
-      value: "$180K+",
+      value: "$25K",
       key: "proof_payouts",
       icon: <DollarSign className="w-5 h-5" />,
     },
     {
-      value: "64%",
+      value: "5",
       key: "proof_pass_rate",
-      icon: <TrendingUp className="w-5 h-5" />,
+      icon: <Trophy className="w-5 h-5" />,
     },
     {
-      value: `${sportsCount}`,
+      value: "1×",
       key: "proof_sports",
-      icon: <Trophy className="w-5 h-5" />,
+      icon: <Users className="w-5 h-5" />,
     },
   ];
 
   return (
     <div className="flex flex-col">
       {/* ━━ HERO ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <section className="relative min-h-[92vh] flex flex-col justify-center overflow-hidden bg-[#020617]">
-        {/* Radial green glow from top */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-x-0 top-0 h-[70%] bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(34,197,94,0.13)_0%,transparent_70%)]" />
-        </div>
+      <section className="relative overflow-hidden bg-background">
+        {/* Stage spotlight — centered gold beam from top */}
+        <Spotlight />
+        {/* Twinkling gold sparkle particles */}
+        <HeroSparkles count={42} />
+        {/* Film grain overlay — premium texture signal */}
+        <GrainOverlay opacity={0.032} />
+        {/* Animated beams background */}
+        <BackgroundBeams />
+        {/* Radial glows */}
+        <div className="absolute top-0 right-0 w-[700px] h-[700px] bg-[radial-gradient(ellipse,rgba(201,168,76,0.06)_0%,transparent_65%)] pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[radial-gradient(ellipse,rgba(255,45,120,0.04)_0%,transparent_70%)] pointer-events-none" />
 
-        {/* Grid pattern overlay */}
-        <div className="absolute inset-0 bg-grid-green opacity-60 pointer-events-none" />
-
-        {/* Subtle vignette */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(2,6,23,0.7)_100%)] pointer-events-none" />
-
-        {/* Bottom fade to page bg */}
-        <div className="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-28 pb-16 text-center">
-          {/* Live badge */}
-          <div className="flex justify-center mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-pf-brand/30 bg-pf-brand/10 text-pf-brand text-xs font-semibold shadow-[0_0_20px_rgba(34,197,94,0.15)] backdrop-blur-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-pf-brand animate-pulse" />
-              {t("badge")}
-            </div>
-          </div>
-
-          {/* Main headline */}
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-tight text-white leading-[0.9] max-w-4xl mx-auto mb-6">
-            {t("hero_title_1")}{" "}
-            <span className="text-gradient-green">
-              {t("hero_title_highlight")}
-            </span>
-            {t("hero_title_2") && (
-              <>
-                , <br className="hidden sm:block" />
-                {t("hero_title_2")}
-              </>
-            )}
-          </h1>
-
-          {/* Subtitle */}
-          <p className="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed mb-4">
-            {hasExactCommercialTerms
-              ? t("hero_subtitle")
-              : t("hero_subtitle_review")}
-          </p>
-
-          {countryPolicy.requiresReviewNotice && (
-            <p className="text-sm text-amber-400/80 max-w-2xl mx-auto mb-4">
-              {t("countryPolicyReview")}
-            </p>
-          )}
-
-          {/* CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-10 mb-16">
-            <Link
-              href="/challenges"
-              className="relative overflow-hidden group inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-pf-brand text-white font-bold text-sm tracking-wide shadow-[0_0_30px_rgba(34,197,94,0.35)] hover:shadow-[0_0_50px_rgba(34,197,94,0.5)] transition-all duration-300 hover:-translate-y-0.5 cursor-pointer"
-            >
-              <span className="relative z-10">{t("hero_cta_primary")}</span>
-              <ArrowRight className="relative z-10 w-4 h-4 transition-transform group-hover:translate-x-1" />
-              {/* Shimmer sweep */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-            </Link>
-            <Link
-              href="/how-it-works"
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold text-sm tracking-wide transition-all duration-300 backdrop-blur-sm cursor-pointer"
-            >
-              {t("hero_cta_secondary")}
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          {/* Stats grid — glass cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-2xl mx-auto">
-            {stats.map(({ value, key, icon }) => (
+        <div className="relative mx-auto max-w-[1200px] px-6 lg:px-16">
+          <div className="grid grid-cols-1 lg:grid-cols-[55fr_45fr] gap-12 xl:gap-20 items-center min-h-[calc(100vh-56px)] py-20">
+            {/* ── LEFT COLUMN ─────────────────────────────── */}
+            <div>
+              {/* Eyebrow */}
               <div
-                key={key}
-                className="group rounded-2xl border border-white/[0.07] bg-white/[0.03] backdrop-blur-sm p-4 sm:p-5 text-center hover:border-pf-brand/30 hover:bg-pf-brand/5 transition-all duration-300 cursor-default"
+                className="flex items-center gap-3 mb-5 animate-slide-reveal"
+                style={{ animationDelay: "0ms" }}
               >
-                <div className="flex justify-center mb-2 text-pf-brand/60 group-hover:text-pf-brand transition-colors">
-                  {icon}
+                <div className="w-7 h-px bg-pf-brand flex-shrink-0" />
+                <span className="font-mono text-[10px] text-pf-brand uppercase tracking-[0.12em]">
+                  {t("badge")}
+                </span>
+              </div>
+
+              {/* H1 — staggered line reveals */}
+              <h1
+                className="font-serif italic text-[clamp(3rem,5.5vw,5.5rem)] leading-[1.05] text-foreground animate-slide-reveal"
+                style={{ animationDelay: "80ms" }}
+              >
+                {t("hero_title_1")}{" "}
+                <span className="text-gradient-animated">
+                  {t("hero_title_highlight")}
+                </span>
+                ,<br />
+                <span className="text-pf-brand">{t("hero_title_2")}</span>
+              </h1>
+
+              {/* Subtitle */}
+              <p
+                className="text-[clamp(14px,1.5vw,16px)] text-muted-foreground leading-relaxed max-w-[420px] mt-6 mb-2 animate-slide-reveal"
+                style={{ animationDelay: "200ms" }}
+              >
+                <TextGenerateEffect
+                  words={t("hero_subtitle")}
+                  startDelay={500}
+                  delayPerWord={55}
+                />
+              </p>
+
+              {/* CTAs */}
+              <div
+                className="flex flex-wrap gap-3 mt-9 animate-slide-reveal"
+                style={{ animationDelay: "320ms" }}
+              >
+                <Link
+                  href="/challenges"
+                  className="animate-cta-ripple group relative inline-flex items-center gap-2 px-7 py-3.5 rounded bg-pf-pink hover:bg-pf-pink-dark text-white font-semibold text-[14px] transition-colors duration-200 overflow-hidden"
+                >
+                  {/* shimmer sweep on hover */}
+                  <span className="pointer-events-none absolute inset-0 -skew-x-12 translate-x-[-150%] group-hover:translate-x-[150%] transition-transform duration-500 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                  {t("hero_cta_primary")}
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  href="/how-it-works"
+                  className="inline-flex items-center gap-2 px-7 py-3.5 rounded border border-white/10 text-muted-foreground hover:border-pf-brand/30 hover:text-foreground font-semibold text-[14px] transition-all duration-200"
+                >
+                  {t("hero_cta_secondary")}
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+
+              {/* Stat row */}
+              <div
+                className="flex mt-12 gap-y-4 animate-slide-reveal"
+                style={{ animationDelay: "440ms" }}
+              >
+                {proofStats.map(({ value, key }, i) => (
+                  <div
+                    key={key}
+                    className={`shrink-0 ${i < proofStats.length - 1 ? "pr-7 mr-7 border-r border-white/[0.08]" : ""}`}
+                  >
+                    <AnimatedCounter
+                      value={value}
+                      className="font-display font-bold text-[1.4rem] text-foreground leading-none tabular-nums"
+                    />
+                    <p className="font-mono text-[9px] text-muted-foreground uppercase tracking-[0.06em] mt-1.5">
+                      {t(key)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── RIGHT COLUMN — Account Card Widget ──────── */}
+            <div
+              className="relative hidden lg:block animate-slide-reveal"
+              style={{ animationDelay: "160ms" }}
+            >
+              {/* Glow behind card */}
+              <div className="absolute -inset-8 bg-[radial-gradient(ellipse,rgba(201,168,76,0.06)_0%,transparent_70%)] pointer-events-none" />
+
+              <div className="animate-float relative bg-pf-dark-card border border-pf-brand/20 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.4),0_8px_32px_rgba(0,0,0,0.3)] p-7">
+                {/* Card header */}
+                <div className="flex items-center justify-between mb-5">
+                  <span className="font-mono text-[10px] text-pf-brand uppercase tracking-[0.1em]">
+                    Elite Account
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-[5px] h-[5px] rounded-full bg-pf-brand" />
+                    <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.08em]">
+                      Active
+                    </span>
+                  </div>
                 </div>
-                <p className="text-xl sm:text-2xl font-extrabold text-white tabular-nums tracking-tight">
-                  {value}
+
+                {/* Balance */}
+                <p className="font-mono text-[9px] text-muted-foreground uppercase tracking-[0.08em] mb-1">
+                  Current Balance
                 </p>
-                <p className="text-[10px] sm:text-[11px] text-slate-500 mt-1 uppercase tracking-wider">
-                  {t(key)}
+                <p className="font-serif italic text-[2.2rem] text-pf-pink leading-none mb-4">
+                  $10,247.50
+                </p>
+
+                {/* Sparkline */}
+                <div className="mb-4 bg-[#111111] rounded overflow-hidden">
+                  <svg
+                    viewBox="0 0 300 60"
+                    className="w-full h-14"
+                    aria-hidden="true"
+                  >
+                    <defs>
+                      <linearGradient
+                        id="sparkGold"
+                        x1="0"
+                        y1="0"
+                        x2="1"
+                        y2="0"
+                      >
+                        <stop
+                          offset="0%"
+                          stopColor="#c9a84c"
+                          stopOpacity="0.5"
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="#e2c06a"
+                          stopOpacity="1"
+                        />
+                      </linearGradient>
+                    </defs>
+                    <path
+                      d="M0,48 C40,44 80,40 120,34 C160,28 200,20 240,14 L300,8"
+                      stroke="url(#sparkGold)"
+                      strokeWidth="1.5"
+                      fill="none"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M0,48 C40,44 80,40 120,34 C160,28 200,20 240,14 L300,8 L300,60 L0,60 Z"
+                      fill="rgba(201,168,76,0.06)"
+                    />
+                  </svg>
+                </div>
+
+                {/* Progress */}
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-mono text-[9px] text-muted-foreground uppercase tracking-[0.08em]">
+                    Challenge Progress
+                  </span>
+                  <span className="font-mono text-[9px] text-muted-foreground">
+                    72%
+                  </span>
+                </div>
+                <div className="h-[2px] bg-white/[0.06] rounded mb-5">
+                  <div className="h-full w-[72%] bg-pf-brand rounded" />
+                </div>
+
+                <div className="h-px bg-white/[0.06] mb-4" />
+
+                {/* Picks */}
+                <p className="font-mono text-[9px] text-pf-brand uppercase tracking-[0.1em] mb-3">
+                  Recent Picks
+                </p>
+                <table className="w-full text-left mb-4">
+                  <thead>
+                    <tr>
+                      {["Pick", "Odds", "Stake", "P&L"].map((h) => (
+                        <th
+                          key={h}
+                          className="font-mono text-[9px] text-muted-foreground uppercase tracking-[0.06em] pb-2 pr-2 font-normal"
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="font-mono text-[10px] text-foreground pb-2 pr-2">
+                        Real Madrid ML
+                      </td>
+                      <td className="font-mono text-[10px] text-muted-foreground pb-2 pr-2">
+                        1.85
+                      </td>
+                      <td className="font-mono text-[10px] text-muted-foreground pb-2 pr-2">
+                        $200
+                      </td>
+                      <td className="font-mono text-[10px] text-pf-pink pb-2">
+                        +$170
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="font-mono text-[10px] text-foreground pb-2 pr-2">
+                        Lakers -3.5
+                      </td>
+                      <td className="font-mono text-[10px] text-muted-foreground pb-2 pr-2">
+                        1.91
+                      </td>
+                      <td className="font-mono text-[10px] text-muted-foreground pb-2 pr-2">
+                        $150
+                      </td>
+                      <td className="font-mono text-[10px] text-pf-pink pb-2">
+                        +$143
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="font-mono text-[10px] text-foreground pb-2 pr-2">
+                        Chiefs ML
+                      </td>
+                      <td className="font-mono text-[10px] text-muted-foreground pb-2 pr-2">
+                        2.10
+                      </td>
+                      <td className="font-mono text-[10px] text-muted-foreground pb-2 pr-2">
+                        $100
+                      </td>
+                      <td className="font-mono text-[9px] text-pf-pink pb-2 uppercase tracking-wider">
+                        LIVE
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Payout CTA */}
+                <button className="w-full border border-pf-pink/25 text-pf-pink font-semibold text-[12px] uppercase tracking-[0.08em] py-3 rounded hover:bg-pf-pink/[0.08] transition-colors mb-2.5">
+                  Request Payout →
+                </button>
+                <p className="font-mono text-[9px] text-center text-muted-foreground">
+                  48h avg processing · No hidden fees
                 </p>
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>
@@ -380,19 +558,26 @@ export default async function HomePage({
       </div>
 
       {/* ━━ HOW IT WORKS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <section className="relative py-24 overflow-hidden bg-[#030c18]">
-        {/* Subtle top edge accent */}
+      <section className="relative py-24 overflow-hidden bg-card">
+        {/* Lamp glow effect */}
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-pf-brand/20 to-transparent" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] bg-[conic-gradient(from_270deg_at_50%_0%,transparent_45deg,rgba(201,168,76,0.12)_90deg,rgba(201,168,76,0.06)_180deg,transparent_225deg)] pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[120px] bg-[radial-gradient(ellipse,rgba(201,168,76,0.18)_0%,transparent_70%)] blur-xl pointer-events-none" />
 
         <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <p className="text-pf-brand text-xs font-bold uppercase tracking-[0.2em] mb-3">
-              El proceso
-            </p>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="w-8 h-px bg-pf-brand flex-shrink-0" />
+              <span className="font-mono text-xs text-pf-brand uppercase tracking-[0.15em]">
+                {t("eyebrow_process")}
+              </span>
+            </div>
+            <h2 className="font-display font-bold text-3xl sm:text-4xl text-foreground">
               {t("steps_title")}
             </h2>
-            <p className="text-slate-400 mt-3 text-sm">{t("steps_subtitle")}</p>
+            <p className="text-muted-foreground mt-3 text-sm">
+              {t("steps_subtitle")}
+            </p>
           </div>
 
           {/* Steps — with connecting line */}
@@ -402,7 +587,7 @@ export default async function HomePage({
               <div className="h-full bg-gradient-to-r from-amber-500/40 via-blue-500/40 to-pf-brand/40" />
             </div>
 
-            {steps.map(({ num, key, color }) => {
+            {steps.map(({ num, key, color }, idx) => {
               const stepColors = {
                 amber: {
                   ring: "border-amber-500/40 text-amber-400",
@@ -419,35 +604,34 @@ export default async function HomePage({
                 green: {
                   ring: "border-pf-brand/40 text-pf-brand",
                   bg: "bg-pf-brand/10",
-                  glow: "group-hover:shadow-[0_0_25px_rgba(34,197,94,0.25)]",
+                  glow: "group-hover:shadow-[0_0_25px_rgba(201,168,76,0.25)]",
                   dot: "bg-pf-brand",
                 },
               }[color];
 
               return (
-                <div
-                  key={key}
-                  className="group relative flex flex-col items-center text-center"
-                >
-                  {/* Number bubble */}
-                  <div
-                    className={`relative z-10 w-[4.5rem] h-[4.5rem] rounded-2xl border-2 ${stepColors.ring} ${stepColors.bg} flex items-center justify-center mb-6 font-extrabold text-2xl transition-all duration-300 ${stepColors.glow}`}
-                  >
-                    {num}
-                    {/* Corner dot */}
+                <ScrollReveal key={key} delay={idx * 100} scale>
+                  <div className="group relative flex flex-col items-center text-center">
+                    {/* Number bubble */}
                     <div
-                      className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full ${stepColors.dot} ring-2 ring-[#030c18]`}
-                    />
+                      className={`relative z-10 w-[4.5rem] h-[4.5rem] rounded-2xl border-2 ${stepColors.ring} ${stepColors.bg} flex items-center justify-center mb-6 font-extrabold text-2xl transition-all duration-300 ${stepColors.glow}`}
+                    >
+                      {num}
+                      {/* Corner dot */}
+                      <div
+                        className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full ${stepColors.dot} ring-2 ring-card`}
+                      />
+                    </div>
+                    <h3 className="text-base font-bold text-white mb-2">
+                      {t(`${key}_title` as Parameters<typeof t>[0])}
+                    </h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed max-w-[220px] mx-auto">
+                      {key === "step3" && !hasExactCommercialTerms
+                        ? t("step3_desc_review")
+                        : t(`${key}_desc` as Parameters<typeof t>[0])}
+                    </p>
                   </div>
-                  <h3 className="text-base font-bold text-white mb-2">
-                    {t(`${key}_title` as Parameters<typeof t>[0])}
-                  </h3>
-                  <p className="text-sm text-slate-400 leading-relaxed max-w-[220px] mx-auto">
-                    {key === "step3" && !hasExactCommercialTerms
-                      ? t("step3_desc_review")
-                      : t(`${key}_desc` as Parameters<typeof t>[0])}
-                  </p>
-                </div>
+                </ScrollReveal>
               );
             })}
           </div>
@@ -455,7 +639,7 @@ export default async function HomePage({
           <div className="text-center mt-12">
             <Link
               href="/how-it-works"
-              className="inline-flex items-center gap-2 text-sm text-pf-brand hover:text-emerald-300 font-semibold transition-colors group"
+              className="inline-flex items-center gap-2 text-sm text-pf-brand hover:text-pf-brand/70 font-semibold transition-colors group"
             >
               {t("steps_learn_more")}
               <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
@@ -465,8 +649,9 @@ export default async function HomePage({
       </section>
 
       {/* ━━ COMMUNITY PROOF ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <section className="py-16 bg-background border-t border-border">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6">
+      <section className="py-16 bg-background border-t border-border relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_50%,rgba(201,168,76,0.04)_0%,transparent_70%)] pointer-events-none" />
+        <div className="relative mx-auto max-w-4xl px-4 sm:px-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
             {proofStats.map(({ value, key, icon }) => (
               <div
@@ -476,9 +661,10 @@ export default async function HomePage({
                 <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-pf-brand/10 border border-pf-brand/20 text-pf-brand mb-3 group-hover:bg-pf-brand/15 transition-colors">
                   {icon}
                 </div>
-                <p className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight tabular-nums">
-                  {value}
-                </p>
+                <AnimatedCounter
+                  value={value}
+                  className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight tabular-nums"
+                />
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wider mt-1">
                   {t(key)}
                 </p>
@@ -489,13 +675,19 @@ export default async function HomePage({
       </section>
 
       {/* ━━ TIER CARDS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <section className="py-24 bg-background border-t border-border">
+      <section className="py-24 bg-background border-t border-border relative overflow-hidden">
+        {/* Lamp effect */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[220px] bg-[conic-gradient(from_270deg_at_50%_0%,transparent_40deg,rgba(255,45,120,0.08)_90deg,rgba(255,45,120,0.04)_180deg,transparent_220deg)] pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[350px] h-[140px] bg-[radial-gradient(ellipse,rgba(255,45,120,0.12)_0%,transparent_70%)] blur-xl pointer-events-none" />
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <p className="text-pf-brand text-xs font-bold uppercase tracking-[0.2em] mb-3">
-              Planes
-            </p>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="w-8 h-px bg-pf-brand flex-shrink-0" />
+              <span className="font-mono text-xs text-pf-brand uppercase tracking-[0.15em]">
+                {t("eyebrow_tiers")}
+              </span>
+            </div>
+            <h2 className="font-display font-bold text-3xl sm:text-4xl font-extrabold text-foreground">
               {t("tiers_title")}
             </h2>
             <p className="text-muted-foreground mt-3 text-sm">
@@ -504,103 +696,116 @@ export default async function HomePage({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {tiers.map((tier) => {
+            {tiers.map((tier, idx) => {
               const cfg = TIER_CONFIG[tier.name] ?? DEFAULT_CONFIG;
+              const glowRgb = cfg.isPopular ? "255,45,120" : "201,168,76";
               return (
-                <div
-                  key={tier.id}
-                  className={`relative flex flex-col rounded-2xl border bg-gradient-to-b ${cfg.gradientFrom} to-transparent ${cfg.borderColor} p-5 transition-all duration-300 hover:-translate-y-1 cursor-pointer group`}
-                  style={{
-                    boxShadow: cfg.isPopular
-                      ? `0 0 40px ${cfg.glowColor}`
-                      : undefined,
-                  }}
-                >
-                  {/* Popular ring */}
-                  {cfg.isPopular && (
-                    <>
-                      <div className="absolute -inset-px rounded-2xl ring-2 ring-violet-500/40 pointer-events-none" />
-                      <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full border px-3 py-0.5 text-[11px] font-bold ${cfg.badgeClass} shadow-[0_0_12px_rgba(139,92,246,0.3)]`}
+                <ScrollReveal key={tier.id} delay={idx * 60} scale>
+                  <GlowingCard glowColor={glowRgb}>
+                    <div
+                      className={`relative flex flex-col rounded-2xl border bg-gradient-to-b ${cfg.gradientFrom} to-transparent ${cfg.borderColor} p-5 transition-all duration-300 hover:-translate-y-1 cursor-pointer group`}
+                      style={{
+                        boxShadow: cfg.isPopular
+                          ? `0 0 40px ${cfg.glowColor}`
+                          : undefined,
+                      }}
+                    >
+                      {/* Popular ring + border beam */}
+                      {cfg.isPopular && (
+                        <>
+                          <BorderBeam
+                            duration={3}
+                            colorFrom="rgba(255,45,120,0)"
+                            colorTo="#ff2d78"
+                          />
+                          <div className="absolute -inset-px rounded-2xl ring-1 ring-pf-pink/30 pointer-events-none" />
+                          {/* Top edge glow line */}
+                          <div className="absolute top-0 left-[15%] right-[15%] h-px bg-gradient-to-r from-transparent via-pf-pink to-transparent opacity-60 pointer-events-none" />
+                          <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full border px-3 py-0.5 text-[11px] font-bold ${cfg.badgeClass} shadow-[0_0_12px_rgba(255,45,120,0.3)]`}
+                            >
+                              <Star className="w-2.5 h-2.5 fill-current" />
+                              {t("popular")}
+                            </span>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Icon + name */}
+                      <div className="flex items-center gap-2.5 mb-4 mt-2">
+                        <div
+                          className={`flex items-center justify-center w-8 h-8 rounded-lg border ${cfg.badgeClass}`}
                         >
-                          <Star className="w-2.5 h-2.5 fill-current" />
-                          {t("popular")}
+                          {cfg.icon}
+                        </div>
+                        <span className="font-bold text-foreground text-sm">
+                          {tier.name}
                         </span>
                       </div>
-                    </>
-                  )}
 
-                  {/* Icon + name */}
-                  <div className="flex items-center gap-2.5 mb-4 mt-2">
-                    <div
-                      className={`flex items-center justify-center w-8 h-8 rounded-lg border ${cfg.badgeClass}`}
-                    >
-                      {cfg.icon}
+                      {/* Price */}
+                      <div className="mb-4">
+                        <span className="text-3xl font-extrabold text-foreground tracking-tight">
+                          {formatUsd(tier.fee, numberLocale, 2)}
+                        </span>
+                        <span className="text-xs text-muted-foreground ml-1">
+                          USD
+                        </span>
+                        {localFeeByTier.get(tier.id) && (
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            (~{localFeeByTier.get(tier.id)})
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Metrics */}
+                      <dl className="space-y-2 text-xs mb-4 flex-1">
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">
+                            {t("bankroll")}
+                          </dt>
+                          <dd className="font-bold text-foreground">
+                            {formatUsd(tier.fundedBankroll, numberLocale)}
+                          </dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">
+                            {t("profit_split")}
+                          </dt>
+                          <dd className="font-bold text-pf-brand">
+                            {tier.profitSplitPct}%
+                          </dd>
+                        </div>
+                      </dl>
+
+                      {/* Rules */}
+                      <ul className="space-y-1 mb-4 text-[11px] text-muted-foreground">
+                        {[
+                          t("rule_phase1"),
+                          t("rule_phase2"),
+                          t("rule_daily_limit"),
+                        ].map((r) => (
+                          <li key={r} className="flex items-center gap-1.5">
+                            <Check className="w-3 h-3 text-pf-brand shrink-0" />
+                            {r}
+                          </li>
+                        ))}
+                      </ul>
+
+                      <Link
+                        href="/challenges"
+                        className={`w-full text-center rounded-xl py-2.5 text-xs font-bold transition-all duration-200 ${
+                          cfg.isPopular
+                            ? "bg-pf-pink hover:bg-pf-pink-dark text-white shadow-[0_0_20px_rgba(255,45,120,0.3)] group-hover:shadow-[0_0_30px_rgba(255,45,120,0.4)]"
+                            : "border border-border hover:border-pf-brand/40 hover:bg-pf-brand/5 text-foreground hover:text-pf-brand"
+                        }`}
+                      >
+                        {t("tiers_cta_short")}
+                      </Link>
                     </div>
-                    <span className="font-bold text-foreground text-sm">
-                      {tier.name}
-                    </span>
-                  </div>
-
-                  {/* Price */}
-                  <div className="mb-4">
-                    <span className="text-3xl font-extrabold text-foreground tracking-tight">
-                      {formatUsd(tier.fee, numberLocale, 2)}
-                    </span>
-                    <span className="text-xs text-muted-foreground ml-1">
-                      USD
-                    </span>
-                    {localFeeByTier.get(tier.id) && (
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        (~{localFeeByTier.get(tier.id)})
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Metrics */}
-                  <dl className="space-y-2 text-xs mb-4 flex-1">
-                    <div className="flex justify-between">
-                      <dt className="text-muted-foreground">{t("bankroll")}</dt>
-                      <dd className="font-bold text-foreground">
-                        {formatUsd(tier.fundedBankroll, numberLocale)}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-muted-foreground">
-                        {t("profit_split")}
-                      </dt>
-                      <dd className="font-bold text-pf-brand">
-                        {tier.profitSplitPct}%
-                      </dd>
-                    </div>
-                  </dl>
-
-                  {/* Rules */}
-                  <ul className="space-y-1 mb-4 text-[11px] text-muted-foreground">
-                    {[
-                      t("rule_phase1"),
-                      t("rule_phase2"),
-                      t("rule_daily_limit"),
-                    ].map((r) => (
-                      <li key={r} className="flex items-center gap-1.5">
-                        <Check className="w-3 h-3 text-pf-brand shrink-0" />
-                        {r}
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Link
-                    href="/challenges"
-                    className={`w-full text-center rounded-xl py-2.5 text-xs font-bold transition-all duration-200 ${
-                      cfg.isPopular
-                        ? "bg-pf-brand hover:bg-pf-brand-dark text-white shadow-[0_0_20px_rgba(34,197,94,0.3)] group-hover:shadow-[0_0_30px_rgba(34,197,94,0.4)]"
-                        : "border border-border hover:border-pf-brand/40 hover:bg-pf-brand/5 text-foreground hover:text-pf-brand"
-                    }`}
-                  >
-                    {t("tiers_cta_short")}
-                  </Link>
-                </div>
+                  </GlowingCard>
+                </ScrollReveal>
               );
             })}
           </div>
@@ -608,7 +813,7 @@ export default async function HomePage({
           <div className="text-center mt-10">
             <Link
               href="/challenges"
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-pf-brand hover:bg-pf-brand-dark text-white font-bold text-sm shadow-pf-glow hover:shadow-pf-glow-lg transition-all duration-300 hover:-translate-y-0.5 group"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-pf-pink hover:bg-pf-pink-dark text-white font-bold text-sm shadow-pf-pink-glow hover:shadow-pf-pink-glow-lg transition-all duration-300 hover:-translate-y-0.5 group"
             >
               {t("tiers_cta")}
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
@@ -618,15 +823,20 @@ export default async function HomePage({
       </section>
 
       {/* ━━ SPORTS COVERAGE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <section className="py-20 bg-[#030c18] border-t border-white/[0.04]">
+      <section className="py-20 bg-card border-t border-white/[0.04]">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 text-center">
-          <p className="text-pf-brand text-xs font-bold uppercase tracking-[0.2em] mb-3">
-            Mercados
-          </p>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="w-8 h-px bg-pf-brand flex-shrink-0" />
+            <span className="font-mono text-xs text-pf-brand uppercase tracking-[0.15em]">
+              {t("eyebrow_markets")}
+            </span>
+          </div>
+          <h2 className="font-display font-bold text-2xl sm:text-3xl font-extrabold text-white mb-3">
             {t("sports_title")}
           </h2>
-          <p className="text-slate-400 text-sm mb-8">{t("sports_subtitle")}</p>
+          <p className="text-muted-foreground text-sm mb-8">
+            {t("sports_subtitle")}
+          </p>
 
           <div className="flex flex-wrap justify-center gap-3 mb-6">
             {sports.map((s) => {
@@ -648,113 +858,179 @@ export default async function HomePage({
         </div>
       </section>
 
-      {/* ━━ TRUST PILLARS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <section className="py-20 bg-[#030c18] border-t border-white/[0.04]">
+      {/* ━━ BENTO FEATURES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section className="py-20 bg-card border-t border-white/[0.04]">
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
           <div className="text-center mb-12">
-            <p className="text-pf-brand text-xs font-bold uppercase tracking-[0.2em] mb-3">
-              {locale === "en" ? "Why PlayFunded" : "Por qué PlayFunded"}
-            </p>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
-              {locale === "en"
-                ? "Built for serious traders"
-                : "Construido para traders serios"}
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="w-8 h-px bg-pf-brand flex-shrink-0" />
+              <span className="font-mono text-xs text-pf-brand uppercase tracking-[0.15em]">
+                {t("eyebrow_features")}
+              </span>
+            </div>
+            <h2 className="font-display font-bold text-2xl sm:text-3xl text-foreground">
+              {t("feature_built_title")}
             </h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            {[
-              {
-                icon: <Shield className="w-6 h-6" />,
-                accent: "from-emerald-500/20 to-emerald-500/5",
-                border: "border-emerald-500/20 hover:border-emerald-500/40",
-                iconBg:
-                  "bg-emerald-500/10 border-emerald-500/25 text-emerald-400",
-                title:
-                  locale === "en"
-                    ? "Real capital, our risk"
-                    : "Capital real, riesgo nuestro",
-                desc:
-                  locale === "en"
-                    ? "We put up the bankroll. You prove your skill with real stakes."
-                    : "Nosotros ponemos el dinero. Tú demuestras tu talento con stakes reales.",
-              },
-              {
-                icon: <DollarSign className="w-6 h-6" />,
-                accent: "from-blue-500/20 to-blue-500/5",
-                border: "border-blue-500/20 hover:border-blue-500/40",
-                iconBg: "bg-blue-500/10 border-blue-500/25 text-blue-400",
-                title: locale === "en" ? "Monthly payouts" : "Pagos mensuales",
-                desc:
-                  locale === "en"
-                    ? "Collect up to 80% of your profits every month, no lock-in."
-                    : "Cobra hasta el 80% de tus ganancias cada mes, sin bloqueos.",
-              },
-              {
-                icon: <Trophy className="w-6 h-6" />,
-                accent: "from-violet-500/20 to-violet-500/5",
-                border: "border-violet-500/20 hover:border-violet-500/40",
-                iconBg: "bg-violet-500/10 border-violet-500/25 text-violet-400",
-                title:
-                  locale === "en" ? "Live sports markets" : "Deportes en vivo",
-                desc:
-                  locale === "en"
-                    ? "Liga MX, NBA, NFL, ATP, UFC and more leagues available."
-                    : "Liga MX, NBA, NFL, ATP, UFC y más ligas disponibles.",
-              },
-            ].map((p) => (
-              <div
-                key={p.title}
-                className={`relative flex flex-col gap-4 p-6 rounded-2xl border ${p.border} bg-gradient-to-b ${p.accent} to-transparent transition-all duration-300 group overflow-hidden`}
-              >
-                <div
-                  className={`shrink-0 flex items-center justify-center w-11 h-11 rounded-xl border ${p.iconBg} transition-colors`}
-                >
-                  {p.icon}
+
+          {/* Bento Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-[minmax(160px,auto)]">
+            {/* Big card — Real capital */}
+            <GlowingCard
+              className="sm:col-span-2 lg:col-span-2 lg:row-span-1"
+              glowColor="201,168,76"
+            >
+              <div className="h-full p-7 rounded-2xl border border-pf-brand/20 hover:border-pf-brand/40 bg-gradient-to-br from-pf-brand/8 to-transparent transition-colors duration-300 group overflow-hidden relative">
+                <div className="absolute bottom-0 right-0 w-48 h-48 bg-[radial-gradient(ellipse,rgba(201,168,76,0.08)_0%,transparent_70%)] pointer-events-none" />
+                <div className="flex items-center justify-center w-11 h-11 rounded-xl border bg-pf-brand/10 border-pf-brand/25 text-pf-brand mb-5">
+                  <Shield className="w-5 h-5" />
                 </div>
-                <div>
-                  <p className="font-bold text-sm text-white mb-1.5">
-                    {p.title}
-                  </p>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    {p.desc}
-                  </p>
+                <p className="font-display font-bold text-xl text-foreground mb-2">
+                  {t("feature_capital_title")}
+                </p>
+                <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
+                  {t("feature_capital_desc")}
+                </p>
+                {/* Mini balance bar */}
+                <div className="mt-5 flex items-center gap-3">
+                  <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                    <div className="h-full w-[72%] bg-gradient-to-r from-pf-brand/60 to-pf-brand rounded-full" />
+                  </div>
+                  <span className="font-mono text-[10px] text-pf-brand">
+                    72% funded
+                  </span>
                 </div>
               </div>
-            ))}
+            </GlowingCard>
+
+            {/* Monthly payouts */}
+            <GlowingCard glowColor="201,168,76">
+              <div className="h-full p-6 rounded-2xl border border-pf-brand/15 hover:border-pf-brand/35 bg-gradient-to-b from-pf-brand/5 to-transparent transition-colors duration-300 group overflow-hidden relative">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl border bg-pf-brand/10 border-pf-brand/20 text-pf-brand mb-4">
+                  <DollarSign className="w-5 h-5" />
+                </div>
+                <p className="font-display font-bold text-base text-foreground mb-1.5">
+                  {t("feature_payouts_title")}
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {t("feature_payouts_desc")}
+                </p>
+                <div className="mt-4 flex items-baseline gap-1">
+                  <span className="font-display font-bold text-2xl text-pf-brand">
+                    80%
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    max split
+                  </span>
+                </div>
+              </div>
+            </GlowingCard>
+
+            {/* Live sports */}
+            <GlowingCard glowColor="255,45,120">
+              <div className="h-full p-6 rounded-2xl border border-pf-pink/15 hover:border-pf-pink/35 bg-gradient-to-b from-pf-pink/5 to-transparent transition-colors duration-300 group overflow-hidden">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl border bg-pf-pink/10 border-pf-pink/20 text-pf-pink mb-4">
+                  <Trophy className="w-5 h-5" />
+                </div>
+                <p className="font-display font-bold text-base text-foreground mb-1.5">
+                  {t("feature_sports_title")}
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {t("feature_sports_desc")}
+                </p>
+                <div className="mt-4 flex gap-1.5 flex-wrap">
+                  {["⚽", "🏀", "🏈", "🎾", "🥊"].map((emoji) => (
+                    <span key={emoji} className="text-lg leading-none">
+                      {emoji}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </GlowingCard>
+
+            {/* Two-phase system */}
+            <GlowingCard glowColor="201,168,76">
+              <div className="h-full p-6 rounded-2xl border border-white/[0.06] hover:border-pf-brand/25 bg-gradient-to-b from-white/[0.02] to-transparent transition-colors duration-300 group">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl border bg-white/[0.05] border-white/[0.08] text-muted-foreground mb-4">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <p className="font-display font-bold text-base text-foreground mb-1.5">
+                  {t("feature_eval_title")}
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {t("feature_eval_desc")}
+                </p>
+                {/* Phase indicators */}
+                <div className="mt-4 flex gap-2">
+                  <div className="flex-1 h-1 rounded-full bg-pf-brand/60" />
+                  <div className="flex-1 h-1 rounded-full bg-white/[0.12]" />
+                </div>
+                <div className="flex justify-between mt-1">
+                  <span className="font-mono text-[9px] text-pf-brand uppercase tracking-wider">
+                    Phase 1 ✓
+                  </span>
+                  <span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider">
+                    Phase 2
+                  </span>
+                </div>
+              </div>
+            </GlowingCard>
+
+            {/* One-time fee */}
+            <GlowingCard glowColor="255,45,120">
+              <div className="h-full p-6 rounded-2xl border border-pf-pink/15 hover:border-pf-pink/30 bg-gradient-to-b from-pf-pink/5 to-transparent transition-colors duration-300 group">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl border bg-pf-pink/10 border-pf-pink/20 text-pf-pink mb-4">
+                  <Zap className="w-5 h-5" />
+                </div>
+                <p className="font-display font-bold text-base text-foreground mb-1.5">
+                  {t("feature_fee_title")}
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {t("feature_fee_desc")}
+                </p>
+                <div className="mt-4 flex items-baseline gap-1">
+                  <span className="font-display font-bold text-2xl text-pf-pink">
+                    $19.99
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {t("feature_fee_start")}
+                  </span>
+                </div>
+              </div>
+            </GlowingCard>
           </div>
         </div>
       </section>
 
+      {/* ━━ TESTIMONIALS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <TestimonialsMarquee />
+
       {/* ━━ FINAL CTA ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <section className="relative py-28 overflow-hidden bg-[#020617]">
-        {/* Green radial glow center */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_50%_50%,rgba(34,197,94,0.11)_0%,transparent_70%)] pointer-events-none" />
-        <div className="absolute inset-0 bg-grid-green opacity-40 pointer-events-none" />
+      <section className="relative py-28 overflow-hidden bg-background">
+        {/* Gold radial glow center */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_50%_50%,rgba(201,168,76,0.11)_0%,transparent_70%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-grid-gold opacity-40 pointer-events-none" />
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-pf-brand/20 to-transparent" />
 
         <div className="relative text-center max-w-2xl mx-auto px-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-pf-brand/25 bg-pf-brand/10 text-pf-brand text-xs font-semibold mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-pf-brand animate-pulse" />
             {hasExactCommercialTerms
-              ? "Únete ahora"
-              : "Disponible próximamente"}
+              ? t("eyebrow_cta_join")
+              : t("eyebrow_cta_coming")}
           </div>
           <h2 className="text-4xl sm:text-5xl font-extrabold text-white mb-4 leading-tight">
             {t("cta_title")}
           </h2>
-          <p className="text-slate-400 mb-10 text-sm leading-relaxed max-w-lg mx-auto">
+          <p className="text-muted-foreground mb-10 text-sm leading-relaxed max-w-lg mx-auto">
             {hasExactCommercialTerms
               ? t("cta_subtitle")
               : t("cta_subtitle_review")}
           </p>
-          <Link
-            href="/challenges"
-            className="relative overflow-hidden group inline-flex items-center gap-2 px-10 py-4 rounded-xl bg-pf-brand text-white font-bold text-base shadow-[0_0_50px_rgba(34,197,94,0.4)] hover:shadow-[0_0_70px_rgba(34,197,94,0.55)] transition-all duration-300 hover:-translate-y-1 cursor-pointer"
-          >
-            <span className="relative z-10">{t("cta_button")}</span>
-            <ArrowRight className="relative z-10 w-5 h-5 transition-transform group-hover:translate-x-1" />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-          </Link>
+          <MovingBorderButton href="/challenges">
+            {t("cta_button")}
+            <ArrowRight className="w-5 h-5" />
+          </MovingBorderButton>
           <p className="text-[11px] text-slate-600 mt-5">
             {hasExactCommercialTerms
               ? t("cta_disclaimer")

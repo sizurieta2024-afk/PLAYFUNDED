@@ -66,9 +66,7 @@ export default async function CheckoutSuccessPage({
     }
   }
 
-  const title = challengeReady
-    ? t("successTitle")
-    : t("successPendingTitle");
+  const title = challengeReady ? t("successTitle") : t("successPendingTitle");
   const subtitle = challengeReady
     ? t("successSubtitle")
     : t("successPendingSubtitle");
@@ -86,18 +84,16 @@ export default async function CheckoutSuccessPage({
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">
+          <h1 className="text-3xl font-display font-bold text-foreground">
             {title}
           </h1>
-          <p className="text-lg text-pf-brand font-medium">
-            {subtitle}
-          </p>
+          <p className="text-lg text-pf-brand font-medium">{subtitle}</p>
           <p className="text-muted-foreground">{description}</p>
         </div>
 
         <Link
           href="/dashboard"
-          className="inline-flex items-center justify-center w-full sm:w-auto px-8 py-3 rounded-xl bg-pf-brand hover:bg-pf-brand-dark text-white font-semibold transition-colors"
+          className="inline-flex items-center justify-center w-full sm:w-auto px-8 py-3 rounded-xl bg-pf-pink hover:bg-pf-pink-dark text-white font-semibold transition-colors"
         >
           {t("successButton")}
         </Link>

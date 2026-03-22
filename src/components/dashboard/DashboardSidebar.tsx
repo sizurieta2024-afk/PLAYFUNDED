@@ -105,7 +105,7 @@ export function DashboardSidebar() {
       </aside>
 
       {/* ── Mobile bottom nav ───────────────────────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-white/[0.08] bg-[#020617]/95 backdrop-blur-md flex items-center justify-around px-2 pb-safe">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-white/[0.08] bg-background/95 backdrop-blur-md flex items-center justify-around px-2 pb-safe">
         {NAV_ITEMS.map(({ href, icon: Icon, label, exact }) => {
           const active = isActive(href, exact);
           return (

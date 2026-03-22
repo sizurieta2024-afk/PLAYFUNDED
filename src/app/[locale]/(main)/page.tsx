@@ -520,7 +520,7 @@ export default async function HomePage({
           <div className="relative grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Connector line (desktop) */}
             <div className="hidden md:block absolute top-[2.25rem] left-[calc(16.66%+1.5rem)] right-[calc(16.66%+1.5rem)] h-px">
-              <div className="h-full bg-gradient-to-r from-amber-500/40 via-blue-500/40 to-pf-brand/40" />
+              <div className="h-full bg-gradient-to-r from-amber-500/40 via-amber-400/60 to-amber-500/40" />
             </div>
 
             {steps.map(({ num, key, color }, idx) => {
@@ -538,10 +538,10 @@ export default async function HomePage({
                   dot: "bg-blue-500",
                 },
                 green: {
-                  ring: "border-pf-brand/40 text-pf-brand",
-                  bg: "bg-pf-brand/10",
-                  glow: "group-hover:shadow-[0_0_25px_rgba(201,168,76,0.25)]",
-                  dot: "bg-pf-brand",
+                  ring: "border-amber-500/40 text-amber-400",
+                  bg: "bg-amber-500/10",
+                  glow: "group-hover:shadow-[0_0_25px_rgba(245,158,11,0.25)]",
+                  dot: "bg-amber-500",
                 },
               }[color];
 
@@ -558,7 +558,7 @@ export default async function HomePage({
                         className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full ${stepColors.dot} ring-2 ring-card`}
                       />
                     </div>
-                    <h3 className="text-base font-bold text-white mb-2">
+                    <h3 className="text-base font-bold text-foreground mb-2">
                       {t(`${key}_title` as Parameters<typeof t>[0])}
                     </h3>
                     <p className="text-sm text-muted-foreground leading-relaxed max-w-[220px] mx-auto">

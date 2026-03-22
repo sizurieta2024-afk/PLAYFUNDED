@@ -220,4 +220,8 @@ jobs:
           npm ci 2>&1 | awk '!/The configuration property `package.json#prisma`/ && !/The Prisma config file in prisma.config.ts overrides the deprecated `package.json#prisma` property in package.json\./ && !/For more information, see: https:\/\/pris.ly\/prisma-config/'
 
       - name: Production dependency audit
-        run: npm audit --omit=dev --audit-level=high
+        # GHSA-38f7-945m-qr2g: effect vuln in @prisma/config — fix requires Prisma downgrade (breaking)
+        # Suppressed until Prisma ships a fixed @prisma/config. See scripts/audit-filter.mjs
+        run: npm audit --omit=dev --audit-level=high --json 2>/dev/null | node scripts/audit-filter.mjs
+        env:
+          AUDIT_SUPPRESS: "GHSA-38f7-945m-qr2g"

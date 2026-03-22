@@ -767,7 +767,7 @@ export default async function HomePage({
               {t("eyebrow_markets")}
             </span>
           </div>
-          <h2 className="font-display font-bold text-2xl sm:text-3xl font-extrabold text-white mb-3">
+          <h2 className="font-display font-bold text-2xl sm:text-3xl font-extrabold text-foreground mb-3">
             {t("sports_title")}
           </h2>
           <p className="text-muted-foreground text-sm mb-8">
@@ -783,7 +783,7 @@ export default async function HomePage({
                   className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl border border-white/10 bg-white/[0.03] hover:border-pf-brand/30 hover:bg-pf-brand/5 transition-all duration-200 group cursor-default"
                 >
                   <Icon className={`w-4 h-4 shrink-0 ${s.color}`} />
-                  <span className="text-sm font-semibold text-slate-300 group-hover:text-white transition-colors">
+                  <span className="text-sm font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
                     {s.name}
                   </span>
                 </div>
@@ -955,7 +955,7 @@ export default async function HomePage({
               ? t("eyebrow_cta_join")
               : t("eyebrow_cta_coming")}
           </div>
-          <h2 className="text-4xl sm:text-5xl font-extrabold text-white mb-4 leading-tight">
+          <h2 className="text-4xl sm:text-5xl font-extrabold text-foreground mb-4 leading-tight">
             {t("cta_title")}
           </h2>
           <p className="text-muted-foreground mb-10 text-sm leading-relaxed max-w-lg mx-auto">

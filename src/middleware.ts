@@ -21,6 +21,30 @@ const GEO_EXEMPT_PREFIXES = [
   "/admin",
 ];
 
+// Search engine and AI crawler user agents — bypass geo-block so content is indexable
+const CRAWLER_UA_PATTERNS = [
+  "googlebot",
+  "google-inspectiontool",
+  "bingbot",
+  "slurp", // Yahoo
+  "duckduckbot",
+  "baiduspider",
+  "yandexbot",
+  "applebot",
+  "gptbot", // OpenAI
+  "chatgpt-user",
+  "anthropic-ai",
+  "claudebot",
+  "perplexitybot",
+  "cohere-ai",
+];
+
+function isCrawler(ua: string | null): boolean {
+  if (!ua) return false;
+  const lower = ua.toLowerCase();
+  return CRAWLER_UA_PATTERNS.some((p) => lower.includes(p));
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -49,7 +73,8 @@ export async function middleware(request: NextRequest) {
     (p) => pathnameWithoutLocale.startsWith(p) || pathname.startsWith(p),
   );
 
-  if (!isGeoExempt) {
+  const ua = request.headers.get("user-agent");
+  if (!isGeoExempt && !isCrawler(ua)) {
     const ip =
       request.headers.get("x-real-ip") ??
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -172,6 +197,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

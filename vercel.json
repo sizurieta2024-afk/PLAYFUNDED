@@ -3,10 +3,17 @@
     {
       "path": "/api/cron/daily-reset",
       "schedule": "5 0 * * *"
+    },
+    {
+      "path": "/api/cron/backup",
+      "schedule": "0 3 * * *"
     }
   ],
   "functions": {
     "src/app/api/settle/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/cron/backup/route.ts": {
       "maxDuration": 60
     }
   }

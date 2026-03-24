@@ -34,7 +34,7 @@ import {
   Flame,
 } from "lucide-react";
 import type { Metadata } from "next";
-import { websiteSchema } from "@/lib/schema";
+import { websiteSchema, homeFaqSchema } from "@/lib/schema";
 
 const BASE_URL = "https://playfunded.lat";
 const LOCALE_PREFIX: Record<string, string> = {
@@ -132,7 +132,7 @@ export async function generateMetadata({
   const canonicalUrl = `${BASE_URL}${prefix}`;
 
   return {
-    title: t("meta_title"),
+    title: { absolute: t("meta_title") },
     description: t("meta_description"),
     alternates: {
       canonical: canonicalUrl,
@@ -246,6 +246,12 @@ export default async function HomePage({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema()) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(homeFaqSchema(locale)),
+        }}
       />
       <div className="flex flex-col">
         {/* ━━ HERO ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
@@ -977,6 +983,55 @@ export default async function HomePage({
 
         {/* ━━ TESTIMONIALS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         <TestimonialsMarquee />
+
+        {/* ━━ FAQ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+        <section
+          className="relative py-24 bg-card"
+          aria-label={t("faq_heading")}
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_80%_50%,rgba(201,168,76,0.06)_0%,transparent_70%)] pointer-events-none" />
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-pf-brand/20 to-transparent" />
+          <div className="relative max-w-3xl mx-auto px-4 sm:px-6">
+            {/* Eyebrow */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-px bg-pf-brand" />
+              <span className="font-mono text-xs text-pf-brand uppercase tracking-[0.2em]">
+                FAQ
+              </span>
+            </div>
+            <h2 className="font-display font-bold text-3xl sm:text-4xl text-foreground mb-2">
+              {t("faq_heading")}
+            </h2>
+            <p className="text-muted-foreground text-sm mb-12">
+              {t("faq_subheading")}
+            </p>
+
+            <div className="space-y-0 divide-y divide-border/40">
+              {(
+                [
+                  [t("faq_q1"), t("faq_a1")],
+                  [t("faq_q2"), t("faq_a2")],
+                  [t("faq_q3"), t("faq_a3")],
+                  [t("faq_q4"), t("faq_a4")],
+                  [t("faq_q5"), t("faq_a5")],
+                ] as [string, string][]
+              ).map(([q, a], i) => (
+                <details
+                  key={i}
+                  className="group py-5 cursor-pointer list-none"
+                >
+                  <summary className="flex items-center justify-between gap-4 text-foreground font-semibold text-sm sm:text-base select-none list-none marker:hidden [&::-webkit-details-marker]:hidden">
+                    <span>{q}</span>
+                    <ChevronRight className="w-4 h-4 text-pf-brand shrink-0 transition-transform group-open:rotate-90" />
+                  </summary>
+                  <p className="mt-3 text-muted-foreground text-sm leading-relaxed">
+                    {a}
+                  </p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {/* ━━ FINAL CTA ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         <section className="relative py-28 overflow-hidden bg-background">

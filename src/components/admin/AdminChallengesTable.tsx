@@ -140,7 +140,7 @@ export function AdminChallengesTable({
                       disabled={
                         pending || !o.note?.trim() || o.status === c.status
                       }
-                      className="text-xs px-2 py-1 rounded-lg bg-pf-brand/10 text-pf-brand border border-pf-brand/30 hover:bg-pf-brand/20 transition-colors disabled:opacity-40"
+                      className="text-xs px-2 py-1 rounded-lg bg-pf-pink/10 text-pf-pink border border-pf-pink/30 hover:bg-pf-pink/20 transition-colors disabled:opacity-40"
                     >
                       Save
                     </button>

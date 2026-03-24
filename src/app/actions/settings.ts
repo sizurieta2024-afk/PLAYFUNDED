@@ -6,13 +6,14 @@ import { prisma } from "@/lib/prisma";
 import { sendEmail, selfExclusionEmail } from "@/lib/email";
 
 async function getAuthUser() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) throw new Error("Unauthenticated");
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !authUser) throw new Error("Unauthenticated");
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
     select: {
       id: true,
       email: true,
@@ -43,7 +44,7 @@ export async function updateWeeklyLimit(limitUsd: number | null) {
   const user = await getAuthUser();
 
   if (limitUsd !== null && (limitUsd < 10 || limitUsd > 100_000)) {
-    return { error: "Limit must be between $10 and $100,000" };
+    return { errorCode: "LIMIT_INVALID" as const };
   }
 
   await prisma.user.update({
@@ -58,12 +59,12 @@ export async function updateWeeklyLimit(limitUsd: number | null) {
 }
 
 export async function selfExclude(
-  period: "30d" | "90d" | "180d" | "permanent",
+  period: "30d" | "60d" | "90d" | "permanent",
 ) {
   const user = await getAuthUser();
 
   if (user.isPermExcluded) {
-    return { error: "Account is permanently excluded" };
+    return { errorCode: "PERM_EXCLUDED" as const };
   }
 
   const periodLabel =
@@ -71,9 +72,11 @@ export async function selfExclude(
       ? "permanent"
       : period === "30d"
         ? "30 days"
+        : period === "60d"
+          ? "60 days"
         : period === "90d"
           ? "90 days"
-          : "6 months";
+          : "";
 
   if (period === "permanent") {
     await prisma.user.update({
@@ -81,7 +84,7 @@ export async function selfExclude(
       data: { isPermExcluded: true, selfExcludedUntil: null },
     });
   } else {
-    const days = period === "30d" ? 30 : period === "90d" ? 90 : 180;
+    const days = period === "30d" ? 30 : period === "60d" ? 60 : 90;
     const until = new Date();
     until.setDate(until.getDate() + days);
     await prisma.user.update({
@@ -101,7 +104,7 @@ export async function cancelTempExclusion() {
   const user = await getAuthUser();
 
   if (user.isPermExcluded) {
-    return { error: "Permanent exclusion cannot be cancelled" };
+    return { errorCode: "PERM_EXCLUSION_LOCKED" as const };
   }
 
   await prisma.user.update({

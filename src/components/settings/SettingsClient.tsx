@@ -27,6 +27,20 @@ export function SettingsClient({
   const t = useTranslations("settings");
   const locale = useLocale();
   const [pending, startTransition] = useTransition();
+  const confirmKeyword = t("confirmKeyword");
+
+  function getSettingsErrorMessage(errorCode: string) {
+    switch (errorCode) {
+      case "LIMIT_INVALID":
+        return t("limitInvalid");
+      case "PERM_EXCLUDED":
+        return t("permExcludedStatus");
+      case "PERM_EXCLUSION_LOCKED":
+        return t("permExclusionLocked");
+      default:
+        return t("genericError");
+    }
+  }
 
   async function handleSignOut() {
     const supabase = createBrowserClient(
@@ -49,7 +63,7 @@ export function SettingsClient({
   // Exclusion UI state
   const [showExclude, setShowExclude] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<
-    "30d" | "90d" | "180d" | "permanent" | null
+    "30d" | "60d" | "90d" | "permanent" | null
   >(null);
   const [confirmText, setConfirmText] = useState("");
   const [excludeMsg, setExcludeMsg] = useState<{
@@ -65,18 +79,27 @@ export function SettingsClient({
     }
     startTransition(async () => {
       const res = await updateWeeklyLimit(val);
-      if (res.error) setLimitMsg({ ok: false, text: res.error });
-      else setLimitMsg({ ok: true, text: t("limitSaved") });
+      if ("errorCode" in res && res.errorCode) {
+        setLimitMsg({
+          ok: false,
+          text: getSettingsErrorMessage(res.errorCode),
+        });
+      } else setLimitMsg({ ok: true, text: t("limitSaved") });
     });
   }
 
   function handleExclude() {
     if (!selectedPeriod) return;
-    if (selectedPeriod === "permanent" && confirmText !== "CONFIRM") return;
+    if (selectedPeriod === "permanent" && confirmText !== confirmKeyword)
+      return;
     startTransition(async () => {
       const res = await selfExclude(selectedPeriod);
-      if (res.error) setExcludeMsg({ ok: false, text: res.error });
-      else {
+      if ("errorCode" in res && res.errorCode) {
+        setExcludeMsg({
+          ok: false,
+          text: getSettingsErrorMessage(res.errorCode),
+        });
+      } else {
         setExcludeMsg({ ok: true, text: t("excludeSuccess") });
         setShowExclude(false);
         setSelectedPeriod(null);
@@ -88,8 +111,12 @@ export function SettingsClient({
   function handleCancelExclusion() {
     startTransition(async () => {
       const res = await cancelTempExclusion();
-      if (res.error) setExcludeMsg({ ok: false, text: res.error });
-      else setExcludeMsg({ ok: true, text: t("exclusionCancelled") });
+      if ("errorCode" in res && res.errorCode) {
+        setExcludeMsg({
+          ok: false,
+          text: getSettingsErrorMessage(res.errorCode),
+        });
+      } else setExcludeMsg({ ok: true, text: t("exclusionCancelled") });
     });
   }
 
@@ -141,13 +168,13 @@ export function SettingsClient({
               }}
               placeholder={t("noLimit")}
               disabled={pending}
-              className="pl-7 pr-3 py-2 text-sm rounded-lg border border-border bg-background w-40 focus:outline-none focus:ring-1 focus:ring-pf-brand/40"
+              className="pl-7 pr-3 py-2 text-sm rounded-lg border border-border bg-background w-40 focus:outline-none focus:ring-1 focus:ring-pf-pink/40"
             />
           </div>
           <button
             onClick={handleSaveLimit}
             disabled={pending}
-            className="px-4 py-2 text-sm font-medium rounded-lg bg-pf-brand text-white hover:bg-pf-brand/90 transition-colors disabled:opacity-40"
+            className="px-4 py-2 text-sm font-medium rounded-lg bg-pf-pink text-white hover:bg-pf-pink-dark transition-colors disabled:opacity-40"
           >
             {t("save")}
           </button>
@@ -180,16 +207,16 @@ export function SettingsClient({
       {/* ── Sign out ───────────────────────────────────────────────── */}
       <section className="rounded-xl border border-border bg-card p-6 flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold">Sign out</h2>
+          <h2 className="text-sm font-semibold">{t("signOutSection")}</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Sign out of your account on this device
+            {t("signOutDesc")}
           </p>
         </div>
         <button
           onClick={handleSignOut}
           className="px-4 py-2 text-sm font-medium rounded-lg border border-border hover:border-red-500/50 hover:text-red-400 text-muted-foreground transition-colors"
         >
-          Sign out
+          {t("signOutCta")}
         </button>
       </section>
 
@@ -251,7 +278,7 @@ export function SettingsClient({
               <div className="space-y-4 border-t border-border pt-4">
                 <p className="text-xs font-medium">{t("choosePeriod")}</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {(["30d", "90d", "180d", "permanent"] as const).map((p) => (
+                  {(["30d", "60d", "90d", "permanent"] as const).map((p) => (
                     <button
                       key={p}
                       onClick={() => {
@@ -280,7 +307,9 @@ export function SettingsClient({
                       onChange={(e) =>
                         setConfirmText(e.target.value.toUpperCase())
                       }
-                      placeholder='Type "CONFIRM"'
+                      placeholder={t("confirmPlaceholder", {
+                        keyword: confirmKeyword,
+                      })}
                       className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-red-500/40"
                     />
                   </div>
@@ -293,7 +322,7 @@ export function SettingsClient({
                       pending ||
                       !selectedPeriod ||
                       (selectedPeriod === "permanent" &&
-                        confirmText !== "CONFIRM")
+                        confirmText !== confirmKeyword)
                     }
                     className="px-4 py-2 text-xs font-medium rounded-lg bg-muted text-foreground hover:bg-muted/80 transition-colors disabled:opacity-40"
                   >

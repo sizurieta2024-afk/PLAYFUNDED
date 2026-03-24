@@ -1,16 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient, createServiceClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
+import {
+  sendEmail,
+  kycApprovedEmail,
+  kycRejectedEmail,
+} from "@/lib/email";
+import { reviewKycByAdmin } from "@/lib/admin/review-service";
 
 async function requireAdmin() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) return null;
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !authUser) return null;
 
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
   });
   if (!user || user.role !== "admin") return null;
   return user;
@@ -95,24 +102,27 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
-  const submission = await prisma.kycSubmission.findUnique({
-    where: { id: submissionId },
+  const updated = await reviewKycByAdmin({
+    db: prisma,
+    adminId: admin.id,
+    submissionId,
+    action,
+    reviewNote,
   });
-  if (!submission || submission.status !== "pending") {
+  if (!updated) {
     return NextResponse.json(
       { error: "Submission not found or not pending" },
       { status: 404 },
     );
   }
 
-  const updated = await prisma.kycSubmission.update({
-    where: { id: submissionId },
-    data: {
-      status: action === "approve" ? "approved" : "rejected",
-      reviewedAt: new Date(),
-      reviewNote: reviewNote ?? null,
-    },
-  });
+  if (action === "approve") {
+    const { subject, html } = kycApprovedEmail(updated.user.name);
+    void sendEmail(updated.user.email, subject, html);
+  } else {
+    const { subject, html } = kycRejectedEmail(updated.user.name, reviewNote);
+    void sendEmail(updated.user.email, subject, html);
+  }
 
   return NextResponse.json({ submission: updated });
 }

@@ -1,6 +1,10 @@
 import { getTranslations } from "next-intl/server";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
+import { formatLocalPrice, getCurrencyForCountry } from "@/lib/exchangerates";
+import { resolveCountry } from "@/lib/country-policy";
+import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
 import { TierCard } from "@/components/challenges/TierCard";
 import type { Metadata } from "next";
 
@@ -22,6 +26,25 @@ export default async function ChallengesPage({
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "challenges" });
 
+  // Detect country for geo-specific payment methods (e.g. Pix for Brazil)
+  const headersList = await headers();
+  const country =
+    resolveCountry(
+      headersList.get("x-vercel-ip-country"),
+      headersList.get("cf-ipcountry"),
+    ) ?? undefined;
+  const countryPolicy = await getResolvedCountryPolicy(country);
+  const availablePaymentMethods = countryPolicy.checkoutMethods.reduce<
+    Array<"stripe" | "crypto" | "pix">
+  >((methods, method) => {
+    if (method === "card") methods.push("stripe");
+    if (method === "crypto" || method === "pix") methods.push(method);
+    return methods;
+  }, []);
+  const reviewNotice = countryPolicy.requiresReviewNotice
+    ? t("countryPolicyReview")
+    : null;
+
   // Fetch tiers and current user in parallel
   const [tiers, supabase] = await Promise.all([
     prisma.tier.findMany({
@@ -32,10 +55,26 @@ export default async function ChallengesPage({
   ]);
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  const isAuthenticated = !!session;
+  const isAuthenticated = !authError && !!authUser;
+  const localCurrencyCode = getCurrencyForCountry(country);
+  const localFeeByTier = new Map<string, string>();
+  if (localCurrencyCode) {
+    const localFees = await Promise.all(
+      tiers.map(async (tier) => ({
+        tierId: tier.id,
+        label: await formatLocalPrice(tier.fee, localCurrencyCode),
+      })),
+    );
+    for (const row of localFees) {
+      if (row.label) {
+        localFeeByTier.set(row.tierId, row.label);
+      }
+    }
+  }
 
   const tierDescriptions: Record<string, string> = {
     Starter: t("starterDesc"),
@@ -49,7 +88,7 @@ export default async function ChallengesPage({
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
       {/* Header */}
       <div className="text-center space-y-4 mb-14">
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground">
+        <h1 className="font-display font-bold font-serif italic text-4xl sm:text-5xl tracking-tight text-foreground">
           {t("pageTitle")}
         </h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -69,6 +108,11 @@ export default async function ChallengesPage({
               isAuthenticated={isAuthenticated}
               locale={locale}
               description={tierDescriptions[tier.name] ?? ""}
+              country={country}
+              localFeeLabel={localFeeByTier.get(tier.id)}
+              availablePaymentMethods={availablePaymentMethods}
+              giftsEnabled={countryPolicy.marketing.giftsEnabled}
+              reviewNotice={reviewNotice}
               t={{
                 fundedBankroll: t("fundedBankroll"),
                 profitSplit: t("profitSplit"),
@@ -93,11 +137,14 @@ export default async function ChallengesPage({
                 usdc: t("usdc"),
                 btc: t("btc"),
                 payWith: t("payWith"),
+                pix: t("pix"),
+                pixDesc: t("pixDesc"),
                 sendAsGift: t("sendAsGift"),
                 giftRecipientEmailPlaceholder: t(
                   "giftRecipientEmailPlaceholder",
                 ),
                 giftStripeOnly: t("giftStripeOnly"),
+                paymentMethodUnavailable: t("paymentMethodUnavailable"),
               }}
             />
           </div>

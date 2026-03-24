@@ -10,7 +10,7 @@ interface Props {
   role: string;
 }
 
-export function AdminUserActions({ userId, isBanned, banReason, role }: Props) {
+export function AdminUserActions({ userId, isBanned, role }: Props) {
   const [pending, startTransition] = useTransition();
   const [reason, setReason] = useState("");
   const [showBanForm, setShowBanForm] = useState(false);
@@ -38,7 +38,7 @@ export function AdminUserActions({ userId, isBanned, banReason, role }: Props) {
         <button
           onClick={handleUnban}
           disabled={pending}
-          className="px-4 py-2 text-sm font-medium rounded-lg border border-pf-brand/30 text-pf-brand hover:bg-pf-brand/10 transition-colors disabled:opacity-40"
+          className="px-4 py-2 text-sm font-medium rounded-lg bg-pf-pink hover:bg-pf-pink-dark text-white font-semibold transition-colors disabled:opacity-40"
         >
           Unban user
         </button>

@@ -23,7 +23,9 @@ export default async function TraderProfilePage({
           followers: { select: { followerId: true } },
         },
       },
-      tier: { select: { name: true, fundedBankroll: true, profitSplitPct: true } },
+      tier: {
+        select: { name: true, fundedBankroll: true, profitSplitPct: true },
+      },
       picks: {
         where: { status: { in: ["won", "lost", "push", "void"] } },
         orderBy: { placedAt: "desc" },
@@ -43,18 +45,19 @@ export default async function TraderProfilePage({
 
   if (!challenge) notFound();
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
 
   let currentUserId: string | null = null;
   let isFollowing = false;
   let isSelf = false;
 
-  if (session) {
+  if (!authError && authUser) {
     const me = await prisma.user.findFirst({
-      where: { supabaseId: session.user.id },
+      where: { supabaseId: authUser.id },
       select: { id: true },
     });
     currentUserId = me?.id ?? null;
@@ -72,7 +75,8 @@ export default async function TraderProfilePage({
   );
   const winRate =
     settled.length > 0
-      ? (settled.filter((p) => p.status === "won").length / settled.length) * 100
+      ? (settled.filter((p) => p.status === "won").length / settled.length) *
+        100
       : 0;
 
   const STATUS_STYLES: Record<string, string> = {
@@ -97,7 +101,7 @@ export default async function TraderProfilePage({
             {(challenge.user.name ?? "?")[0].toUpperCase()}
           </div>
           <div>
-            <h1 className="text-2xl font-bold">
+            <h1 className="font-display font-bold font-serif italic text-2xl">
               {challenge.user.name ?? t("anonymous")}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -143,9 +147,14 @@ export default async function TraderProfilePage({
             color: "text-foreground",
           },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl border border-border bg-card p-4">
+          <div
+            key={s.label}
+            className="rounded-xl border border-border bg-card p-4"
+          >
             <p className="text-xs text-muted-foreground mb-1">{s.label}</p>
-            <p className={`text-xl font-bold tabular-nums ${s.color}`}>{s.value}</p>
+            <p className={`text-xl font-bold tabular-nums ${s.color}`}>
+              {s.value}
+            </p>
           </div>
         ))}
       </div>

@@ -104,7 +104,7 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
                       <button
                         onClick={() => handleUnban(u.id)}
                         disabled={pending}
-                        className="text-xs px-3 py-1.5 rounded-lg border border-pf-brand/30 text-pf-brand hover:bg-pf-brand/10 transition-colors disabled:opacity-50"
+                        className="text-xs px-3 py-1.5 rounded-lg bg-pf-pink hover:bg-pf-pink-dark text-white font-semibold transition-colors disabled:opacity-50"
                       >
                         Unban
                       </button>
@@ -120,7 +120,7 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
                               [u.id]: e.target.value,
                             }))
                           }
-                          className="text-xs px-2 py-1.5 rounded-lg border border-border bg-background text-foreground w-32 focus:outline-none focus:ring-1 focus:ring-pf-brand/40"
+                          className="text-xs px-2 py-1.5 rounded-lg border border-border bg-background text-foreground w-32 focus:outline-none focus:ring-1 focus:ring-pf-pink/40"
                         />
                         <button
                           onClick={() => handleBan(u.id)}

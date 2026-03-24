@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlayFunded — Midnight Stadium</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        display: ['Barlow Condensed', 'sans-serif'],
+        sans:    ['Barlow', 'sans-serif'],
+      },
+    }
+  }
+}
+</script>
+<style>
+  /* ── Design tokens ─────────────────────────────────────── */
+  :root {
+    --color-bg:      #04090f;
+    --color-bg-2:    rgba(255,255,255,0.035);
+    --color-bg-3:    rgba(255,255,255,0.055);
+    --color-green:   #22C55E;
+    --color-green-lt:#86efac;
+    --color-border:  rgba(255,255,255,0.07);
+    --color-border-green: rgba(34,197,94,0.35);
+    --color-text:    #ffffff;
+    --color-muted:   rgba(255,255,255,0.35);
+    --transition-fast: 150ms ease;
+    --transition-mid:  250ms ease;
+    --radius-card: 12px;
+
+    --fs-xs:   clamp(0.65rem, 1.5vw, 0.75rem);
+    --fs-sm:   clamp(0.8rem,  2vw,   0.875rem);
+    --fs-base: clamp(0.9rem,  2.5vw, 1rem);
+    --fs-lg:   clamp(1rem,    3vw,   1.125rem);
+    --fs-h1:   clamp(3.5rem,  10vw,  8rem);
+  }
+
+  /* ── Base ──────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; }
+  body { background: var(--color-bg); color: #fff; font-family: 'Barlow', sans-serif; overflow-x: hidden; }
+  a, button { cursor: pointer; }
+
+  /* ── Stadium atmosphere ────────────────────────────────── */
+  .stadium-glow {
+    background:
+      radial-gradient(ellipse 110% 75% at 50% -5%,
+        rgba(255,255,255,0.055) 0%,
+        rgba(34,197,94,0.07)   25%,
+        transparent            65%),
+      var(--color-bg);
+  }
+
+  /* ── Floodlights ───────────────────────────────────────── */
+  .floodlight {
+    position: absolute; top: 0; width: 2px; height: 45%;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.25), transparent);
+    transform-origin: top;
+    pointer-events: none;
+  }
+  .floodlight-l { left: 8%;  transform: rotate(18deg); }
+  .floodlight-r { right: 8%; transform: rotate(-18deg); }
+
+  /* ── Score / pick cards ────────────────────────────────── */
+  .score-card {
+    background: var(--color-bg-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    backdrop-filter: blur(12px);
+    transition: border-color var(--transition-mid), background var(--transition-fast);
+  }
+  .score-card:hover { background: var(--color-bg-3); border-color: rgba(34,197,94,0.2); }
+
+  /* ── Tier cards ────────────────────────────────────────── */
+  .tier-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.015) 100%);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    transition: border-color var(--transition-mid), transform var(--transition-mid);
+  }
+  .tier-card:hover { border-color: var(--color-green); transform: translateY(-3px); }
+  .tier-card.featured { border-color: var(--color-green); background: linear-gradient(135deg, rgba(34,197,94,0.09) 0%, rgba(34,197,94,0.025) 100%); }
+
+  /* ── Sport tag ─────────────────────────────────────────── */
+  .sport-tag {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
+  }
+  .sport-tag:hover { background: rgba(34,197,94,0.08); border-color: var(--color-border-green); }
+
+  /* ── Progress bar ──────────────────────────────────────── */
+  .progress-bg { background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+  .progress-fill {
+    background: linear-gradient(90deg, var(--color-green), var(--color-green-lt));
+    height: 4px; border-radius: 4px;
+  }
+
+  /* ── CTA green button ──────────────────────────────────── */
+  .btn-green {
+    background: var(--color-green);
+    color: #04090f;
+    font-weight: 800;
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    display: inline-block;
+    text-align: center;
+    transition: background var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .btn-green:hover { background: #4ade80; box-shadow: 0 0 20px rgba(34,197,94,0.35); }
+
+  /* ── Outline button ────────────────────────────────────── */
+  .btn-outline {
+    border: 1px solid rgba(255,255,255,0.14);
+    color: rgba(255,255,255,0.65);
+    font-weight: 600;
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    display: inline-block;
+    text-align: center;
+    transition: border-color var(--transition-fast), color var(--transition-fast);
+  }
+  .btn-outline:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
+
+  /* ── Broadcast ticker ──────────────────────────────────── */
+  .ticker-wrap { overflow: hidden; white-space: nowrap; }
+  .ticker-track { display: inline-block; animation: ticker 38s linear infinite; }
+  @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+  /* ── Live badge pulse ──────────────────────────────────── */
+  .live-dot {
+    width: 8px; height: 8px; background: #ef4444;
+    border-radius: 50%; display: inline-block;
+    animation: livepulse 1.4s ease-in-out infinite;
+  }
+  @keyframes livepulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.35;transform:scale(0.65)} }
+
+  /* ── Sparkline ─────────────────────────────────────────── */
+  .sparkline-path { stroke-dasharray: 280; stroke-dashoffset: 280; animation: draw 1.6s ease forwards 0.5s; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+
+  /* ── Picks table ───────────────────────────────────────── */
+  .pick-row { border-bottom: 1px solid var(--color-border); transition: background var(--transition-fast); }
+  .pick-row:last-child { border-bottom: none; }
+  .pick-row:hover { background: rgba(34,197,94,0.04); }
+
+  /* ── Reduced motion ────────────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    .ticker-track, .sparkline-path, .live-dot { animation: none !important; }
+    .btn-green, .btn-outline, .score-card, .tier-card, .sport-tag, .pick-row { transition: none !important; }
+    .tier-card:hover { transform: none; }
+    .sparkline-path { stroke-dashoffset: 0; }
+  }
+
+  /* ── Mobile ────────────────────────────────────────────── */
+  @media (max-width: 640px) {
+    .hide-mobile { display: none !important; }
+    .stat-strip { flex-wrap: wrap; gap: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     NAV
+════════════════════════════════════════════════════════════ -->
+<header class="fixed top-0 w-full z-50 backdrop-blur-xl" style="background:rgba(4,9,15,0.96);border-bottom:1px solid var(--color-border)">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+    <!-- Logo -->
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-1" aria-hidden="true">
+        <div class="w-2 h-5 rounded-sm" style="background:var(--color-green)"></div>
+        <div class="w-2 h-8 rounded-sm" style="background:var(--color-green)"></div>
+        <div class="w-2 h-5 rounded-sm" style="background:var(--color-green)"></div>
+      </div>
+      <span class="font-display text-xl font-black tracking-wider">PLAYFUNDED</span>
+    </div>
+    <!-- Desktop nav -->
+    <nav class="hidden md:flex items-center gap-6" aria-label="Primary">
+      <a href="#challenges" class="text-xs font-semibold uppercase tracking-wide transition-colors hover:text-white" style="color:rgba(255,255,255,0.45);transition-duration:150ms">Challenges</a>
+      <a href="#how-it-works" class="text-xs font-semibold uppercase tracking-wide transition-colors hover:text-white" style="color:rgba(255,255,255,0.45);transition-duration:150ms">How It Works</a>
+      <a href="#testimonials" class="text-xs font-semibold uppercase tracking-wide transition-colors hover:text-white" style="color:rgba(255,255,255,0.45);transition-duration:150ms">Results</a>
+    </nav>
+    <!-- Actions -->
+    <div class="flex items-center gap-3">
+      <a href="#" class="text-sm transition-colors hover:text-white hidden sm:inline" style="color:rgba(255,255,255,0.45);transition-duration:150ms">Log in</a>
+      <a href="#challenges" class="btn-green px-5 py-2.5 text-sm">START &rarr;</a>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════
+     BROADCAST TICKER — styled as scoreboard feed
+════════════════════════════════════════════════════════════ -->
+<div class="fixed top-16 w-full z-40 ticker-wrap" style="background:rgba(4,9,15,0.98);border-bottom:1px solid var(--color-border);padding:7px 0" aria-label="Live trader activity" aria-live="polite">
+  <div class="ticker-track">
+    <!-- Set 1 -->
+    <span class="inline-flex items-center gap-2 mx-5">
+      <span class="live-dot" aria-hidden="true"></span>
+      <span class="text-xs font-bold uppercase tracking-widest" style="color:var(--color-green)">LIVE</span>
+    </span>
+    <span class="text-xs font-bold text-white mx-1">JM RODRIGUEZ</span>
+    <span class="text-xs mx-1" style="color:var(--color-green)">+$4,240</span>
+    <span class="text-xs text-white/30 mx-1">Phase 2 Complete</span>
+    <span class="text-xs mx-3 text-white/15" aria-hidden="true">&#x2B22;</span>
+    <span class="text-xs font-bold text-white mx-1">ANDREA RIOS</span>
+    <span class="text-xs mx-1" style="color:var(--color-green)">+$6,100</span>
+    <span class="text-xs text-white/30 mx-1">Payout Sent &middot; 48h</span>
+    <span class="text-xs mx-3 text-white/15" aria-hidden="true">&#x2B22;</span>
+    <span class="text-xs font-bold text-white mx-1">CARLOS VEGA</span>
+    <span class="text-xs mx-1" style="color:var(--color-green)">+$1,890</span>
+    <span class="text-xs text-white/30 mx-1">Funded Account Active</span>
+    <span class="text-xs mx-3 text-white/15" aria-hidden="true">&#x2B22;</span>
+    <span class="text-xs font-bold text-white mx-1">MARCOS T.</span>
+    <span class="text-xs mx-1" style="color:var(--color-green)">+$6,100</span>
+    <span class="text-xs text-white/30 mx-1">Elite Account Funded</span>
+    <span class="text-xs mx-3 text-white/15" aria-hidden="true">&#x2B22;</span>
+    <span class="text-xs font-bold text-white mx-1">MIGUEL T.</span>
+    <span class="text-xs mx-1" style="color:var(--color-green)">+$2,350</span>
+    <span class="text-xs text-white/30 mx-1">Phase 1 Passed</span>
+    <span class="text-xs mx-3 text-white/15" aria-hidden="true">&#x2B22;</span>
+    <!-- Set 2 -->
+    <span class="inline-flex items-center gap-2 mx-5">
+      <span class="live-dot" aria-hidden="true"></span>
+      <span class="text-xs font-bold uppercase tracking-widest" style="color:var(--color-green)">LIVE</span>
+    </span>
+    <span class="text-xs font-bold text-white mx-1">JM RODRIGUEZ</span>
+    <span class="text-xs mx-1" style="color:var(--color-green)">+$4,240</span>
+    <span class="text-xs text-white/30 mx-1">Phase 2 Complete</span>
+    <span class="text-xs mx-3 text-white/15" aria-hidden="true">&#x2B22;</span>
+    <span class="text-xs font-bold text-white mx-1">ANDREA RIOS</span>
+    <span class="text-xs mx-1" style="color:var(--color-green)">+$6,100</span>
+    <span class="text-xs text-white/30 mx-1">Payout Sent &middot; 48h</span>
+    <span class="text-xs mx-3 text-white/15" aria-hidden="true">&#x2B22;</span>
+    <span class="text-xs font-bold text-white mx-1">CARLOS VEGA</span>
+    <span class="text-xs mx-1" style="color:var(--color-green)">+$1,890</span>
+    <span class="text-xs text-white/30 mx-1">Funded Account Active</span>
+    <span class="text-xs mx-3 text-white/15" aria-hidden="true">&#x2B22;</span>
+    <span class="text-xs font-bold text-white mx-1">MARCOS T.</span>
+    <span class="text-xs mx-1" style="color:var(--color-green)">+$6,100</span>
+    <span class="text-xs text-white/30 mx-1">Elite Account Funded</span>
+    <span class="text-xs mx-3 text-white/15" aria-hidden="true">&#x2B22;</span>
+    <span class="text-xs font-bold text-white mx-1">MIGUEL T.</span>
+    <span class="text-xs mx-1" style="color:var(--color-green)">+$2,350</span>
+    <span class="text-xs text-white/30 mx-1">Phase 1 Passed</span>
+    <span class="text-xs mx-3 text-white/15" aria-hidden="true">&#x2B22;</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     HERO
+════════════════════════════════════════════════════════════ -->
+<main>
+<section class="stadium-glow relative min-h-screen flex items-center overflow-hidden" style="padding-top:7.5rem">
+  <div class="floodlight floodlight-l" aria-hidden="true"></div>
+  <div class="floodlight floodlight-r" aria-hidden="true"></div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 w-full">
+    <div class="grid lg:grid-cols-5 gap-10 xl:gap-14 items-center">
+
+      <!-- LEFT: 3 cols -->
+      <div class="lg:col-span-3">
+        <!-- Sport tags (SVG icons instead of emoji) -->
+        <div class="flex flex-wrap gap-2 mb-8" role="list" aria-label="Supported sports">
+          <span class="sport-tag px-3 py-1.5 text-xs font-semibold inline-flex items-center gap-1.5" style="color:rgba(255,255,255,0.55)" role="listitem">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+            Fútbol
+          </span>
+          <span class="sport-tag px-3 py-1.5 text-xs font-semibold inline-flex items-center gap-1.5" style="color:rgba(255,255,255,0.55)" role="listitem">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93 19.07 19.07"/></svg>
+            Básquet
+          </span>
+          <span class="sport-tag px-3 py-1.5 text-xs font-semibold inline-flex items-center gap-1.5" style="color:rgba(255,255,255,0.55)" role="listitem">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><ellipse cx="12" cy="12" rx="10" ry="7"/><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+            NFL
+          </span>
+          <span class="sport-tag px-3 py-1.5 text-xs font-semibold inline-flex items-center gap-1.5" style="color:rgba(255,255,255,0.55)" role="listitem">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20.2 7.8 7.8 20.2M15.3 7.8l4.9 4.9-12.4 12.4-4.9-4.9z"/></svg>
+            Tenis
+          </span>
+          <span class="sport-tag px-3 py-1.5 text-xs font-semibold inline-flex items-center gap-1.5" style="color:rgba(255,255,255,0.55)" role="listitem">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12"/></svg>
+            MMA
+          </span>
+          <span class="sport-tag px-3 py-1.5 text-xs font-semibold inline-flex items-center gap-1.5" style="color:rgba(255,255,255,0.55)" role="listitem">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><ellipse cx="12" cy="12" rx="10" ry="7"/><path d="M2 12h20"/></svg>
+            Béisbol
+          </span>
+        </div>
+
+        <h1 class="font-display font-black leading-none tracking-tight mb-6 uppercase" style="font-size:var(--fs-h1)">
+          <span class="text-white">TRADE</span><br>
+          <span style="color:var(--color-green)">LIKE</span><br>
+          <span class="text-white">A PRO.</span>
+        </h1>
+
+        <p class="mb-10 max-w-lg font-medium leading-relaxed" style="font-size:var(--fs-lg);color:rgba(255,255,255,0.45)">
+          Stop betting at a sportsbook. Start trading sports with up to
+          <strong class="text-white">$25,000 of our capital</strong>. Keep 80% of the profits.
+          Payouts in <strong class="text-white">48 hours</strong>.
+        </p>
+
+        <!-- CTAs -->
+        <div class="flex flex-col sm:flex-row gap-3 mb-12">
+          <a href="#challenges" class="btn-green px-8 py-4 text-lg">GET FUNDED NOW</a>
+          <a href="#how-it-works" class="btn-outline px-8 py-4 text-sm">HOW IT WORKS &darr;</a>
+        </div>
+
+        <!-- Stats strip -->
+        <div class="flex stat-strip gap-10 border-t pt-8" style="border-color:var(--color-border)" role="list" aria-label="Key statistics">
+          <div role="listitem">
+            <div class="font-display text-4xl font-black text-white">$183K+</div>
+            <div class="text-xs uppercase tracking-widest mt-0.5" style="color:rgba(255,255,255,0.28)">Pagado a traders</div>
+          </div>
+          <div role="listitem">
+            <div class="font-display text-4xl font-black" style="color:var(--color-green)">247</div>
+            <div class="text-xs uppercase tracking-widest mt-0.5" style="color:rgba(255,255,255,0.28)">Cuentas financiadas</div>
+          </div>
+          <div role="listitem">
+            <div class="font-display text-4xl font-black text-white">48h</div>
+            <div class="text-xs uppercase tracking-widest mt-0.5" style="color:rgba(255,255,255,0.28)">Payout speed</div>
+          </div>
+          <div role="listitem">
+            <div class="font-display text-4xl font-black text-white">80%</div>
+            <div class="text-xs uppercase tracking-widest mt-0.5" style="color:rgba(255,255,255,0.28)">Max split</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Live scorecards + sparkline — 2 cols -->
+      <div class="lg:col-span-2 space-y-3" aria-label="Live account data">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="live-dot" aria-hidden="true"></span>
+          <span class="text-xs uppercase tracking-widest font-semibold" style="color:rgba(255,255,255,0.35)">Picks activos en vivo</span>
+        </div>
+
+        <!-- Sparkline card (new) -->
+        <div class="score-card p-4" aria-label="Balance history chart">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs uppercase tracking-wide font-semibold" style="color:rgba(255,255,255,0.35)">Balance History — PRO-2891</span>
+            <span class="text-xs font-bold" style="color:var(--color-green)">+$1,432 &uarr;</span>
+          </div>
+          <svg width="100%" height="52" viewBox="0 0 300 52" preserveAspectRatio="none" role="img" aria-label="Upward trending balance sparkline">
+            <defs>
+              <linearGradient id="stadfill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#22C55E" stop-opacity="0.18"/>
+                <stop offset="100%" stop-color="#22C55E" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path d="M0 44 L25 41 L50 38 L70 42 L90 36 L115 31 L138 27 L160 24 L182 26 L205 19 L228 14 L255 9 L300 5 L300 52 L0 52 Z" fill="url(#stadfill)"/>
+            <path class="sparkline-path"
+                  d="M0 44 L25 41 L50 38 L70 42 L90 36 L115 31 L138 27 L160 24 L182 26 L205 19 L228 14 L255 9 L300 5"
+                  fill="none" stroke="#22C55E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="300" cy="5" r="3" fill="#86efac"/>
+          </svg>
+          <div class="flex justify-between mt-2 text-xs" style="color:rgba(255,255,255,0.28)">
+            <span>Start $10,000</span><span class="text-white font-semibold">Now $11,432</span>
+          </div>
+        </div>
+
+        <!-- Pick card WIN -->
+        <div class="score-card p-4">
+          <div class="flex justify-between items-start mb-3">
+            <div>
+              <div class="text-xs uppercase tracking-wide mb-1" style="color:rgba(255,255,255,0.28)">NBA &middot; 3Q 8:42</div>
+              <div class="font-semibold text-sm text-white">Lakers ML</div>
+            </div>
+            <span class="text-xs font-bold px-2 py-1 rounded" style="background:rgba(34,197,94,0.12);color:var(--color-green)">WIN</span>
+          </div>
+          <div class="progress-bg"><div class="progress-fill" style="width:78%"></div></div>
+          <div class="flex justify-between mt-2 text-xs" style="color:rgba(255,255,255,0.28)">
+            <span>Stake $200</span><span style="color:var(--color-green)">+$360</span>
+          </div>
+        </div>
+
+        <!-- Pick card LIVE -->
+        <div class="score-card p-4">
+          <div class="flex justify-between items-start mb-3">
+            <div>
+              <div class="text-xs uppercase tracking-wide mb-1" style="color:rgba(255,255,255,0.28)">Liga MX &middot; 62'</div>
+              <div class="font-semibold text-sm text-white">América Over 2.5</div>
+            </div>
+            <span class="text-xs font-bold px-2 py-1 rounded bg-yellow-500/15 text-yellow-400">LIVE</span>
+          </div>
+          <div class="progress-bg"><div class="progress-fill" style="width:45%"></div></div>
+          <div class="flex justify-between mt-2 text-xs" style="color:rgba(255,255,255,0.28)">
+            <span>Stake $350</span><span style="color:rgba(255,255,255,0.45)">Pendiente</span>
+          </div>
+        </div>
+
+        <!-- Pick card LOSS -->
+        <div class="score-card p-4" style="opacity:0.6">
+          <div class="flex justify-between items-start mb-3">
+            <div>
+              <div class="text-xs uppercase tracking-wide mb-1" style="color:rgba(255,255,255,0.28)">NFL &middot; Settled</div>
+              <div class="font-semibold text-sm text-white">Chiefs -3.5</div>
+            </div>
+            <span class="text-xs font-bold px-2 py-1 rounded bg-red-500/12 text-red-400">LOSS</span>
+          </div>
+          <div class="progress-bg"><div class="progress-fill" style="width:0%"></div></div>
+          <div class="flex justify-between mt-2 text-xs" style="color:rgba(255,255,255,0.28)">
+            <span>Stake $150</span><span class="text-red-400">-$150</span>
+          </div>
+        </div>
+
+        <!-- Phase progress -->
+        <div class="score-card p-4">
+          <div class="flex justify-between items-center mb-3">
+            <span class="text-xs uppercase tracking-wide font-semibold" style="color:rgba(255,255,255,0.35)">Phase 1 Progress</span>
+            <span class="text-xs font-bold" style="color:var(--color-green)">71% complete</span>
+          </div>
+          <div class="progress-bg mb-2"><div class="progress-fill" style="width:71%"></div></div>
+          <div class="flex justify-between text-xs" style="color:rgba(255,255,255,0.28)">
+            <span>Balance $10,710</span><span>Target $11,000</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     CHALLENGE TIERS
+════════════════════════════════════════════════════════════ -->
+<section id="challenges" class="py-20 border-t" style="border-color:var(--color-border)">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+    <h2 class="font-display text-5xl font-black text-center uppercase mb-2">Choose Your Account</h2>
+    <p class="text-center text-xs uppercase tracking-widest mb-12" style="color:rgba(255,255,255,0.28)">From $500 evaluation to $25K live account</p>
+
+    <div class="grid md:grid-cols-3 gap-4">
+
+      <!-- Starter -->
+      <div class="tier-card p-7 cursor-pointer">
+        <div class="text-xs uppercase tracking-widest mb-2" style="color:rgba(255,255,255,0.28)">Starter</div>
+        <div class="font-display text-5xl font-black text-white mb-1">$5K</div>
+        <div class="text-sm mb-6" style="color:rgba(255,255,255,0.28)">Entry $500</div>
+        <div class="space-y-2 mb-6 text-sm">
+          <div class="flex justify-between" style="color:rgba(255,255,255,0.5)"><span>Profit split</span><span class="text-white font-semibold">70%</span></div>
+          <div class="flex justify-between" style="color:rgba(255,255,255,0.5)"><span>Max drawdown</span><span class="text-white">10%</span></div>
+          <div class="flex justify-between" style="color:rgba(255,255,255,0.5)"><span>Payout speed</span><span class="text-white">48h</span></div>
+          <div class="flex justify-between" style="color:rgba(255,255,255,0.5)"><span>Sports</span><span class="text-white">All 6</span></div>
+        </div>
+        <a href="#" class="block text-center py-3 text-sm uppercase tracking-wide font-semibold transition-colors" style="border:1px solid var(--color-border);color:rgba(255,255,255,0.45)">Select Plan</a>
+      </div>
+
+      <!-- Pro -->
+      <div class="tier-card featured p-7 cursor-pointer">
+        <div class="flex justify-between items-center mb-2">
+          <div class="text-xs uppercase tracking-widest" style="color:rgba(255,255,255,0.28)">Pro</div>
+          <span class="text-xs px-2 py-0.5 rounded-full font-bold" style="background:var(--color-green);color:#04090f">Best Value</span>
+        </div>
+        <div class="font-display text-5xl font-black text-white mb-1">$10K</div>
+        <div class="text-sm mb-6" style="color:rgba(255,255,255,0.28)">Entry $1,000</div>
+        <div class="space-y-2 mb-6 text-sm">
+          <div class="flex justify-between" style="color:rgba(255,255,255,0.5)"><span>Profit split</span><span class="font-bold" style="color:var(--color-green)">75%</span></div>
+          <div class="flex justify-between" style="color:rgba(255,255,255,0.5)"><span>Max drawdown</span><span class="text-white">10%</span></div>
+          <div class="flex justify-between" style="color:rgba(255,255,255,0.5)"><span>Payout speed</span><span class="text-white">48h</span></div>
+          <div class="flex justify-between" style="color:rgba(255,255,255,0.5)"><span>Sports</span><span class="text-white">All 6</span></div>
+        </div>
+        <a href="#" class="btn-green block text-center py-3 text-sm">Get Started &rarr;</a>
+      </div>
+
+      <!-- Elite -->
+      <div class="tier-card p-7 cursor-pointer">
+        <div class="text-xs uppercase tracking-widest mb-2" style="color:rgba(255,255,255,0.28)">Elite</div>
+        <div class="font-display text-5xl font-black text-white mb-1">$25K</div>
+        <div class="text-sm mb-6" style="color:rgba(255,255,255,0.28)">Entry $2,500</div>
+        <div class="space-y-2 mb-6 text-sm">
+          <div class="flex justify-between" style="color:rgba(255,255,255,0.5)"><span>Profit split</span><span class="font-bold" style="color:var(--color-green)">80%</span></div>
+          <div class="flex justify-between" style="color:rgba(255,255,255,0.5)"><span>Max drawdown</span><span class="text-white">10%</span></div>
+          <div class="flex justify-between" style="color:rgba(255,255,255,0.5)"><span>Payout speed</span><span class="text-white">48h</span></div>
+          <div class="flex justify-between" style="color:rgba(255,255,255,0.5)"><span>Sports</span><span class="text-white">All 6</span></div>
+        </div>
+        <a href="#" class="block text-center py-3 text-sm uppercase tracking-wide font-semibold transition-colors" style="border:1px solid var(--color-border);color:rgba(255,255,255,0.45)">Select Plan</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     HOW IT WORKS
+════════════════════════════════════════════════════════════ -->
+<section id="how-it-works" class="py-20 border-t" style="border-color:var(--color-border)">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+    <h2 class="font-display text-5xl font-black text-center uppercase mb-2">How It Works</h2>
+    <p class="text-center text-xs uppercase tracking-widest mb-12" style="color:rgba(255,255,255,0.28)">Three steps to your funded account</p>
+
+    <div class="grid md:grid-cols-3 gap-6">
+
+      <div class="score-card p-7">
+        <div class="font-display text-5xl font-black mb-4" style="color:var(--color-green)">01</div>
+        <h3 class="font-display text-xl font-bold text-white uppercase mb-3">Buy a Challenge</h3>
+        <p class="text-sm leading-relaxed" style="color:rgba(255,255,255,0.45)">
+          Pay the one-time evaluation fee from $500. Get instant access to a challenge account at your chosen size.
+        </p>
+      </div>
+
+      <div class="score-card p-7">
+        <div class="font-display text-5xl font-black mb-4" style="color:var(--color-green)">02</div>
+        <h3 class="font-display text-xl font-bold text-white uppercase mb-3">Pass Two Phases</h3>
+        <p class="text-sm leading-relaxed" style="color:rgba(255,255,255,0.45)">
+          Hit profit targets in Phase 1 and Phase 2 while respecting the 10% drawdown rule. Prove your edge is consistent.
+        </p>
+      </div>
+
+      <div class="score-card p-7">
+        <div class="font-display text-5xl font-black mb-4" style="color:var(--color-green)">03</div>
+        <h3 class="font-display text-xl font-bold text-white uppercase mb-3">Get Funded &amp; Paid</h3>
+        <p class="text-sm leading-relaxed" style="color:rgba(255,255,255,0.45)">
+          Receive your real funded account. Place picks, win, and collect payouts in <strong class="text-white">48 hours</strong>. Keep up to 80%.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TESTIMONIALS
+════════════════════════════════════════════════════════════ -->
+<section id="testimonials" class="py-20 border-t" style="border-color:var(--color-border)">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+    <h2 class="font-display text-5xl font-black text-center uppercase mb-2">Real Payouts</h2>
+    <p class="text-center text-xs uppercase tracking-widest mb-12" style="color:rgba(255,255,255,0.28)">Verified traders — real results</p>
+
+    <div class="grid md:grid-cols-3 gap-5">
+
+      <div class="score-card p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 font-display" style="background:rgba(34,197,94,0.12);color:var(--color-green)">JR</div>
+          <div class="min-w-0">
+            <div class="font-semibold text-sm text-white">Juan R.</div>
+            <div class="text-xs" style="color:rgba(255,255,255,0.28)">México · Elite Account</div>
+          </div>
+          <div class="ml-auto font-display font-black text-xl" style="color:var(--color-green)">+$4,200</div>
+        </div>
+        <p class="text-sm leading-relaxed" style="color:rgba(255,255,255,0.45)">
+          "Phase 2 took me 3 weeks. The platform is legit — payout hit my account in 48 hours, no questions asked."
+        </p>
+      </div>
+
+      <div class="score-card p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 font-display" style="background:rgba(34,197,94,0.12);color:var(--color-green)">AP</div>
+          <div class="min-w-0">
+            <div class="font-semibold text-sm text-white">Andrea P.</div>
+            <div class="text-xs" style="color:rgba(255,255,255,0.28)">Colombia · Pro Account</div>
+          </div>
+          <div class="ml-auto font-display font-black text-xl" style="color:var(--color-green)">+$1,875</div>
+        </div>
+        <p class="text-sm leading-relaxed" style="color:rgba(255,255,255,0.45)">
+          "Finalmente una plataforma seria para Latinoamérica. Los pagos son reales y rápidos."
+        </p>
+      </div>
+
+      <div class="score-card p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 font-display" style="background:rgba(34,197,94,0.12);color:var(--color-green)">MT</div>
+          <div class="min-w-0">
+            <div class="font-semibold text-sm text-white">Marcos T.</div>
+            <div class="text-xs" style="color:rgba(255,255,255,0.28)">Argentina · Elite Account</div>
+          </div>
+          <div class="ml-auto font-display font-black text-xl" style="color:var(--color-green)">+$6,100</div>
+        </div>
+        <p class="text-sm leading-relaxed" style="color:rgba(255,255,255,0.45)">
+          "Mejor que cualquier bookie. Aquí el conocimiento de deportes se convierte en plata real."
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════════════════════ -->
+<footer class="border-t py-8 px-4 sm:px-6" style="border-color:var(--color-border)">
+  <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+    <span class="text-xs" style="color:rgba(255,255,255,0.18)">© 2025 PlayFunded. All rights reserved.</span>
+    <span class="text-xs uppercase tracking-widest" style="color:rgba(255,255,255,0.12)">Concept 03 — Midnight Stadium</span>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -23,7 +23,7 @@ export default async function PicksPage({
 }) {
   const { locale } = await params;
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
     data: { user: authUser },
     error: authError,
@@ -61,7 +61,7 @@ export default async function PicksPage({
         <p className="text-muted-foreground">{t("noChallenge")}</p>
         <Link
           href="/challenges"
-          className="inline-block px-6 py-2.5 rounded-lg bg-pf-brand text-white text-sm font-semibold hover:bg-pf-brand/90 transition-colors"
+          className="inline-block px-6 py-2.5 rounded-lg bg-pf-pink text-white text-sm font-semibold hover:bg-pf-pink-dark transition-colors"
         >
           {t("buyChallenge")}
         </Link>
@@ -153,7 +153,7 @@ export default async function PicksPage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
-      <h1 className="text-2xl font-bold mb-6">{t("pageTitle")}</h1>
+      <h1 className="text-2xl font-display font-bold mb-6">{t("pageTitle")}</h1>
       <PicksClient
         challenge={challengeData}
         initialPicks={picksData}

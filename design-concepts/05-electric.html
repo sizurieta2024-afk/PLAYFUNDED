@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlayFunded — Electric</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* ── Design tokens ─────────────────────────────────────────────── */
+  :root {
+    --violet:          #7C3AED;
+    --violet-light:    #8B5CF6;
+    --violet-bright:   #A78BFA;
+    --electric:        #06B6D4;
+    --electric-bright: #22D3EE;
+    --green-win:       #34D399;
+    --red-loss:        #F87171;
+    --amber-pending:   rgba(251,191,36,0.9);
+    --bg:              #06070D;
+    --bg2:             #0C0D1A;
+    --bg3:             #10111F;
+    --border:          rgba(124,58,237,0.2);
+    --border-subtle:   rgba(255,255,255,0.05);
+    --text-primary:    rgba(255,255,255,0.92);
+    --text-muted:      rgba(255,255,255,0.4);
+    --text-dim:        rgba(255,255,255,0.22);
+    --font-sans:       'Space Grotesk', sans-serif;
+    --font-mono:       'Space Mono', monospace;
+    --radius-sm:       6px;
+    --radius-md:       10px;
+    --radius-lg:       14px;
+    --t-fast:          150ms ease;
+    --t-base:          200ms ease;
+    --t-slow:          300ms ease;
+  }
+
+  /* ── Reset ─────────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  a { text-decoration: none; cursor: pointer; }
+  button { cursor: pointer; }
+
+  /* ── Mesh gradient background ──────────────────────────────────── */
+  .mesh-bg {
+    background:
+      radial-gradient(ellipse 60% 50% at 15% 20%, rgba(124,58,237,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 85% 80%, rgba(6,182,212,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 50% 50%, rgba(124,58,237,0.06) 0%, transparent 60%);
+  }
+  .hex-pattern {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg stroke='%237C3AED' stroke-opacity='0.05' stroke-width='1'%3E%3Cpath d='M30 0l26 15v30L30 60 4 45V15z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    background-size: 60px 60px;
+  }
+
+  /* ── Tags / pills ──────────────────────────────────────────────── */
+  .tag {
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.3);
+    color: var(--violet-bright);
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    letter-spacing: 0.04em;
+    display: inline-block;
+  }
+  .tag-cyan {
+    background: rgba(6,182,212,0.1);
+    border: 1px solid rgba(6,182,212,0.25);
+    color: var(--electric-bright);
+  }
+
+  /* ── Gradient text ─────────────────────────────────────────────── */
+  .gradient-text {
+    background: linear-gradient(135deg, var(--violet-bright) 0%, var(--electric-bright) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Buttons ───────────────────────────────────────────────────── */
+  .cta-primary {
+    background: linear-gradient(135deg, var(--violet), #5B21B6);
+    color: #fff;
+    font-weight: 600;
+    transition: box-shadow var(--t-base), transform var(--t-base);
+    cursor: pointer;
+  }
+  .cta-primary:hover {
+    box-shadow: 0 0 32px rgba(124,58,237,0.55);
+    transform: translateY(-1px);
+  }
+  .cta-outline {
+    border: 1px solid rgba(124,58,237,0.4);
+    color: var(--violet-bright);
+    transition: border-color var(--t-base), background var(--t-base);
+    cursor: pointer;
+  }
+  .cta-outline:hover {
+    border-color: var(--violet-light);
+    background: rgba(124,58,237,0.1);
+  }
+
+  /* ── Animated gradient border card (hero right) ────────────────── */
+  @keyframes borderRotate {
+    from { --border-angle: 135deg; }
+    to   { --border-angle: 495deg; }
+  }
+  .live-card {
+    position: relative;
+    background: var(--bg2);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .live-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, rgba(124,58,237,0.55), rgba(6,182,212,0.35), rgba(124,58,237,0.12), rgba(6,182,212,0.4));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  @keyframes borderPulse {
+    0%, 100% { opacity: 0.7; }
+    50%       { opacity: 1; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .live-card::before { animation: borderPulse 3s ease-in-out infinite; }
+  }
+
+  /* ── Glass card ────────────────────────────────────────────────── */
+  .glass-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-subtle);
+    backdrop-filter: blur(20px);
+    transition: border-color var(--t-base);
+    cursor: default;
+  }
+  .glass-card:hover { border-color: rgba(124,58,237,0.35); }
+
+  /* ── Ticker ────────────────────────────────────────────────────── */
+  .ticker-outer {
+    overflow: hidden;
+    white-space: nowrap;
+    background: rgba(12,13,26,0.95);
+    border-top: 1px solid rgba(124,58,237,0.15);
+    border-bottom: 1px solid rgba(124,58,237,0.15);
+  }
+  .ticker-track {
+    display: inline-flex;
+    align-items: center;
+  }
+  @keyframes tickerScroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ticker-track { animation: tickerScroll 60s linear infinite; }
+  }
+  .ticker-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 24px 7px 0;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.03em;
+    color: rgba(255,255,255,0.25);
+  }
+  .ticker-item .dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .ticker-sep {
+    display: inline-block;
+    width: 1px;
+    height: 10px;
+    background: rgba(124,58,237,0.25);
+    margin: 0 20px 0 0;
+    vertical-align: middle;
+  }
+
+  /* ── Picks table ───────────────────────────────────────────────── */
+  .pick-row {
+    display: grid;
+    grid-template-columns: 1fr 52px 56px 64px;
+    gap: 8px;
+    padding: 8px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    align-items: center;
+    transition: background var(--t-fast);
+  }
+  .pick-row:hover { background: rgba(124,58,237,0.05); }
+  .pick-row:last-child { border-bottom: none; }
+
+  /* ── Testimonial card ──────────────────────────────────────────── */
+  .testi-card {
+    background: rgba(124,58,237,0.05);
+    border: 1px solid rgba(124,58,237,0.18);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    transition: border-color var(--t-base), box-shadow var(--t-base);
+    cursor: default;
+  }
+  .testi-card:hover {
+    border-color: rgba(124,58,237,0.35);
+    box-shadow: 0 0 24px rgba(124,58,237,0.1);
+  }
+
+  /* ── Fade-up animations ────────────────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .fade-up   { animation: fadeUp 0.7s ease forwards; }
+    .fade-up-2 { animation: fadeUp 0.7s 0.12s ease forwards; opacity: 0; }
+    .fade-up-3 { animation: fadeUp 0.7s 0.24s ease forwards; opacity: 0; }
+    .fade-up-4 { animation: fadeUp 0.7s 0.36s ease forwards; opacity: 0; }
+  }
+
+  /* ── Responsive ────────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .hero-grid    { grid-template-columns: 1fr !important; }
+    .tiers-grid   { grid-template-columns: 1fr !important; }
+    .testi-grid   { grid-template-columns: 1fr !important; }
+    .hero-right   { display: none; }
+    .nav-center   { display: none; }
+  }
+  @media (max-width: 480px) {
+    .hero-tags    { flex-wrap: wrap; }
+    .hero-cta-row { flex-direction: column; }
+    .pick-row     { grid-template-columns: 1fr 44px 50px 56px; gap: 4px; padding: 8px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── NAV ──────────────────────────────────────────────────────── -->
+<header style="position:fixed;top:0;width:100%;z-index:50;background:rgba(6,7,13,0.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid rgba(124,58,237,0.15);" role="banner">
+  <div style="max-width:1200px;margin:0 auto;padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="width:32px;height:32px;background:linear-gradient(135deg,#7C3AED,#06B6D4);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0;" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></svg>
+      </div>
+      <span style="font-weight:700;font-size:16px;letter-spacing:-0.025em;">PlayFunded</span>
+      <span class="tag">LATAM</span>
+    </div>
+    <nav class="nav-center" style="display:flex;align-items:center;gap:28px;" aria-label="Main navigation">
+      <a href="#challenges" style="font-size:13px;color:var(--text-muted);transition:color var(--t-base);" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.4)'">Challenges</a>
+      <a href="#process"    style="font-size:13px;color:var(--text-muted);transition:color var(--t-base);" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.4)'">Process</a>
+      <a href="#results"    style="font-size:13px;color:var(--text-muted);transition:color var(--t-base);" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.4)'">Results</a>
+    </nav>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <a href="#" style="font-size:13px;color:var(--text-muted);">Sign in</a>
+      <a href="#challenges" class="cta-primary" style="font-size:13px;padding:10px 20px;border-radius:var(--radius-md);">Launch app
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline;margin-left:4px;vertical-align:middle;" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ── LIVE TICKER ───────────────────────────────────────────────── -->
+<div class="ticker-outer" style="position:fixed;top:64px;width:100%;z-index:49;" role="marquee" aria-label="Live funded trader activity" aria-live="off">
+  <div class="ticker-track">
+    <!-- Set A -->
+    <span class="ticker-item">
+      <span class="dot" style="background:var(--violet-bright);"></span>
+      <span style="color:var(--violet-bright);">FUNDED</span>
+      <span style="color:rgba(255,255,255,0.5);">Carlos M. (México)</span>
+      <span style="color:var(--electric-bright);">$10K Elite</span>
+    </span>
+    <span class="ticker-sep"></span>
+    <span class="ticker-item">
+      <span class="dot" style="background:var(--electric-bright);"></span>
+      <span style="color:var(--electric-bright);">PAYOUT</span>
+      <span style="color:rgba(255,255,255,0.5);">Juan R. (México)</span>
+      <span style="color:var(--violet-bright);">+$4,200</span>
+    </span>
+    <span class="ticker-sep"></span>
+    <span class="ticker-item">
+      <span class="dot" style="background:var(--violet-bright);"></span>
+      <span style="color:var(--violet-bright);">FUNDED</span>
+      <span style="color:rgba(255,255,255,0.5);">Marcos T. (Argentina)</span>
+      <span style="color:var(--electric-bright);">$25K Elite</span>
+    </span>
+    <span class="ticker-sep"></span>
+    <span class="ticker-item">
+      <span class="dot" style="background:var(--electric-bright);"></span>
+      <span style="color:var(--electric-bright);">PAYOUT</span>
+      <span style="color:rgba(255,255,255,0.5);">Andrea P. (Colombia)</span>
+      <span style="color:var(--violet-bright);">+$1,875</span>
+    </span>
+    <span class="ticker-sep"></span>
+    <span class="ticker-item">
+      <span class="dot" style="background:var(--violet-bright);"></span>
+      <span style="color:var(--violet-bright);">PHASE 2</span>
+      <span style="color:rgba(255,255,255,0.5);">Valeria G. (Chile)</span>
+      <span style="color:var(--electric-bright);">PASSED</span>
+    </span>
+    <span class="ticker-sep"></span>
+    <span class="ticker-item">
+      <span class="dot" style="background:var(--electric-bright);"></span>
+      <span style="color:var(--electric-bright);">PAYOUT</span>
+      <span style="color:rgba(255,255,255,0.5);">Marcos T. (Argentina)</span>
+      <span style="color:var(--violet-bright);">+$6,100</span>
+    </span>
+    <span class="ticker-sep"></span>
+    <span class="ticker-item">
+      <span class="dot" style="background:var(--violet-bright);"></span>
+      <span style="color:var(--violet-bright);">FUNDED</span>
+      <span style="color:rgba(255,255,255,0.5);">Diego F. (Brasil)</span>
+      <span style="color:var(--electric-bright);">$10K Pro</span>
+    </span>
+    <span class="ticker-sep"></span>
+    <!-- Set B (duplicate for seamless loop) -->
+    <span class="ticker-item">
+      <span class="dot" style="background:var(--violet-bright);"></span>
+      <span style="color:var(--violet-bright);">FUNDED</span>
+      <span style="color:rgba(255,255,255,0.5);">Carlos M. (México)</span>
+      <span style="color:var(--electric-bright);">$10K Elite</span>
+    </span>
+    <span class="ticker-sep"></span>
+    <span class="ticker-item">
+      <span class="dot" style="background:var(--electric-bright);"></span>
+      <span style="color:var(--electric-bright);">PAYOUT</span>
+      <span style="color:rgba(255,255,255,0.5);">Juan R. (México)</span>
+      <span style="color:var(--violet-bright);">+$4,200</span>
+    </span>
+    <span class="ticker-sep"></span>
+    <span class="ticker-item">
+      <span class="dot" style="background:var(--violet-bright);"></span>
+      <span style="color:var(--violet-bright);">FUNDED</span>
+      <span style="color:rgba(255,255,255,0.5);">Marcos T. (Argentina)</span>
+      <span style="color:var(--electric-bright);">$25K Elite</span>
+    </span>
+    <span class="ticker-sep"></span>
+    <span class="ticker-item">
+      <span class="dot" style="background:var(--electric-bright);"></span>
+      <span style="color:var(--electric-bright);">PAYOUT</span>
+      <span style="color:rgba(255,255,255,0.5);">Andrea P. (Colombia)</span>
+      <span style="color:var(--violet-bright);">+$1,875</span>
+    </span>
+    <span class="ticker-sep"></span>
+    <span class="ticker-item">
+      <span class="dot" style="background:var(--violet-bright);"></span>
+      <span style="color:var(--violet-bright);">PHASE 2</span>
+      <span style="color:rgba(255,255,255,0.5);">Valeria G. (Chile)</span>
+      <span style="color:var(--electric-bright);">PASSED</span>
+    </span>
+    <span class="ticker-sep"></span>
+    <span class="ticker-item">
+      <span class="dot" style="background:var(--electric-bright);"></span>
+      <span style="color:var(--electric-bright);">PAYOUT</span>
+      <span style="color:rgba(255,255,255,0.5);">Marcos T. (Argentina)</span>
+      <span style="color:var(--violet-bright);">+$6,100</span>
+    </span>
+    <span class="ticker-sep"></span>
+    <span class="ticker-item">
+      <span class="dot" style="background:var(--violet-bright);"></span>
+      <span style="color:var(--violet-bright);">FUNDED</span>
+      <span style="color:rgba(255,255,255,0.5);">Diego F. (Brasil)</span>
+      <span style="color:var(--electric-bright);">$10K Pro</span>
+    </span>
+    <span class="ticker-sep"></span>
+  </div>
+</div>
+
+<!-- ── HERO ──────────────────────────────────────────────────────── -->
+<main>
+<section class="mesh-bg hex-pattern" style="min-height:100vh;display:flex;align-items:center;padding:136px 32px 60px;" id="hero">
+  <div style="max-width:1200px;margin:0 auto;width:100%;">
+    <div class="hero-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;">
+
+      <!-- LEFT copy -->
+      <div>
+        <div class="fade-up hero-tags" style="display:flex;gap:8px;margin-bottom:28px;">
+          <span class="tag">v2.4 LIVE</span>
+          <span class="tag tag-cyan">LATAM ONLY</span>
+          <span class="tag tag-cyan">247 ACTIVE TRADERS</span>
+        </div>
+
+        <h1 class="fade-up-2" style="font-size:clamp(44px,5.5vw,74px);font-weight:700;line-height:1.0;letter-spacing:-0.04em;margin-bottom:24px;">
+          <span style="color:var(--text-primary);">Sports trading</span><br>
+          <span class="gradient-text">supercharged.</span><br>
+          <span style="color:var(--text-primary);">Funded accounts.</span>
+        </h1>
+
+        <p class="fade-up-3" style="font-size:16px;color:var(--text-muted);line-height:1.7;max-width:420px;margin-bottom:36px;">
+          Trade sports props with up to $25K of institutional capital. Two phases. Real payouts in 48h. Zero house edge. The platform serious traders have been waiting for.
+        </p>
+
+        <div class="fade-up-4 hero-cta-row" style="display:flex;gap:12px;margin-bottom:48px;flex-wrap:wrap;">
+          <a href="#challenges" class="cta-primary" style="padding:14px 28px;border-radius:var(--radius-md);font-weight:600;font-size:15px;display:inline-flex;align-items:center;gap:6px;">
+            Start challenge
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </a>
+          <a href="#results" class="cta-outline" style="padding:14px 28px;border-radius:var(--radius-md);font-weight:600;font-size:15px;">View results</a>
+        </div>
+
+        <!-- Mini stats -->
+        <div class="fade-up-4" style="display:flex;gap:28px;flex-wrap:wrap;">
+          <div>
+            <div style="font-size:26px;font-weight:700;letter-spacing:-0.04em;background:linear-gradient(135deg,#A78BFA,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">$183K+</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:2px;letter-spacing:0.05em;">Total paid out</div>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,0.06);"></div>
+          <div>
+            <div style="font-size:26px;font-weight:700;letter-spacing:-0.04em;color:var(--violet-bright);">247</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:2px;letter-spacing:0.05em;">Funded traders</div>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,0.06);"></div>
+          <div>
+            <div style="font-size:26px;font-weight:700;letter-spacing:-0.04em;color:var(--electric-bright);">48h</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:2px;letter-spacing:0.05em;">Avg payout</div>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,0.06);"></div>
+          <div>
+            <div style="font-size:26px;font-weight:700;letter-spacing:-0.04em;color:var(--electric-bright);">80%</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:2px;letter-spacing:0.05em;">Max split</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Dashboard preview card -->
+      <div class="hero-right" style="position:relative;">
+        <div class="live-card" style="padding:24px;">
+          <!-- Card header -->
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+            <div>
+              <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono);">Pro Account · PRO-2891 · Phase 2</div>
+              <div style="font-size:24px;font-weight:700;letter-spacing:-0.03em;">$11,432</div>
+              <div style="font-size:12px;color:var(--green-win);margin-top:2px;">&#9650; +$1,432 <span style="color:var(--text-dim);font-weight:400;">(+14.3%)</span></div>
+            </div>
+            <span class="tag tag-cyan" style="font-size:9px;">LIVE</span>
+          </div>
+
+          <!-- Sparkline SVG -->
+          <div style="margin-bottom:12px;">
+            <svg width="100%" height="68" viewBox="0 0 480 68" preserveAspectRatio="none" role="img" aria-label="Balance sparkline chart">
+              <defs>
+                <linearGradient id="elecSparkGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#A78BFA" stop-opacity="0.2"/>
+                  <stop offset="100%" stop-color="#A78BFA" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,60 L48,56 L96,50 L144,53 L192,42 L240,36 L288,39 L336,28 L384,20 L432,14 L480,8 L480,68 L0,68 Z"
+                    fill="url(#elecSparkGrad)"/>
+              <path d="M0,60 L48,56 L96,50 L144,53 L192,42 L240,36 L288,39 L336,28 L384,20 L432,14 L480,8"
+                    stroke="url(#elecLineGrad)" stroke-width="1.5" fill="none"/>
+              <defs>
+                <linearGradient id="elecLineGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#7C3AED"/>
+                  <stop offset="100%" stop-color="#06B6D4"/>
+                </linearGradient>
+              </defs>
+              <circle cx="480" cy="8" r="3" fill="#22D3EE"/>
+            </svg>
+            <!-- Progress bar -->
+            <div style="height:4px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden;margin-top:4px;">
+              <div style="height:100%;width:86%;background:linear-gradient(90deg,#7C3AED,#06B6D4);border-radius:2px;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:5px;">
+              <span style="font-size:10px;color:var(--text-dim);">Target: $500</span>
+              <span style="font-size:10px;color:var(--violet-bright);">$432 / $500 · 86%</span>
+            </div>
+          </div>
+
+          <!-- Picks table -->
+          <div style="border:1px solid rgba(255,255,255,0.05);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:14px;">
+            <!-- Header row -->
+            <div class="pick-row" style="background:rgba(255,255,255,0.02);cursor:default;">
+              <span style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);font-family:var(--font-mono);">Pick</span>
+              <span style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);font-family:var(--font-mono);text-align:right;">Odds</span>
+              <span style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);font-family:var(--font-mono);text-align:right;">Stake</span>
+              <span style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);font-family:var(--font-mono);text-align:right;">P&amp;L</span>
+            </div>
+            <div class="pick-row">
+              <div>
+                <div style="font-size:12px;font-weight:500;">Lakers ML</div>
+                <div style="font-size:9px;color:var(--text-dim);">NBA · 3Q</div>
+              </div>
+              <span style="font-size:11px;color:var(--text-primary);text-align:right;font-family:var(--font-mono);">2.10</span>
+              <span style="font-size:11px;color:var(--text-muted);text-align:right;font-family:var(--font-mono);">$200</span>
+              <span style="font-size:12px;font-weight:600;color:var(--green-win);text-align:right;">+$220</span>
+            </div>
+            <div class="pick-row">
+              <div>
+                <div style="font-size:12px;font-weight:500;">América O2.5</div>
+                <div style="font-size:9px;color:var(--text-dim);">Liga MX · 62'</div>
+              </div>
+              <span style="font-size:11px;color:var(--text-primary);text-align:right;font-family:var(--font-mono);">1.95</span>
+              <span style="font-size:11px;color:var(--text-muted);text-align:right;font-family:var(--font-mono);">$350</span>
+              <span style="font-size:11px;color:var(--amber-pending);text-align:right;">Live</span>
+            </div>
+            <div class="pick-row" style="opacity:0.55;">
+              <div>
+                <div style="font-size:12px;font-weight:500;">Chiefs -3.5</div>
+                <div style="font-size:9px;color:var(--text-dim);">NFL · Settled</div>
+              </div>
+              <span style="font-size:11px;color:var(--text-primary);text-align:right;font-family:var(--font-mono);">1.90</span>
+              <span style="font-size:11px;color:var(--text-muted);text-align:right;font-family:var(--font-mono);">$150</span>
+              <span style="font-size:12px;font-weight:600;color:var(--red-loss);text-align:right;">-$150</span>
+            </div>
+          </div>
+
+          <div style="padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:11px;color:var(--text-dim);">Payout available <span style="font-size:9px;">(48h avg)</span></span>
+            <span style="font-size:14px;font-weight:700;background:linear-gradient(135deg,#A78BFA,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">$1,146
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#06B6D4" stroke-width="2.5" style="display:inline;vertical-align:middle;" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Floating badge -->
+        <div style="position:absolute;bottom:-16px;right:-16px;background:linear-gradient(135deg,#7C3AED,#5B21B6);padding:12px 16px;border-radius:var(--radius-md);box-shadow:0 20px 40px rgba(124,58,237,0.45);cursor:default;">
+          <div style="font-size:9px;color:rgba(255,255,255,0.6);margin-bottom:2px;font-family:var(--font-mono);">Phase 2 complete</div>
+          <div style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:6px;">
+            Payout sent
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PROCESS ───────────────────────────────────────────────────── -->
+<section style="padding:80px 32px;max-width:1200px;margin:0 auto;" id="process">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:48px;">
+    <div style="width:3px;height:20px;background:linear-gradient(180deg,#7C3AED,#06B6D4);border-radius:2px;" aria-hidden="true"></div>
+    <h2 style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-dim);font-family:var(--font-mono);">How it works</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:40px;">
+    <div class="glass-card" style="border-radius:var(--radius-lg);padding:28px;">
+      <div style="font-size:40px;font-weight:700;letter-spacing:-0.04em;background:linear-gradient(135deg,rgba(124,58,237,0.3),rgba(6,182,212,0.2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;margin-bottom:20px;">01</div>
+      <h3 style="font-size:18px;font-weight:600;letter-spacing:-0.02em;margin-bottom:12px;">Buy a challenge</h3>
+      <p style="font-size:13px;color:var(--text-muted);line-height:1.75;">Pay the one-time evaluation fee. Get instant access to a simulated account from $5K to $25K and start trading immediately.</p>
+    </div>
+    <div class="glass-card" style="border-radius:var(--radius-lg);padding:28px;border-color:rgba(124,58,237,0.25);">
+      <div style="font-size:40px;font-weight:700;letter-spacing:-0.04em;background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;margin-bottom:20px;">02</div>
+      <h3 style="font-size:18px;font-weight:600;letter-spacing:-0.02em;margin-bottom:12px;">Pass two phases</h3>
+      <p style="font-size:13px;color:var(--text-muted);line-height:1.75;">Hit profit targets in each phase while staying within drawdown limits. Prove your edge with consistent, disciplined picks.</p>
+    </div>
+    <div class="glass-card" style="border-radius:var(--radius-lg);padding:28px;">
+      <div style="font-size:40px;font-weight:700;letter-spacing:-0.04em;background:linear-gradient(135deg,rgba(6,182,212,0.4),rgba(124,58,237,0.2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;margin-bottom:20px;">03</div>
+      <h3 style="font-size:18px;font-weight:600;letter-spacing:-0.02em;margin-bottom:12px;">Get funded &amp; paid</h3>
+      <p style="font-size:13px;color:var(--text-muted);line-height:1.75;">Receive your funded account. Trade live markets and withdraw up to 80% of profits. Average payout clears in 48 hours.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── CHALLENGE TIERS ───────────────────────────────────────────── -->
+<section style="padding:0 32px 80px;max-width:1200px;margin:0 auto;" id="challenges">
+  <div style="border-top:1px solid rgba(124,58,237,0.15);padding-top:64px;">
+    <h2 style="font-size:clamp(24px,3vw,32px);font-weight:700;letter-spacing:-0.04em;margin-bottom:8px;">Evaluation challenges</h2>
+    <p style="font-size:14px;color:var(--text-dim);margin-bottom:40px;">One-time fee. No monthly charges. Keep your profits.</p>
+
+    <div class="tiers-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+      <!-- Starter -->
+      <div class="glass-card" style="border-radius:var(--radius-lg);padding:28px;">
+        <div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-bottom:12px;font-family:var(--font-mono);">Starter</div>
+        <div style="font-size:34px;font-weight:700;letter-spacing:-0.04em;margin-bottom:4px;">$5,000</div>
+        <div style="font-size:13px;color:var(--text-dim);margin-bottom:24px;">Entry fee: $500</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-muted);">Profit split</span><span style="color:var(--violet-bright);font-weight:600;">70%</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-muted);">Max drawdown</span><span>10%</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-muted);">Avg payout</span><span style="color:var(--electric-bright);">48h</span></div>
+        </div>
+        <a href="#" class="cta-outline" style="display:block;text-align:center;padding:12px;border-radius:var(--radius-sm);font-weight:600;font-size:13px;">Select</a>
+      </div>
+
+      <!-- Pro (popular) -->
+      <div style="border-radius:var(--radius-lg);padding:28px;background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.4);cursor:default;transition:box-shadow var(--t-base);" onmouseover="this.style.boxShadow='0 0 32px rgba(124,58,237,0.2)'" onmouseout="this.style.boxShadow='none'">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <span style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);font-family:var(--font-mono);">Pro</span>
+          <span class="tag" style="font-size:9px;">MOST POPULAR</span>
+        </div>
+        <div style="font-size:34px;font-weight:700;letter-spacing:-0.04em;margin-bottom:4px;">$10,000</div>
+        <div style="font-size:13px;color:var(--text-dim);margin-bottom:24px;">Entry fee: $1,000</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-muted);">Profit split</span><span style="color:var(--violet-bright);font-weight:600;">75%</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-muted);">Max drawdown</span><span>10%</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-muted);">Avg payout</span><span style="color:var(--electric-bright);">48h</span></div>
+        </div>
+        <a href="#" class="cta-primary" style="display:block;text-align:center;padding:12px;border-radius:var(--radius-sm);font-weight:600;font-size:13px;">Start now</a>
+      </div>
+
+      <!-- Elite -->
+      <div class="glass-card" style="border-radius:var(--radius-lg);padding:28px;">
+        <div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-bottom:12px;font-family:var(--font-mono);">Elite</div>
+        <div style="font-size:34px;font-weight:700;letter-spacing:-0.04em;margin-bottom:4px;">$25,000</div>
+        <div style="font-size:13px;color:var(--text-dim);margin-bottom:24px;">Entry fee: $2,500</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-muted);">Profit split</span><span style="color:var(--electric-bright);font-weight:600;">80%</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-muted);">Max drawdown</span><span>10%</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-muted);">Avg payout</span><span style="color:var(--electric-bright);">48h</span></div>
+        </div>
+        <a href="#" class="cta-outline" style="display:block;text-align:center;padding:12px;border-radius:var(--radius-sm);font-weight:600;font-size:13px;">Select</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TESTIMONIALS ───────────────────────────────────────────────── -->
+<section style="padding:0 32px 80px;max-width:1200px;margin:0 auto;" id="results">
+  <div style="border-top:1px solid rgba(124,58,237,0.15);padding-top:64px;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:48px;">
+      <div style="width:3px;height:20px;background:linear-gradient(180deg,#7C3AED,#06B6D4);border-radius:2px;" aria-hidden="true"></div>
+      <h2 style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-dim);font-family:var(--font-mono);">Funded trader results</h2>
+    </div>
+
+    <div class="testi-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+      <div class="testi-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+          <div>
+            <div style="font-size:14px;font-weight:600;">Juan R.</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">México · Elite</div>
+          </div>
+          <div style="font-size:20px;font-weight:700;color:var(--green-win);">+$4,200</div>
+        </div>
+        <p style="font-size:13px;color:var(--text-muted);line-height:1.65;">"Pasé ambas fases en tres semanas. El payout llegó en menos de 48 horas. La plataforma más seria que he encontrado en LATAM."</p>
+        <div style="margin-top:16px;height:1px;background:linear-gradient(90deg,rgba(124,58,237,0.3),transparent);"></div>
+      </div>
+      <div class="testi-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+          <div>
+            <div style="font-size:14px;font-weight:600;">Andrea P.</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Colombia · Pro</div>
+          </div>
+          <div style="font-size:20px;font-weight:700;color:var(--green-win);">+$1,875</div>
+        </div>
+        <p style="font-size:13px;color:var(--text-muted);line-height:1.65;">"El panel de riesgo me ayudó a mantener disciplina. Nunca antes había tenido acceso a capital real para operar deportes a este nivel."</p>
+        <div style="margin-top:16px;height:1px;background:linear-gradient(90deg,rgba(6,182,212,0.3),transparent);"></div>
+      </div>
+      <div class="testi-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+          <div>
+            <div style="font-size:14px;font-weight:600;">Marcos T.</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Argentina · Elite</div>
+          </div>
+          <div style="font-size:20px;font-weight:700;color:var(--green-win);">+$6,100</div>
+        </div>
+        <p style="font-size:13px;color:var(--text-muted);line-height:1.65;">"La cuenta de $25K cambió todo. El proceso fue limpio, los retiros rápidos, y el split del 80% es lo mejor del mercado."</p>
+        <div style="margin-top:16px;height:1px;background:linear-gradient(90deg,rgba(124,58,237,0.3),rgba(6,182,212,0.2),transparent);"></div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ── FOOTER ────────────────────────────────────────────────────── -->
+<footer style="border-top:1px solid rgba(124,58,237,0.1);padding:24px 32px;max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;" role="contentinfo">
+  <span style="font-size:12px;color:rgba(255,255,255,0.18);">© 2025 PlayFunded. All rights reserved.</span>
+  <span style="font-size:10px;color:rgba(255,255,255,0.1);letter-spacing:0.12em;text-transform:uppercase;font-family:var(--font-mono);">Concept 05 — Electric</span>
+</footer>
+</body>
+</html>

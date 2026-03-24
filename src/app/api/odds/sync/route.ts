@@ -1,6 +1,6 @@
 // ============================================================
 // ODDS SYNC — cron endpoint
-// Called by Vercel Cron every 10 minutes (pre-game)
+// Called by the production scheduler every 10 minutes (pre-game)
 // Protected by CRON_SECRET header
 // Fetches from both providers and upserts into OddsCache
 // ============================================================
@@ -11,6 +11,7 @@ import { OddsApiProvider } from "@/lib/odds/odds-api";
 import { ApiFootballProvider } from "@/lib/odds/api-football";
 import { LEAGUE_CONFIG } from "@/lib/odds/types";
 import type { OddsEvent } from "@/lib/odds/types";
+import { recordOpsEvent } from "@/lib/ops-events";
 
 function isAuthorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -27,7 +28,10 @@ interface SyncResult {
   error?: string;
 }
 
-async function upsertEvents(events: OddsEvent[], provider: string): Promise<number> {
+async function upsertEvents(
+  events: OddsEvent[],
+  provider: string,
+): Promise<number> {
   let count = 0;
   for (const event of events) {
     await prisma.oddsCache.upsert({
@@ -63,7 +67,7 @@ async function upsertEvents(events: OddsEvent[], provider: string): Promise<numb
   return count;
 }
 
-export async function POST(req: NextRequest) {
+async function runSync(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -99,18 +103,32 @@ export async function POST(req: NextRequest) {
 
   const totalFetched = results.reduce((sum, r) => sum + r.fetched, 0);
   const totalErrors = results.filter((r) => r.error).length;
+  const syncedAt = new Date().toISOString();
+
+  await recordOpsEvent({
+    type: totalErrors > 0 ? "cron_odds_sync_failed" : "cron_odds_sync_completed",
+    level: totalErrors > 0 ? "warn" : "info",
+    source: "api:odds:sync",
+    subjectType: "cron",
+    subjectId: "odds-sync",
+    details: {
+      syncedAt,
+      totalFetched,
+      totalErrors,
+      failedLeagues: results.filter((r) => r.error).map((r) => r.league),
+    },
+  });
 
   return NextResponse.json({
     ok: true,
-    syncedAt: new Date().toISOString(),
+    syncedAt,
     totalFetched,
     totalErrors,
     results,
   });
 }
 
-// Allow GET for manual health check (still requires auth)
-export async function GET(req: NextRequest) {
+async function getSyncStatus(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -135,4 +153,18 @@ export async function GET(req: NextRequest) {
       count: r._count.id,
     })),
   });
+}
+
+export async function POST(req: NextRequest) {
+  return runSync(req);
+}
+
+// The scheduler calls GET. Default GET behavior is to run sync.
+// For manual health diagnostics, call: /api/odds/sync?mode=status
+export async function GET(req: NextRequest) {
+  const mode = req.nextUrl.searchParams.get("mode");
+  if (mode === "status") {
+    return getSyncStatus(req);
+  }
+  return runSync(req);
 }

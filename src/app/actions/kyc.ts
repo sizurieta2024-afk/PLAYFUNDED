@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
 import type { IdType } from "@prisma/client";
+import { resolveKycPayoutEligibility } from "@/lib/kyc/eligibility";
 
 export async function submitKyc(formData: {
   fullName: string;
@@ -13,14 +14,15 @@ export async function submitKyc(formData: {
   idFrontPath: string;
   idBackPath?: string;
 }): Promise<{ error?: string }> {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) redirect("/auth/login");
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !authUser) redirect("/auth/login");
 
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
     include: { kycSubmission: true },
   });
   if (!user) redirect("/auth/login");
@@ -28,6 +30,11 @@ export async function submitKyc(formData: {
   // Don't re-submit if already approved
   if (user.kycSubmission?.status === "approved") {
     return {};
+  }
+
+  const eligibility = await resolveKycPayoutEligibility(prisma, user);
+  if (!eligibility.allowed) {
+    return { error: eligibility.code };
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;

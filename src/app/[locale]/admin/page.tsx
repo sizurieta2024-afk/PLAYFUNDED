@@ -161,7 +161,6 @@ export default async function AdminDashboardPage() {
       take: 8,
       include: {
         user: { select: { email: true, name: true } },
-        tier: { select: { name: true, fundedBankroll: true } },
       },
     }),
     // Recent audit log
@@ -179,6 +178,16 @@ export default async function AdminDashboardPage() {
     select: { id: true, name: true },
   });
   const tierMap = Object.fromEntries(tiers.map((t) => [t.id, t.name]));
+  const fundedTraderTierIds = Array.from(
+    new Set(topFundedTraders.map((challenge) => challenge.tierId)),
+  );
+  const fundedTraderTiers = await prisma.tier.findMany({
+    where: { id: { in: fundedTraderTierIds } },
+    select: { id: true, name: true, fundedBankroll: true },
+  });
+  const fundedTraderTierMap = new Map(
+    fundedTraderTiers.map((tier) => [tier.id, tier]),
+  );
 
   // Derived numbers
   const thisMonthRev = monthRevenue._sum.amount ?? 0;
@@ -472,7 +481,8 @@ export default async function AdminDashboardPage() {
                 </thead>
                 <tbody>
                   {topFundedTraders.map((c) => {
-                    const pnl = c.balance - c.tier.fundedBankroll;
+                    const tier = fundedTraderTierMap.get(c.tierId);
+                    const pnl = c.balance - (tier?.fundedBankroll ?? c.startBalance);
                     return (
                       <tr key={c.id} className="border-b border-border last:border-0">
                         <td className="px-4 py-2.5">
@@ -483,7 +493,9 @@ export default async function AdminDashboardPage() {
                             {c.user.email}
                           </p>
                         </td>
-                        <td className="px-4 py-2.5 text-xs text-muted-foreground">{c.tier.name}</td>
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground">
+                          {tier?.name ?? "Unknown tier"}
+                        </td>
                         <td className="px-4 py-2.5 text-right tabular-nums text-xs">{fmt(c.balance)}</td>
                         <td className={`px-4 py-2.5 text-right tabular-nums text-xs font-semibold ${pnl >= 0 ? "text-pf-brand" : "text-red-400"}`}>
                           {pnl >= 0 ? "+" : ""}{fmt(pnl)}

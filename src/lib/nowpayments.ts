@@ -1,3 +1,6 @@
+import { timingSafeEqual } from "node:crypto";
+import { fetchWithTimeout } from "@/lib/net/fetch-with-timeout";
+
 const BASE_URL = "https://api.nowpayments.io/v1";
 
 function getApiKey(): string {
@@ -39,7 +42,7 @@ export async function createCryptoInvoice({
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
   const localePath = locale === "es-419" ? "" : `/${locale}`;
 
-  const res = await fetch(`${BASE_URL}/payment`, {
+  const res = await fetchWithTimeout(`${BASE_URL}/payment`, {
     method: "POST",
     headers: {
       "x-api-key": apiKey,
@@ -55,7 +58,7 @@ export async function createCryptoInvoice({
       success_url: `${baseUrl}${localePath}/checkout/success`,
       cancel_url: `${baseUrl}${localePath}/checkout/cancel`,
     }),
-  });
+  }, 10_000);
 
   if (!res.ok) {
     const err = await res.text();
@@ -113,5 +116,13 @@ export async function verifyNowPaymentsSignature(
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 
-  return hex === signature;
+  const normalizedSignature = signature.trim().toLowerCase();
+  const expected = Buffer.from(hex, "utf8");
+  const received = Buffer.from(normalizedSignature, "utf8");
+
+  if (expected.length !== received.length) {
+    return false;
+  }
+
+  return timingSafeEqual(expected, received);
 }

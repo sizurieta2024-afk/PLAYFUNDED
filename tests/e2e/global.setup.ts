@@ -84,6 +84,17 @@ setup("authenticate e2e user via Supabase API", async ({ page }) => {
   }
   console.log("[setup] Smoke check passed — session is active");
 
+  // Guard the shared auth fixture: this user must not have admin access.
+  await page.goto("/en/admin", { waitUntil: "domcontentloaded" });
+  const adminUrl = page.url();
+  console.log(`[setup] Admin smoke check URL: ${adminUrl}`);
+  if (adminUrl.includes("/admin")) {
+    throw new Error(
+      "[setup] Auth fixture is unexpectedly an admin user. E2E non-admin access tests would be invalid.",
+    );
+  }
+  console.log("[setup] Admin smoke check passed — fixture user is non-admin");
+
   // Save storageState so other tests can reuse it
   fs.mkdirSync(path.dirname(AUTH_FILE), { recursive: true });
   await page.context().storageState({ path: AUTH_FILE });

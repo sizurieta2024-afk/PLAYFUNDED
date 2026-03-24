@@ -24,14 +24,12 @@ export default async function AdminPicksPage({
   const skip = (pageNum - 1) * take;
 
   // Summary stats
-  const [total, pending, won, lost, voided, totalStake, totalProfit] =
+  const [total, pending, won, lost, totalProfit] =
     await Promise.all([
       prisma.pick.count(),
       prisma.pick.count({ where: { status: "pending" } }),
       prisma.pick.count({ where: { status: "won" } }),
       prisma.pick.count({ where: { status: "lost" } }),
-      prisma.pick.count({ where: { status: "void" } }),
-      prisma.pick.aggregate({ _sum: { stake: true } }),
       // Profit = sum(actualPayout - stake) for settled picks
       prisma.pick.aggregate({
         where: { status: { in: ["won", "lost"] } },

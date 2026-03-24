@@ -1,0 +1,66 @@
+name: Ops Health Check (Every 5 Minutes)
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ops-health-5m
+  cancel-in-progress: false
+
+jobs:
+  ops-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+
+      - name: Validate required secrets
+        run: |
+          test -n "${{ secrets.PF_BASE_URL }}"
+          test -n "${{ secrets.PF_CRON_SECRET }}"
+
+      - name: Check ops health
+        id: health
+        continue-on-error: true
+        env:
+          PF_BASE_URL: ${{ secrets.PF_BASE_URL }}
+          PF_CRON_SECRET: ${{ secrets.PF_CRON_SECRET }}
+        run: |
+          set -uo pipefail
+          status=0
+          node scripts/check-ops-health.mjs > /tmp/ops-health.out 2>&1 || status=$?
+          cat /tmp/ops-health.out
+          {
+            echo 'body<<EOF'
+            cat /tmp/ops-health.out
+            echo 'EOF'
+            echo "exit_code=${status}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Send failure alert
+        if: steps.health.outputs.exit_code != '0'
+        env:
+          PF_BASE_URL: ${{ secrets.PF_BASE_URL }}
+          PF_ALERT_WEBHOOK_URL: ${{ secrets.PF_ALERT_WEBHOOK_URL }}
+          PF_ALERT_WEBHOOK_KIND: ${{ secrets.PF_ALERT_WEBHOOK_KIND }}
+          OPS_HEALTH_BODY: ${{ steps.health.outputs.body }}
+        run: |
+          if [ -z "${PF_ALERT_WEBHOOK_URL:-}" ]; then
+            echo "PF_ALERT_WEBHOOK_URL not set; skipping alert"
+            exit 0
+          fi
+          node scripts/send-ops-alert.mjs
+
+      - name: Fail workflow on unhealthy ops status
+        if: steps.health.outputs.exit_code != '0'
+        run: |
+          echo "Ops health check failed"
+          exit 1

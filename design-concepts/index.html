@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlayFunded — Design Concepts</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d0d0d; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 48px 32px; }
+  h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 8px; }
+  .sub { font-size: 14px; color: rgba(255,255,255,0.4); margin-bottom: 48px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .card { border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; text-decoration: none; color: inherit; transition: all 0.2s; display: block; }
+  .card:hover { border-color: rgba(255,255,255,0.25); transform: translateY(-2px); }
+  .preview { height: 160px; display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 900; letter-spacing: -0.04em; position: relative; overflow: hidden; }
+  .meta { padding: 16px 18px; background: rgba(255,255,255,0.03); }
+  .num { font-size: 11px; color: rgba(255,255,255,0.3); letter-spacing: 0.1em; margin-bottom: 4px; }
+  .name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .desc { font-size: 12px; color: rgba(255,255,255,0.4); }
+  .open-btn { margin-top: 12px; display: inline-block; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 5px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.1); }
+</style>
+</head>
+<body>
+  <h1>PlayFunded — Design Concepts</h1>
+  <p class="sub">10 distinct landing page styles. Click any card to open it in a new tab.</p>
+
+  <div class="grid">
+    <a href="01-dark-horse.html" target="_blank" class="card">
+      <div class="preview" style="background:#080c0a;color:#39FF14;text-shadow:0 0 30px #39FF14;">DH</div>
+      <div class="meta">
+        <div class="num">01</div>
+        <div class="name">Dark Horse</div>
+        <div class="desc">Terminal/prop firm · Acid green on near-black · IBM Plex Mono</div>
+        <span class="open-btn">Open →</span>
+      </div>
+    </a>
+
+    <a href="02-gold-class.html" target="_blank" class="card">
+      <div class="preview" style="background:linear-gradient(135deg,#060404,#160f0f);color:#C9A84C;text-shadow:0 0 30px rgba(201,168,76,0.5);">GC</div>
+      <div class="meta">
+        <div class="num">02</div>
+        <div class="name">Gold Class</div>
+        <div class="desc">Luxury sports club · Deep black + gold · Playfair Display serif</div>
+        <span class="open-btn">Open →</span>
+      </div>
+    </a>
+
+    <a href="03-midnight-stadium.html" target="_blank" class="card">
+      <div class="preview" style="background:#04090f;color:#22C55E;">MS</div>
+      <div class="meta">
+        <div class="num">03</div>
+        <div class="name">Midnight Stadium</div>
+        <div class="desc">Broadcast/stadium · Deep navy + green · Barlow Condensed bold</div>
+        <span class="open-btn">Open →</span>
+      </div>
+    </a>
+
+    <a href="04-obsidian.html" target="_blank" class="card">
+      <div class="preview" style="background:#000;color:rgba(255,255,255,0.9);font-family:'Georgia',serif;font-style:italic;">Ob</div>
+      <div class="meta">
+        <div class="num">04</div>
+        <div class="name">Obsidian</div>
+        <div class="desc">Ultra-minimal · Pure black + single green accent · DM Serif Display</div>
+        <span class="open-btn">Open →</span>
+      </div>
+    </a>
+
+    <a href="05-electric.html" target="_blank" class="card">
+      <div class="preview" style="background:linear-gradient(135deg,#06070D,#120b22);color:#7C3AED;text-shadow:0 0 20px #7C3AED;">EL</div>
+      <div class="meta">
+        <div class="num">05</div>
+        <div class="name">Electric</div>
+        <div class="desc">Cyberpunk sports · Dark + violet + cyan · Space Grotesk</div>
+        <span class="open-btn">Open →</span>
+      </div>
+    </a>
+
+    <a href="06-the-broker.html" target="_blank" class="card">
+      <div class="preview" style="background:#111418;color:#22c55e;font-family:monospace;">TB</div>
+      <div class="meta">
+        <div class="num">06</div>
+        <div class="name">The Broker</div>
+        <div class="desc">Bloomberg/finance · Charcoal + green · Live market ticker</div>
+        <span class="open-btn">Open →</span>
+      </div>
+    </a>
+
+    <a href="07-champion.html" target="_blank" class="card">
+      <div class="preview" style="background:#0f0c09;color:#f59e0b;text-shadow:0 0 20px rgba(245,158,11,0.4);">CH</div>
+      <div class="meta">
+        <div class="num">07</div>
+        <div class="name">Champion</div>
+        <div class="desc">Achievement-focused · Warm black + amber · Syne + Manrope</div>
+        <span class="open-btn">Open →</span>
+      </div>
+    </a>
+
+    <a href="08-crystal.html" target="_blank" class="card">
+      <div class="preview" style="background:linear-gradient(135deg,rgba(99,102,241,0.2),rgba(16,185,129,0.15),#080a12);color:#a5b4fc;">CR</div>
+      <div class="meta">
+        <div class="num">08</div>
+        <div class="name">Crystal</div>
+        <div class="desc">Glassmorphism · Mesh gradient dark · Indigo + emerald</div>
+        <span class="open-btn">Open →</span>
+      </div>
+    </a>
+
+    <a href="09-bold-signal.html" target="_blank" class="card">
+      <div class="preview" style="background:#f0ece4;color:#c8f135;-webkit-text-stroke:3px #0a0a0a;">BS</div>
+      <div class="meta">
+        <div class="num">09</div>
+        <div class="name">Bold Signal</div>
+        <div class="desc">Neo-brutalism · Light sand + lime · Heavy borders, no shadows</div>
+        <span class="open-btn">Open →</span>
+      </div>
+    </a>
+
+    <a href="10-sunrise.html" target="_blank" class="card">
+      <div class="preview" style="background:linear-gradient(135deg,#faf8f4,rgba(232,101,74,0.12));color:#e8654a;">SR</div>
+      <div class="meta">
+        <div class="num">10</div>
+        <div class="name">Sunrise</div>
+        <div class="desc">Warm light mode · Coral accent · LATAM-friendly · Fraunces serif</div>
+        <span class="open-btn">Open →</span>
+      </div>
+    </a>
+  </div>
+</body>
+</html>

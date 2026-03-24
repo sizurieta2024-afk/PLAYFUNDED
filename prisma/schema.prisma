@@ -56,6 +56,13 @@ enum PaymentMethod {
   mercadopago
 }
 
+enum CheckoutMethod {
+  card
+  crypto
+  pix
+  mercadopago
+}
+
 enum PaymentStatus {
   pending
   processing
@@ -104,6 +111,18 @@ enum AffiliateCommissionRate {
   ten
 }
 
+enum CountryPolicyStatus {
+  blocked
+  review
+  enabled
+}
+
+enum OpsLevel {
+  info
+  warn
+  error
+}
+
 // ============================================================
 // USER
 // ============================================================
@@ -118,10 +137,6 @@ model User {
   role               UserRole  @default(user)
   isBanned           Boolean   @default(false)
   banReason          String?
-  selfExcludedUntil  DateTime?
-  isPermExcluded     Boolean   @default(false)
-  weeklyDepositLimit Int?      // USD cents
-
   // Supabase Auth ID (links to auth.users)
   supabaseId String? @unique
 
@@ -136,9 +151,12 @@ model User {
   picks            Pick[]
   payments         Payment[]
   payouts          Payout[]
-  affiliate        Affiliate?
+  affiliate            Affiliate?
+  affiliateApplications AffiliateApplication[]
+  affiliateConversions  AffiliateConversion[]
   marketRequests   MarketRequest[]
   kycSubmission    KycSubmission?
+  payoutProfile    PayoutProfile?
   followedTraders  Follow[]          @relation("follower")
   followers        Follow[]          @relation("following")
   auditLogs        AuditLog[]
@@ -283,6 +301,7 @@ model ParlayLeg {
   marketType  String
   selection   String
   odds        Float      // Decimal odds for this leg
+  linePoint   Float?     // Spread or total line (null for moneyline)
   status      PickStatus @default(pending)
 
   // Relations
@@ -300,6 +319,10 @@ model Payment {
   userId      String
   tierId      String
   amount      Int           // USD cents
+  listPriceAmount Int
+  discountAmount Int        @default(0)
+  discountPct   Int         @default(0)
+  discountCode  String?
   currency    String        @default("USD")
   method      PaymentMethod
   status      PaymentStatus @default(pending)
@@ -323,10 +346,12 @@ model Payment {
 
   user User @relation(fields: [userId], references: [id])
   tier Tier @relation(fields: [tierId], references: [id])
+  affiliateConversion AffiliateConversion?
 
   @@index([userId])
   @@index([status])
   @@index([providerRef])
+  @@index([discountCode])
 }
 
 // ============================================================
@@ -345,6 +370,9 @@ model Payout {
   // Admin
   adminNote   String?
   txRef       String?      // payment reference / transaction ID
+  providerPayoutId String?
+  destinationAddress String?
+  providerData Json?       // provider-specific metadata (e.g. dLocal recipient snapshot)
 
   // Rollover
   isRollover  Boolean      @default(false) // true if user chose to rollover profits
@@ -365,6 +393,35 @@ model Payout {
   @@index([userId])
   @@index([status])
   @@index([challengeId])
+}
+
+// ============================================================
+// PAYOUT PROFILE (required to automate dLocal bank payouts)
+// ============================================================
+
+model PayoutProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+
+  legalFirstName    String
+  legalLastName     String
+  documentType      String   // Country-specific (e.g. CI, CPF, DNI)
+  documentNumber    String
+
+  bankCode          String?
+  bankBranch        String?
+  bankAccountNumber String?
+  bankAccountType   String?  // CHECKING | SAVINGS (provider-specific string)
+  bankCity          String?
+  bankStreet        String?
+
+  pixKeyType        String?  // For Brazil instant payouts
+  pixKeyValue       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 // ============================================================
@@ -405,6 +462,8 @@ model Affiliate {
   userId         String                  @unique
   code           String                  @unique // PF-XXXXXX format
   commissionRate AffiliateCommissionRate @default(five) // 5% or 10%
+  discountPct    Int                     @default(0)
+  isActive       Boolean                 @default(true)
 
   // Aggregate stats (updated on each conversion for fast reads)
   totalClicks      Int @default(0)
@@ -415,8 +474,10 @@ model Affiliate {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user   User             @relation(fields: [userId], references: [id])
-  clicks AffiliateClick[]
+  user        User                       @relation(fields: [userId], references: [id])
+  clicks      AffiliateClick[]
+  conversions AffiliateConversion[]
+  codeRequests AffiliateCodeChangeRequest[]
 
   @@index([code])
 }
@@ -440,6 +501,86 @@ model AffiliateClick {
 
   @@index([affiliateId])
   @@index([convertedToUserId])
+}
+
+// ============================================================
+// AFFILIATE CONVERSION
+// ============================================================
+
+model AffiliateConversion {
+  id             String   @id @default(uuid())
+  affiliateId     String
+  userId          String
+  paymentId       String   @unique
+  code            String
+  listPriceAmount Int
+  paidAmount      Int
+  discountAmount  Int      @default(0)
+  discountPct     Int      @default(0)
+  commissionEarned Int     @default(0)
+  createdAt       DateTime @default(now())
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+  payment   Payment   @relation(fields: [paymentId], references: [id])
+
+  @@index([affiliateId])
+  @@index([userId])
+}
+
+// ============================================================
+// COUNTRY POLICY OVERRIDE
+// ============================================================
+
+model CountryPolicyOverride {
+  id                        String              @id @default(uuid())
+  country                   String              @unique
+  displayName               String?
+  marketStatus              CountryPolicyStatus?
+  publicAccess              Boolean?
+  challengePurchasesEnabled Boolean?
+  payoutsEnabled            Boolean?
+  requiresReviewNotice      Boolean?
+  reviewNote                String?
+
+  overrideCheckoutMethods   Boolean             @default(false)
+  checkoutMethods           CheckoutMethod[]    @default([])
+  overridePayoutMethods     Boolean             @default(false)
+  payoutMethods             PayoutMethod[]      @default([])
+
+  showExactCommercialTerms  Boolean?
+  affiliateProgramEnabled   Boolean?
+  giftsEnabled              Boolean?
+  showProcessorNames        Boolean?
+
+  legalApproved             Boolean?
+  pspApproved               Boolean?
+  copyApproved              Boolean?
+  kycEnabled                Boolean?
+
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+
+  @@index([marketStatus])
+  @@index([updatedAt])
+}
+
+// ============================================================
+// RATE LIMIT BUCKET (shared limiter state)
+// ============================================================
+
+model RateLimitBucket {
+  key       String   @id
+  routeKey  String
+  clientKey String
+  count     Int
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([routeKey, clientKey])
+  @@index([resetAt])
+  @@index([updatedAt])
 }
 
 // ============================================================
@@ -508,6 +649,32 @@ model AuditLog {
 }
 
 // ============================================================
+// OPS EVENT LOG (operational events)
+// ============================================================
+
+model OpsEventLog {
+  id            String    @id @default(uuid())
+  type          String
+  level         OpsLevel  @default(info)
+  source        String?
+  actorUserId   String?
+  subjectType   String?
+  subjectId     String?
+  country       String?
+  policyVersion String?
+  details       Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([level])
+  @@index([source])
+  @@index([subjectType, subjectId])
+  @@index([country])
+  @@index([createdAt])
+}
+
+// ============================================================
 // FOLLOW (community — funded trader follows)
 // ============================================================
 
@@ -524,4 +691,53 @@ model Follow {
   @@unique([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
+}
+
+// ============================================================
+// AFFILIATE APPLICATION
+// ============================================================
+
+model AffiliateApplication {
+  id          String   @id @default(uuid())
+  userId      String
+  fullName    String
+  country     String
+  reason      String   @db.Text
+  socialHandles Json?  // { tiktok, instagram, twitter, youtube }
+  audienceSize  String? // "under_1k" | "1k_5k" | "5k_20k" | "20k_plus"
+  website       String?
+  status        String @default("pending") // pending | approved | rejected
+  reviewNote    String?
+  reviewedAt    DateTime?
+  reviewedByAdminId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId])
+  @@index([userId])
+  @@index([status])
+}
+
+// ============================================================
+// AFFILIATE CODE CHANGE REQUEST
+// ============================================================
+
+model AffiliateCodeChangeRequest {
+  id            String    @id @default(uuid())
+  affiliateId   String
+  requestedCode String
+  status        String    @default("pending") // pending | approved | rejected
+  reviewNote    String?
+  reviewedAt    DateTime?
+  reviewedByAdminId String?
+
+  createdAt DateTime @default(now())
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id])
+
+  @@index([affiliateId])
+  @@index([status])
 }

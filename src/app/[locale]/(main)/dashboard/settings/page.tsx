@@ -22,12 +22,13 @@ export default async function SettingsPage({
 }) {
   await params;
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  if (!session) redirect("/auth/login");
+  if (authError || !authUser) redirect("/auth/login");
 
   const settings = await getSettings();
 

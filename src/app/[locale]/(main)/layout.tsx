@@ -10,15 +10,17 @@ export default async function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+  const isAuthenticated = !authError && !!authUser;
 
   // Admins live in /admin — redirect them away from the regular site
-  if (session) {
+  if (isAuthenticated && authUser) {
     const user = await prisma.user.findFirst({
-      where: { supabaseId: session.user.id },
+      where: { supabaseId: authUser.id },
       select: { role: true },
     });
     if (user?.role === "admin") {
@@ -28,7 +30,7 @@ export default async function MainLayout({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Navbar isAuthenticated={!!session} />
+      <Navbar isAuthenticated={isAuthenticated} />
       <main className="flex-1">{children}</main>
       <Footer />
       <ChatWidget />

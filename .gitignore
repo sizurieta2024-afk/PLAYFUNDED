@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# social automation artifacts
+/automation/social/generated/
+/automation/social/state/
+/automation/social/logs/
+
+# local testing artifacts
+/.playwright-mcp/
+error.log
+__pycache__/
+*.pyc

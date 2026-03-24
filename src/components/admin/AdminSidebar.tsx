@@ -15,6 +15,7 @@ import {
   Crosshair,
   CreditCard,
   ShieldAlert,
+  ClipboardCheck,
   LogOut,
 } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
@@ -23,6 +24,7 @@ const NAV = [
   { label: "Overview", href: "/admin", icon: LayoutDashboard, exact: true },
   { label: "Revenue", href: "/admin/revenue", icon: TrendingUp },
   { label: "Risk", href: "/admin/risk", icon: ShieldAlert },
+  { label: "Launch", href: "/admin/launch", icon: ClipboardCheck },
   { label: "Users", href: "/admin/users", icon: Users },
   { label: "Challenges", href: "/admin/challenges", icon: Trophy },
   { label: "Picks", href: "/admin/picks", icon: Crosshair },
@@ -38,7 +40,7 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   function isActive(href: string, exact = false) {
-    const normalized = pathname.replace(/^\/(en|es-419)/, "");
+    const normalized = pathname.replace(/^\/(en|es-419|pt-BR)/, "");
     return exact ? normalized === href : normalized.startsWith(href);
   }
 

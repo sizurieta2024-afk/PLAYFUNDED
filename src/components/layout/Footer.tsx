@@ -4,11 +4,13 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { LanguageToggle } from "./LanguageToggle";
 import { TrendingUp } from "lucide-react";
+import { getDiscordInviteUrl } from "@/lib/public-links";
 
 export function Footer() {
   const t = useTranslations("footer");
   const tn = useTranslations("nav");
   const year = new Date().getFullYear();
+  const discordInviteUrl = getDiscordInviteUrl();
 
   const columns = [
     {
@@ -32,7 +34,15 @@ export function Footer() {
       heading: t("support"),
       links: [
         { label: t("contact"), href: "/contact" as const },
-        { label: t("affiliate"), href: "/affiliate" as const },
+        ...(discordInviteUrl
+          ? [
+              {
+                label: t("discord"),
+                href: discordInviteUrl,
+                external: true,
+              },
+            ]
+          : []),
       ],
     },
   ] as const;
@@ -75,12 +85,23 @@ export function Footer() {
               <ul className="space-y-2.5">
                 {col.links.map((link) => (
                   <li key={link.label}>
-                    <Link
-                      href={link.href}
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {link.label}
-                    </Link>
+                    {"external" in link && link.external ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link
+                        href={link.href}
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

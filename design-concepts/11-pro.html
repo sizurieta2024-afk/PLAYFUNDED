@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlayFunded — Get Funded Trading Sports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ─── TOKENS ──────────────────────────────────────────────── */
+:root {
+  --bg:        #0c0f0d;
+  --bg-2:      #111511;
+  --bg-3:      #161b16;
+  --border:    rgba(255,255,255,0.06);
+  --border-em: rgba(0,200,83,0.2);
+
+  --green:     #00c853;
+  --green-dim: #00a040;
+  --green-bg:  rgba(0,200,83,0.08);
+  --amber:     #f59e0b;
+  --red:       #ef4444;
+
+  --text-1:    #f0f4f0;
+  --text-2:    rgba(240,244,240,0.55);
+  --text-3:    rgba(240,244,240,0.28);
+
+  --radius:    10px;
+  --radius-lg: 16px;
+}
+
+/* ─── RESET ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text-1);
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── TYPOGRAPHY ──────────────────────────────────────────── */
+.display { font-family: 'Barlow Condensed', sans-serif; }
+
+/* ─── LAYOUT ──────────────────────────────────────────────── */
+.container { max-width: 1240px; margin: 0 auto; padding: 0 32px; }
+
+/* ─── COMPONENTS ──────────────────────────────────────────── */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.07em;
+  padding: 5px 12px; border-radius: 20px;
+}
+.chip-green { background: var(--green-bg); color: var(--green); border: 1px solid var(--border-em); }
+.chip-dim   { background: rgba(255,255,255,0.04); color: var(--text-3); border: 1px solid var(--border); }
+
+.card {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.cta-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--green); color: #000;
+  font-family: 'Outfit', sans-serif; font-weight: 700;
+  font-size: 15px; padding: 14px 32px;
+  border-radius: var(--radius); border: none;
+  cursor: pointer; text-decoration: none;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+.cta-primary:hover {
+  background: var(--green-dim);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 32px rgba(0,200,83,0.3);
+}
+
+.cta-ghost {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: transparent;
+  color: var(--text-2);
+  font-family: 'Outfit', sans-serif; font-weight: 600;
+  font-size: 15px; padding: 14px 28px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  cursor: pointer; text-decoration: none;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.cta-ghost:hover {
+  border-color: rgba(255,255,255,0.18);
+  color: var(--text-1);
+  background: rgba(255,255,255,0.03);
+}
+
+/* ─── NAV ─────────────────────────────────────────────────── */
+nav.topnav {
+  position: fixed; top: 0; width: 100%; z-index: 100;
+  background: rgba(12,15,13,0.85);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--border);
+}
+.topnav-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 60px;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none;
+}
+.nav-logo-mark {
+  width: 30px; height: 30px;
+  background: var(--green);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+}
+.nav-logo-text {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 20px; font-weight: 800;
+  letter-spacing: 0.02em; color: var(--text-1);
+}
+.nav-links {
+  display: flex; align-items: center; gap: 28px; list-style: none;
+}
+.nav-links a {
+  font-size: 13px; font-weight: 500; color: var(--text-3);
+  text-decoration: none; transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--text-1); }
+.nav-actions { display: flex; align-items: center; gap: 14px; }
+.nav-signin {
+  font-size: 13px; font-weight: 500; color: var(--text-3);
+  text-decoration: none; transition: color 0.2s;
+}
+.nav-signin:hover { color: var(--text-1); }
+.nav-cta {
+  font-size: 13px; font-weight: 700;
+  background: var(--green); color: #000;
+  padding: 9px 20px; border-radius: 8px;
+  text-decoration: none; transition: background 0.2s;
+}
+.nav-cta:hover { background: var(--green-dim); }
+
+/* ─── LIVE FEED TICKER ────────────────────────────────────── */
+.feed-bar {
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  white-space: nowrap;
+  height: 36px;
+  display: flex; align-items: center;
+}
+.feed-track {
+  display: inline-flex; align-items: center; gap: 0;
+  animation: feedScroll 40s linear infinite;
+}
+.feed-item {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 0 28px;
+  font-size: 12px; font-weight: 500; color: var(--text-3);
+  border-right: 1px solid var(--border);
+}
+.feed-name { color: var(--text-1); font-weight: 600; }
+.feed-amount { color: var(--green); font-weight: 700; }
+.feed-dot { width: 5px; height: 5px; background: var(--green); border-radius: 50%; flex-shrink: 0; }
+@keyframes feedScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ─── HERO ────────────────────────────────────────────────── */
+.hero {
+  min-height: 100vh;
+  display: flex; align-items: center;
+  padding: 120px 0 80px;
+  position: relative; overflow: hidden;
+}
+.hero-glow {
+  position: absolute;
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(0,200,83,0.09) 0%, transparent 65%);
+  top: -100px; right: -150px;
+  pointer-events: none;
+}
+.hero-glow-2 {
+  position: absolute;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(0,200,83,0.04) 0%, transparent 60%);
+  bottom: 0; left: -80px;
+  pointer-events: none;
+}
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 480px;
+  gap: 60px; align-items: center;
+  position: relative; z-index: 1;
+}
+.hero-eyebrow {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 28px;
+}
+.hero-h1 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: clamp(60px, 8vw, 100px);
+  line-height: 0.93;
+  letter-spacing: -0.01em;
+  margin-bottom: 24px;
+  color: var(--text-1);
+}
+.hero-h1 em { color: var(--green); font-style: normal; }
+.hero-sub {
+  font-size: 17px; font-weight: 400;
+  color: var(--text-2); line-height: 1.7;
+  max-width: 460px; margin-bottom: 40px;
+}
+.hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 44px; }
+.hero-stats {
+  display: flex; gap: 0;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden;
+}
+.hero-stat {
+  flex: 1; padding: 16px 20px;
+  border-right: 1px solid var(--border);
+}
+.hero-stat:last-child { border-right: none; }
+.hero-stat-num {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 26px; font-weight: 800;
+  letter-spacing: -0.02em; line-height: 1;
+  color: var(--text-1);
+}
+.hero-stat-num.green { color: var(--green); }
+.hero-stat-label { font-size: 11px; font-weight: 500; color: var(--text-3); margin-top: 4px; letter-spacing: 0.04em; }
+
+/* ─── ACCOUNT CARD (Hero right) ───────────────────────────── */
+.account-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,200,83,0.06);
+}
+.account-card-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 18px;
+  background: var(--bg-3);
+  border-bottom: 1px solid var(--border);
+}
+.account-card-body { padding: 20px 18px 0; }
+.account-balance-row {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 18px;
+}
+.account-balance { font-family: 'Barlow Condensed', sans-serif; font-size: 40px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.account-pnl { font-size: 13px; font-weight: 600; color: var(--green); margin-top: 4px; }
+.account-target-label { font-size: 11px; color: var(--text-3); margin-bottom: 3px; }
+.account-target-val { font-size: 20px; font-weight: 700; color: var(--text-1); }
+.account-target-pct { font-size: 11px; color: var(--text-3); }
+
+/* Progress bar */
+.prog-wrap { margin-bottom: 8px; }
+.prog-label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; font-weight: 500; color: var(--text-3); }
+.prog-label span:last-child { color: var(--green); font-weight: 700; }
+.prog-track { height: 5px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+.prog-fill { height: 100%; background: linear-gradient(90deg, var(--green), #52d68a); border-radius: 4px; transition: width 1s ease; }
+
+/* SVG chart */
+.chart-wrap { padding: 0 0 4px; }
+.chart-line { stroke: var(--green); stroke-width: 1.5; fill: none; }
+.chart-area { fill: url(#cg); }
+
+/* Picks table */
+.picks-table { margin-top: 0; }
+.picks-head { display: grid; grid-template-columns: 1fr 56px 56px 64px; gap: 8px; padding: 8px 18px; border-top: 1px solid var(--border); }
+.picks-head span { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: var(--text-3); }
+.pick-row { display: grid; grid-template-columns: 1fr 56px 56px 64px; gap: 8px; padding: 10px 18px; border-top: 1px solid var(--border); align-items: center; transition: background 0.15s; }
+.pick-row:hover { background: rgba(255,255,255,0.02); }
+.pick-name { font-size: 13px; font-weight: 600; color: var(--text-1); }
+.pick-league { font-size: 10px; font-weight: 500; color: var(--text-3); margin-top: 1px; }
+.pick-odds { font-size: 13px; font-weight: 600; color: var(--text-1); }
+.pick-stake { font-size: 13px; color: var(--text-2); }
+.pick-pnl { font-size: 13px; font-weight: 700; }
+.pnl-win { color: var(--green); }
+.pnl-live { color: var(--amber); }
+.pnl-loss { color: var(--red); }
+
+/* metrics row */
+.metrics-row { display: flex; justify-content: space-between; padding: 12px 18px; background: var(--bg-3); border-top: 1px solid var(--border); }
+.metric { text-align: center; }
+.metric-val { font-size: 14px; font-weight: 700; color: var(--text-1); }
+.metric-val.green { color: var(--green); }
+.metric-lbl { font-size: 10px; font-weight: 500; color: var(--text-3); margin-top: 2px; }
+
+/* ─── SECTION: HOW IT WORKS ───────────────────────────────── */
+.section { padding: 80px 0; }
+.section-border { border-top: 1px solid var(--border); }
+.section-eyebrow {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 48px;
+}
+.eyebrow-line { width: 3px; height: 18px; background: var(--green); border-radius: 2px; flex-shrink: 0; }
+.eyebrow-text { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-3); }
+
+.steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.step-item { background: var(--bg); padding: 36px 32px; position: relative; }
+.step-num { font-family: 'Barlow Condensed', sans-serif; font-size: 64px; font-weight: 900; color: rgba(0,200,83,0.08); line-height: 1; margin-bottom: 16px; letter-spacing: -0.02em; }
+.step-title { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 10px; color: var(--text-1); }
+.step-body { font-size: 14px; color: var(--text-2); line-height: 1.7; }
+
+/* ─── SECTION: CHALLENGES ─────────────────────────────────── */
+.tiers-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 32px; }
+.tiers-title { font-family: 'Barlow Condensed', sans-serif; font-size: 40px; font-weight: 800; letter-spacing: -0.02em; }
+.tiers-table { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.tiers-head { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 130px; padding: 11px 22px; background: var(--bg-2); border-bottom: 1px solid var(--border); }
+.tiers-head span { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); }
+.tier-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 130px; padding: 18px 22px; border-top: 1px solid var(--border); align-items: center; background: var(--bg); transition: background 0.15s; }
+.tier-row:hover { background: var(--bg-3); }
+.tier-row.featured { background: rgba(0,200,83,0.04); border-color: rgba(0,200,83,0.15); }
+.tier-row.featured + .tier-row { border-top-color: rgba(0,200,83,0.15); }
+.tier-name { font-size: 15px; font-weight: 700; color: var(--text-1); }
+.tier-desc { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.tier-val { font-size: 15px; font-weight: 600; color: var(--text-1); }
+.tier-split { font-size: 15px; font-weight: 700; color: var(--green); }
+.tier-badge { display: inline-flex; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; background: var(--green-bg); color: var(--green); border: 1px solid var(--border-em); padding: 2px 8px; border-radius: 4px; margin-left: 8px; }
+.tier-cta { background: var(--green); color: #000; font-size: 12px; font-weight: 700; padding: 9px 18px; border-radius: 7px; text-decoration: none; display: inline-block; text-align: center; transition: background 0.2s; cursor: pointer; }
+.tier-cta:hover { background: var(--green-dim); }
+.tier-cta.outline { background: transparent; color: var(--text-2); border: 1px solid var(--border); }
+.tier-cta.outline:hover { border-color: rgba(255,255,255,0.2); color: var(--text-1); background: rgba(255,255,255,0.03); }
+
+/* ─── SECTION: TESTIMONIALS ───────────────────────────────── */
+.testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.testimonial-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 26px; }
+.testimonial-amount { font-family: 'Barlow Condensed', sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -0.02em; color: var(--green); margin-bottom: 14px; }
+.testimonial-text { font-size: 14px; color: var(--text-2); line-height: 1.7; margin-bottom: 18px; }
+.testimonial-author { display: flex; align-items: center; gap: 10px; }
+.testimonial-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--green-bg); border: 1px solid var(--border-em); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--green); flex-shrink: 0; }
+.testimonial-name { font-size: 13px; font-weight: 700; color: var(--text-1); }
+.testimonial-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+/* ─── CTA BANNER ──────────────────────────────────────────── */
+.cta-banner {
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 56px; text-align: center;
+  position: relative; overflow: hidden;
+}
+.cta-banner::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(0,200,83,0.06) 0%, transparent 60%);
+  pointer-events: none;
+}
+.cta-banner-title { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(36px, 5vw, 60px); font-weight: 900; letter-spacing: -0.01em; margin-bottom: 14px; position: relative; z-index: 1; }
+.cta-banner-sub { font-size: 16px; color: var(--text-2); margin-bottom: 32px; position: relative; z-index: 1; }
+.cta-banner-actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; position: relative; z-index: 1; }
+
+/* ─── FOOTER ──────────────────────────────────────────────── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 24px 0;
+}
+.footer-inner { display: flex; justify-content: space-between; align-items: center; }
+.footer-text { font-size: 12px; color: var(--text-3); }
+.footer-links { display: flex; gap: 20px; }
+.footer-links a { font-size: 12px; color: var(--text-3); text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: var(--text-2); }
+
+/* ─── RESPONSIVE ──────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .hero-grid { grid-template-columns: 1fr; }
+  .account-card { display: none; }
+}
+@media (max-width: 768px) {
+  .container { padding: 0 20px; }
+  .steps-grid { grid-template-columns: 1fr; }
+  .tiers-table { overflow-x: auto; }
+  .testimonials-grid { grid-template-columns: 1fr; }
+  .nav-links { display: none; }
+  .hero-h1 { font-size: 58px; }
+  .cta-banner { padding: 36px 24px; }
+}
+
+/* ─── ANIMATIONS ──────────────────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  .fade-in { opacity: 0; transform: translateY(20px); animation: fadeIn 0.7s ease forwards; }
+  .fade-in-2 { animation-delay: 0.12s; }
+  .fade-in-3 { animation-delay: 0.24s; }
+  .fade-in-4 { animation-delay: 0.36s; }
+  @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── NAV ─────────────────────────────────────────────── -->
+<nav class="topnav" aria-label="Main navigation">
+  <div class="container topnav-inner">
+    <a href="#" class="nav-logo">
+      <div class="nav-logo-mark" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></svg>
+      </div>
+      <span class="nav-logo-text">PlayFunded</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#challenges">Challenges</a></li>
+      <li><a href="#how-it-works">How It Works</a></li>
+      <li><a href="#results">Results</a></li>
+    </ul>
+    <div class="nav-actions">
+      <a href="#" class="nav-signin">Sign in</a>
+      <a href="#challenges" class="nav-cta">Get Funded</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── LIVE FEED ───────────────────────────────────────── -->
+<div class="feed-bar" style="margin-top:60px;" role="marquee" aria-label="Live trader activity">
+  <div class="feed-track">
+    <!-- Set 1 -->
+    <div class="feed-item"><div class="feed-dot"></div><span class="feed-name">Carlos V.</span><span>Phase 2 complete →</span><span class="feed-amount">+$2,890</span><span>payout sent</span></div>
+    <div class="feed-item"><div class="feed-dot"></div><span class="feed-name">Andrea R.</span><span>Elite funded →</span><span class="feed-amount">+$6,100</span><span>this month</span></div>
+    <div class="feed-item"><div class="feed-dot"></div><span class="feed-name">Miguel T.</span><span>Phase 1 passed ·</span><span style="color:var(--text-2)">$10K account</span></div>
+    <div class="feed-item"><div class="feed-dot"></div><span class="feed-name">Juan R.</span><span>Payout received →</span><span class="feed-amount">+$4,200</span></div>
+    <div class="feed-item"><div class="feed-dot"></div><span class="feed-name">Sofia M.</span><span>Phase 2 active ·</span><span style="color:var(--text-2)">89% to target</span></div>
+    <div class="feed-item"><div class="feed-dot"></div><span class="feed-name">Rodrigo P.</span><span>Funded →</span><span class="feed-amount">+$1,875</span><span>first payout</span></div>
+    <div class="feed-item"><div class="feed-dot"></div><span class="feed-name">Valentina C.</span><span>Challenge passed ·</span><span style="color:var(--text-2)">$25K account</span></div>
+    <div class="feed-item"><div class="feed-dot"></div><span class="feed-name">Emilio F.</span><span>Payout →</span><span class="feed-amount">+$3,450</span><span>· 48h settlement</span></div>
+    <!-- Set 2 (mirror for seamless loop) -->
+    <div class="feed-item"><div class="feed-dot"></div><span class="feed-name">Carlos V.</span><span>Phase 2 complete →</span><span class="feed-amount">+$2,890</span><span>payout sent</span></div>
+    <div class="feed-item"><div class="feed-dot"></div><span class="feed-name">Andrea R.</span><span>Elite funded →</span><span class="feed-amount">+$6,100</span><span>this month</span></div>
+    <div class="feed-item"><div class="feed-dot"></div><span class="feed-name">Miguel T.</span><span>Phase 1 passed ·</span><span style="color:var(--text-2)">$10K account</span></div>
+    <div class="feed-item"><div class="feed-dot"></div><span class="feed-name">Juan R.</span><span>Payout received →</span><span class="feed-amount">+$4,200</span></div>
+    <div class="feed-item"><div class="feed-dot"></div><span class="feed-name">Sofia M.</span><span>Phase 2 active ·</span><span style="color:var(--text-2)">89% to target</span></div>
+    <div class="feed-item"><div class="feed-dot"></div><span class="feed-name">Rodrigo P.</span><span>Funded →</span><span class="feed-amount">+$1,875</span><span>first payout</span></div>
+    <div class="feed-item"><div class="feed-dot"></div><span class="feed-name">Valentina C.</span><span>Challenge passed ·</span><span style="color:var(--text-2)">$25K account</span></div>
+    <div class="feed-item"><div class="feed-dot"></div><span class="feed-name">Emilio F.</span><span>Payout →</span><span class="feed-amount">+$3,450</span><span>· 48h settlement</span></div>
+  </div>
+</div>
+
+<!-- ─── HERO ─────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-glow" aria-hidden="true"></div>
+  <div class="hero-glow-2" aria-hidden="true"></div>
+
+  <div class="container">
+    <div class="hero-grid">
+
+      <!-- Left: Copy -->
+      <div>
+        <div class="hero-eyebrow fade-in">
+          <span class="chip chip-green">
+            <svg width="8" height="8" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg>
+            247 traders funded this month
+          </span>
+          <span class="chip chip-dim">Sports Prop Trading · LATAM</span>
+        </div>
+
+        <h1 class="hero-h1 fade-in fade-in-2">
+          Your edge.<br>
+          <em>Our capital.</em><br>
+          Your profits.
+        </h1>
+
+        <p class="hero-sub fade-in fade-in-3">
+          Pass two phases, trade up to $25,000 of real capital on live sports, and keep 80% of every winning pick — paid to your account within 48 hours.
+        </p>
+
+        <div class="hero-ctas fade-in fade-in-4">
+          <a href="#challenges" class="cta-primary" aria-label="Start your challenge">
+            Start your challenge
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </a>
+          <a href="#how-it-works" class="cta-ghost">See how it works</a>
+        </div>
+
+        <div class="hero-stats fade-in fade-in-4">
+          <div class="hero-stat">
+            <div class="hero-stat-num">$183K</div>
+            <div class="hero-stat-label">Paid to traders</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-num">247</div>
+            <div class="hero-stat-label">Funded accounts</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-num green">80%</div>
+            <div class="hero-stat-label">Max profit split</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-num">48h</div>
+            <div class="hero-stat-label">Avg payout time</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Live account card -->
+      <div class="account-card" role="img" aria-label="Example funded account dashboard">
+        <div class="account-card-head">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="chip chip-green" style="padding:3px 8px;font-size:10px;">
+              <svg width="6" height="6" viewBox="0 0 6 6" aria-hidden="true"><circle cx="3" cy="3" r="3" fill="currentColor"/></svg>
+              Phase 2 · Active
+            </span>
+            <span style="font-size:11px;color:var(--text-3);font-weight:500;">PRO-2891</span>
+          </div>
+          <span style="font-size:11px;color:var(--text-3);">$10K account</span>
+        </div>
+
+        <div class="account-card-body">
+          <div class="account-balance-row">
+            <div>
+              <div class="account-balance">$11,432</div>
+              <div class="account-pnl">▲ +$1,432 · +14.3%</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="account-target-label">To target</div>
+              <div class="account-target-val">$68</div>
+              <div class="account-target-pct">94% complete</div>
+            </div>
+          </div>
+
+          <!-- Mini chart -->
+          <div class="chart-wrap">
+            <svg width="100%" height="64" viewBox="0 0 440 64" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#00c853" stop-opacity="0.18"/>
+                  <stop offset="100%" stop-color="#00c853" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path class="chart-area" d="M0,56 C20,54 40,50 60,48 C80,46 100,50 120,46 C140,42 160,36 180,34 C200,32 220,38 240,34 C260,30 280,24 300,20 C320,16 340,14 360,10 C380,7 400,6 440,4 L440,64 L0,64 Z"/>
+              <path class="chart-line" d="M0,56 C20,54 40,50 60,48 C80,46 100,50 120,46 C140,42 160,36 180,34 C200,32 220,38 240,34 C260,30 280,24 300,20 C320,16 340,14 360,10 C380,7 400,6 440,4"/>
+              <circle cx="440" cy="4" r="3" fill="#00c853"/>
+            </svg>
+          </div>
+
+          <!-- Progress -->
+          <div class="prog-wrap">
+            <div class="prog-label"><span>$10,000 start</span><span>94% to $11,500 target</span></div>
+            <div class="prog-track"><div class="prog-fill" style="width:94%"></div></div>
+          </div>
+        </div>
+
+        <!-- Picks -->
+        <div class="picks-table">
+          <div class="picks-head">
+            <span>Pick</span>
+            <span>Odds</span>
+            <span>Stake</span>
+            <span>P&amp;L</span>
+          </div>
+          <div class="pick-row">
+            <div><div class="pick-name">Lakers ML</div><div class="pick-league">NBA · 3Q 8:42</div></div>
+            <div class="pick-odds">2.10</div>
+            <div class="pick-stake">$200</div>
+            <div class="pick-pnl pnl-win">+$220</div>
+          </div>
+          <div class="pick-row">
+            <div><div class="pick-name">América O2.5</div><div class="pick-league">Liga MX · 62'</div></div>
+            <div class="pick-odds">1.95</div>
+            <div class="pick-stake">$350</div>
+            <div class="pick-pnl pnl-live">Pending</div>
+          </div>
+          <div class="pick-row" style="opacity:0.5;">
+            <div><div class="pick-name">Chiefs -3.5</div><div class="pick-league">NFL · Settled</div></div>
+            <div class="pick-odds">1.90</div>
+            <div class="pick-stake">$150</div>
+            <div class="pick-pnl pnl-loss">-$150</div>
+          </div>
+        </div>
+
+        <div class="metrics-row">
+          <div class="metric"><div class="metric-val green">78%</div><div class="metric-lbl">Win rate</div></div>
+          <div class="metric"><div class="metric-val">23</div><div class="metric-lbl">Picks placed</div></div>
+          <div class="metric"><div class="metric-val">3.4%</div><div class="metric-lbl">Drawdown</div></div>
+          <div class="metric"><div class="metric-val green">$1,146</div><div class="metric-lbl">Payout ready</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── HOW IT WORKS ─────────────────────────────────────── -->
+<section class="section section-border" id="how-it-works">
+  <div class="container">
+    <div class="section-eyebrow">
+      <div class="eyebrow-line" aria-hidden="true"></div>
+      <span class="eyebrow-text">The path to funded</span>
+    </div>
+
+    <div class="steps-grid">
+      <div class="step-item">
+        <div class="step-num">01</div>
+        <h3 class="step-title">Buy the challenge</h3>
+        <p class="step-body">Choose your account size — $5K, $10K, or $25K. Pay a one-time evaluation fee. No subscriptions, no recurring costs. Access your simulated account immediately.</p>
+      </div>
+      <div class="step-item">
+        <div class="step-num">02</div>
+        <h3 class="step-title">Pass two phases</h3>
+        <p class="step-body">Hit your profit target in Phase 1, then again in Phase 2 — while respecting drawdown limits. Show consistent, disciplined picks. Luck doesn't pass twice.</p>
+      </div>
+      <div class="step-item">
+        <div class="step-num">03</div>
+        <h3 class="step-title">Get funded &amp; paid</h3>
+        <p class="step-body">Receive your funded account. Place picks on live sports markets. Withdraw up to 80% of profits every month — directly to your bank or crypto wallet within 48 hours.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CHALLENGES ───────────────────────────────────────── -->
+<section class="section section-border" id="challenges">
+  <div class="container">
+    <div class="tiers-header">
+      <h2 class="tiers-title">Choose your account size</h2>
+      <span style="font-size:13px;color:var(--text-3);">All plans · 6 sports · monthly payouts</span>
+    </div>
+
+    <div class="tiers-table">
+      <div class="tiers-head">
+        <span>Plan</span>
+        <span>Account size</span>
+        <span>Entry fee</span>
+        <span>Profit split</span>
+        <span>Drawdown</span>
+        <span></span>
+      </div>
+
+      <div class="tier-row">
+        <div>
+          <div class="tier-name">Starter</div>
+          <div class="tier-desc">Best for beginners</div>
+        </div>
+        <span class="tier-val">$5,000</span>
+        <span class="tier-val" style="color:var(--text-2)">$500</span>
+        <span class="tier-split">70%</span>
+        <span class="tier-val" style="color:var(--text-2)">10%</span>
+        <a href="#" class="tier-cta outline" aria-label="Select Starter plan">Select</a>
+      </div>
+
+      <div class="tier-row featured">
+        <div>
+          <div class="tier-name">
+            Pro
+            <span class="tier-badge">POPULAR</span>
+          </div>
+          <div class="tier-desc">Most traders choose this</div>
+        </div>
+        <span class="tier-val">$10,000</span>
+        <span class="tier-val" style="color:var(--text-2)">$1,000</span>
+        <span class="tier-split">75%</span>
+        <span class="tier-val" style="color:var(--text-2)">10%</span>
+        <a href="#" class="tier-cta" aria-label="Select Pro plan">Select</a>
+      </div>
+
+      <div class="tier-row">
+        <div>
+          <div class="tier-name">Elite</div>
+          <div class="tier-desc">For proven traders</div>
+        </div>
+        <span class="tier-val">$25,000</span>
+        <span class="tier-val" style="color:var(--text-2)">$2,500</span>
+        <span class="tier-split">80%</span>
+        <span class="tier-val" style="color:var(--text-2)">10%</span>
+        <a href="#" class="tier-cta outline" aria-label="Select Elite plan">Select</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── TESTIMONIALS ─────────────────────────────────────── -->
+<section class="section section-border" id="results">
+  <div class="container">
+    <div class="section-eyebrow">
+      <div class="eyebrow-line" aria-hidden="true"></div>
+      <span class="eyebrow-text">Real traders, real payouts</span>
+    </div>
+
+    <div class="testimonials-grid">
+      <div class="testimonial-card">
+        <div class="testimonial-amount">+$4,200</div>
+        <p class="testimonial-text">"Phase 2 took me three weeks of consistent picks. The payout arrived in less than 48 hours — I didn't believe it until I saw it in my account."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" aria-hidden="true">JR</div>
+          <div>
+            <div class="testimonial-name">Juan R.</div>
+            <div class="testimonial-meta">México · Elite Account · 80% split</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-amount">+$1,875</div>
+        <p class="testimonial-text">"Finalmente una plataforma seria para Latinoamérica. Me trataron como un trader de verdad, no como un apostador más. Los pagos son rápidos y reales."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" aria-hidden="true">AP</div>
+          <div>
+            <div class="testimonial-name">Andrea P.</div>
+            <div class="testimonial-meta">Colombia · Pro Account · 75% split</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-amount">+$6,100</div>
+        <p class="testimonial-text">"Es diferente a todo lo que existe en LATAM. El conocimiento deportivo se convierte en dinero real. Ya van tres meses seguidos retirando."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" aria-hidden="true">MT</div>
+          <div>
+            <div class="testimonial-name">Marcos T.</div>
+            <div class="testimonial-meta">Argentina · Elite Account · 80% split</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CTA BANNER ───────────────────────────────────────── -->
+<section class="section section-border">
+  <div class="container">
+    <div class="cta-banner">
+      <h2 class="cta-banner-title">Ready to prove your edge?</h2>
+      <p class="cta-banner-sub">Join 247 funded traders already earning from their sports knowledge.</p>
+      <div class="cta-banner-actions">
+        <a href="#challenges" class="cta-primary">
+          Start your challenge
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
+        <a href="#how-it-works" class="cta-ghost">How it works</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FOOTER ───────────────────────────────────────────── -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <span class="footer-text">© 2025 PlayFunded — Sports Prop Trading · LATAM</span>
+      <nav class="footer-links" aria-label="Footer navigation">
+        <a href="#">Terms</a>
+        <a href="#">Privacy</a>
+        <a href="#">FAQ</a>
+        <a href="#">Contact</a>
+      </nav>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

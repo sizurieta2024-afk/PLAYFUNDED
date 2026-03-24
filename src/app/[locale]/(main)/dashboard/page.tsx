@@ -23,19 +23,20 @@ export default async function DashboardPage({
 }) {
   const { locale } = await params;
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (authError || !authUser) {
     redirect("/auth/login");
   }
 
   const t = await getTranslations({ locale, namespace: "dashboard" });
 
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
   });
 
   if (!user) redirect("/auth/login");
@@ -50,7 +51,7 @@ export default async function DashboardPage({
       tier: true,
       picks: {
         where: { status: { not: "void" } },
-        select: { status: true },
+        select: { status: true, stake: true },
       },
     },
     orderBy: { createdAt: "desc" },
@@ -109,28 +110,112 @@ export default async function DashboardPage({
     return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
+  // Quick stats aggregates
+  const totalPnlCents = challenges.reduce(
+    (sum, c) => sum + (c.balance - c.startBalance),
+    0,
+  );
+  const totalPnlPct =
+    challenges.length > 0
+      ? (
+          (totalPnlCents /
+            challenges.reduce((sum, c) => sum + c.startBalance, 0)) *
+          100
+        ).toFixed(1)
+      : "0.0";
+  const settledRecent = recentPicks.filter(
+    (p) => p.status === "won" || p.status === "lost" || p.status === "push",
+  );
+  const wonRecent = recentPicks.filter((p) => p.status === "won").length;
+  const winRate =
+    settledRecent.length > 0
+      ? ((wonRecent / settledRecent.length) * 100).toFixed(0)
+      : "—";
+
   return (
-    <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8 space-y-8">
+    <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 space-y-6">
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-border pb-5">
         <div>
-          <h1 className="text-2xl font-bold">{t("pageTitle")}</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">
+          <h1 className="text-xl font-display font-bold text-foreground">
+            {t("pageTitle")}
+          </h1>
+          <p className="text-muted-foreground text-xs mt-0.5">
             {t("welcome")},{" "}
-            <span className="text-foreground font-medium">
-              {session.user.user_metadata?.full_name ??
-                session.user.user_metadata?.name ??
-                session.user.email?.split("@")[0]}
+            <span className="text-foreground font-semibold">
+              {authUser.user_metadata?.full_name ??
+                authUser.user_metadata?.name ??
+                authUser.email?.split("@")[0]}
             </span>
           </p>
         </div>
         <Link
-          href="/challenges"
-          className="px-4 py-2 rounded-lg bg-pf-brand text-white text-sm font-semibold hover:bg-pf-brand/90 transition-colors"
+          href="/dashboard/picks"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-pf-pink hover:bg-pf-pink-dark text-white text-xs font-bold transition-all duration-200 shadow-pf-pink-glow-sm hover:shadow-pf-pink-glow hover:-translate-y-0.5"
         >
-          + {t("placePick")}
+          <span>+</span>
+          {t("placePick")}
         </Link>
       </div>
+
+      {/* ── Quick stats strip ────────────────────────────────────────────── */}
+      {challenges.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            {
+              label: t("activeChallenges"),
+              value: `${challenges.length}`,
+              sub: null,
+              accent: "text-foreground",
+            },
+            {
+              label: "P&L Total",
+              value: formatCents(Math.abs(totalPnlCents)),
+              sub: `${totalPnlCents >= 0 ? "+" : "-"}${Math.abs(Number(totalPnlPct))}%`,
+              accent: totalPnlCents >= 0 ? "text-pf-brand" : "text-red-400",
+            },
+            {
+              label: t("picks"),
+              value: `${recentPicks.length}`,
+              sub: "recientes",
+              accent: "text-foreground",
+            },
+            {
+              label: "Win Rate",
+              value: winRate === "—" ? "—" : `${winRate}%`,
+              sub:
+                settledRecent.length > 0
+                  ? `${settledRecent.length} picks`
+                  : null,
+              accent:
+                winRate !== "—" && Number(winRate) >= 50
+                  ? "text-pf-brand"
+                  : "text-foreground",
+            },
+          ].map((s) => (
+            <div
+              key={s.label}
+              className="rounded-xl border border-border bg-card p-4 flex flex-col gap-1"
+            >
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                {s.label}
+              </p>
+              <p
+                className={`text-2xl font-extrabold tabular-nums tracking-tight ${s.accent}`}
+              >
+                {s.value}
+              </p>
+              {s.sub && (
+                <p
+                  className={`text-[11px] font-semibold ${totalPnlCents >= 0 && s.label === "P&L Total" ? "text-pf-brand/70" : "text-muted-foreground"}`}
+                >
+                  {s.sub}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Active challenges ────────────────────────────────────────────── */}
       {challenges.length === 0 ? (
@@ -138,7 +223,7 @@ export default async function DashboardPage({
           <p className="text-muted-foreground">{t("noActiveChallenges")}</p>
           <Link
             href="/challenges"
-            className="inline-block px-5 py-2.5 rounded-lg bg-pf-brand text-white text-sm font-semibold hover:bg-pf-brand/90 transition-colors"
+            className="inline-block px-5 py-2.5 rounded-lg bg-pf-pink text-white text-sm font-semibold hover:bg-pf-pink-dark transition-colors"
           >
             {t("buyFirstChallenge")}
           </Link>
@@ -156,13 +241,20 @@ export default async function DashboardPage({
                   p.status === "lost" ||
                   p.status === "push",
               ).length;
-              const pendingPicksCount = challenge.picks.filter(
+              const pendingPicks = challenge.picks.filter(
                 (p) => p.status === "pending",
-              ).length;
+              );
+              const pendingPicksCount = pendingPicks.length;
+              // Sum of stakes for pending bets — used so loss bars only move on settled losses
+              const pendingStakeCents = pendingPicks.reduce(
+                (sum, p) => sum + p.stake,
+                0,
+              );
 
               return (
                 <ChallengeCard
                   key={challenge.id}
+                  pendingStakeCents={pendingStakeCents}
                   challenge={{
                     id: challenge.id,
                     balance: challenge.balance,
@@ -191,60 +283,66 @@ export default async function DashboardPage({
         </section>
       )}
 
-      {/* ── Quick links ──────────────────────────────────────────────────── */}
-      <section className="flex flex-wrap gap-2">
-        {[
-          { href: "/dashboard/picks", label: t("placePick") },
-          { href: "/dashboard/analytics", label: t("viewAnalytics") },
-          { href: "/dashboard/payouts", label: t("payouts") },
-          { href: "/dashboard/affiliate", label: "Affiliate" },
-          { href: "/dashboard/settings", label: t("settings") },
-        ].map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-          >
-            {link.label}
-          </Link>
-        ))}
-      </section>
-
       {/* ── Recent picks ─────────────────────────────────────────────────── */}
       {recentPicks.length > 0 && (
         <section>
-          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-            {t("recentPicks")}
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+              {t("recentPicks")}
+            </h2>
+            <Link
+              href="/dashboard/picks"
+              className="text-[11px] text-pf-brand hover:text-pf-brand-dark font-semibold transition-colors"
+            >
+              Ver todos →
+            </Link>
+          </div>
           <div className="rounded-xl border border-border bg-card overflow-hidden">
+            {/* Table header */}
+            <div className="hidden sm:grid grid-cols-[1fr_80px_70px_70px] gap-2 px-4 py-2 border-b border-border bg-muted/30">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Selección
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">
+                Cuota
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">
+                Stake
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">
+                Estado
+              </span>
+            </div>
             {recentPicks.map((pick, i) => (
               <div
                 key={pick.id}
-                className={`flex items-center justify-between gap-3 px-4 py-3 ${
-                  i < recentPicks.length - 1 ? "border-b border-border" : ""
+                className={`grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_80px_70px_70px] gap-2 items-center px-4 py-3 hover:bg-muted/20 transition-colors ${
+                  i < recentPicks.length - 1 ? "border-b border-border/60" : ""
                 }`}
               >
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium truncate">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-foreground truncate">
                     {pick.selection}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {pick.eventName ?? pick.league} ·{" "}
-                    <span className="tabular-nums">{pick.odds.toFixed(2)}</span>
+                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                    {pick.eventName ?? pick.league}
                   </p>
                 </div>
-                <div className="text-right shrink-0 space-y-1">
+                <span className="hidden sm:block text-xs font-mono font-semibold text-center text-foreground/80 tabular-nums">
+                  {pick.odds.toFixed(2)}
+                </span>
+                <span className="hidden sm:block text-xs text-right text-muted-foreground tabular-nums">
+                  {formatCents(pick.stake)}
+                </span>
+                <div className="flex justify-end">
                   <span
-                    className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                    className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold ${
                       STATUS_STYLES[pick.status] ??
                       "bg-muted text-muted-foreground"
                     }`}
                   >
                     {t(pick.status as Parameters<typeof t>[0])}
                   </span>
-                  <p className="text-xs text-muted-foreground tabular-nums">
-                    {formatCents(pick.stake)}
-                  </p>
                 </div>
               </div>
             ))}

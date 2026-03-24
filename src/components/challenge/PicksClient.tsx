@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, X, Zap } from "lucide-react";
+import { EVENT_LOCK_MINUTES } from "@/lib/challenge/event-lock";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -21,6 +22,7 @@ interface Market {
 
 interface CachedEvent {
   id: string;
+  event: string;
   sport: string;
   league: string;
   eventName: string | null;
@@ -58,7 +60,7 @@ interface ChallengeData {
   };
 }
 
-interface SelectedOutcome {
+interface SlipLeg {
   event: CachedEvent;
   marketType: string;
   market: Market;
@@ -84,7 +86,7 @@ function getProfitTargetCents(challenge: ChallengeData): number {
   }
   if (challenge.phase === "phase2") {
     const base = challenge.phase2StartBalance ?? challenge.startBalance;
-    return base + Math.floor((base * 10) / 100);
+    return base + Math.floor((base * 20) / 100);
   }
   return Infinity;
 }
@@ -93,6 +95,13 @@ function getPhaseLabel(phase: string, t: Record<string, string>): string {
   if (phase === "phase1") return t.phase1;
   if (phase === "phase2") return t.phase2;
   return t.funded;
+}
+
+function isEventStillOpen(event: CachedEvent): boolean {
+  if (event.isLive) return false;
+  const eventStart = new Date(event.startTime).getTime();
+  if (Number.isNaN(eventStart)) return false;
+  return eventStart > Date.now() + EVENT_LOCK_MINUTES * 60 * 1000;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -124,34 +133,97 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
   const [activeSport, setActiveSport] = useState<string>("all");
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
 
-  const [selected, setSelected] = useState<SelectedOutcome | null>(null);
+  // Unified bet slip — 1 leg = single, 2-4 legs = parlay
+  const [legs, setLegs] = useState<SlipLeg[]>([]);
   const [stakeInput, setStakeInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [justPlaced, setJustPlaced] = useState(false);
+  const [eventsTick, setEventsTick] = useState(() => Date.now());
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchEvents() {
-      setLoadingEvents(true);
+      if (!cancelled) setLoadingEvents(true);
       try {
         const res = await fetch("/api/odds/events");
         if (res.ok) {
           const data = (await res.json()) as { events: CachedEvent[] };
-          setEvents(data.events);
+          if (!cancelled) setEvents(data.events.filter(isEventStillOpen));
         }
       } catch {
         // silent
       } finally {
-        setLoadingEvents(false);
+        if (!cancelled) {
+          setLoadingEvents(false);
+          setEventsTick(Date.now());
+        }
       }
     }
+
     void fetchEvents();
+    const timer = setInterval(() => void fetchEvents(), 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
   }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => setEventsTick(Date.now()), 15_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshPicks() {
+      try {
+        const res = await fetch(`/api/picks?challengeId=${challenge.id}`, {
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { picks?: PickRecord[] };
+        if (!cancelled && Array.isArray(data.picks)) setPicks(data.picks);
+      } catch {
+        // silent
+      }
+    }
+
+    void refreshPicks();
+    const timer = setInterval(() => void refreshPicks(), 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [challenge.id]);
+
+  // Remove legs whose events have locked since the user added them
+  useEffect(() => {
+    setLegs((prev) => {
+      const open = prev.filter((leg) => isEventStillOpen(leg.event));
+      if (open.length < prev.length) {
+        setSubmitError(
+          "One or more events have been removed because they are now locked.",
+        );
+      }
+      return open;
+    });
+  }, [eventsTick]);
 
   // ── Derived ───────────────────────────────────────────────────────────────
 
-  const maxStakeCents = Math.floor((balance * 5) / 100);
+  const maxStakeCents = Math.floor((challenge.startBalance * 5) / 100);
+  const minStakeCents = Math.max(
+    100,
+    Math.floor((challenge.startBalance * 1) / 100),
+  );
   const targetCents = getProfitTargetCents(challenge);
+  const pendingStakeCents = picks
+    .filter((p) => p.status === "pending")
+    .reduce((sum, p) => sum + p.stake, 0);
+  const effectiveBalance = balance + pendingStakeCents;
   const progressPct =
     targetCents === Infinity
       ? 100
@@ -160,7 +232,7 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
           Math.min(
             100,
             Math.round(
-              ((balance - challenge.startBalance) /
+              ((effectiveBalance - challenge.startBalance) /
                 (targetCents - challenge.startBalance)) *
                 100,
             ),
@@ -171,12 +243,12 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
   const visibleSportTabs = SPORT_TABS.filter(
     (tab) => tab.key === "all" || availableSports.includes(tab.key),
   );
+  const openEvents = events.filter(isEventStillOpen);
   const filteredEvents =
     activeSport === "all"
-      ? events
-      : events.filter((e) => e.sport === activeSport);
+      ? openEvents
+      : openEvents.filter((e) => e.sport === activeSport);
 
-  // Group events by league
   const eventsByLeague = filteredEvents.reduce<Record<string, CachedEvent[]>>(
     (acc, event) => {
       const key = event.league;
@@ -190,42 +262,141 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
   const stakeNum = parseFloat(stakeInput);
   const stakeCents =
     Number.isFinite(stakeNum) && stakeNum > 0 ? Math.round(stakeNum * 100) : 0;
+
+  const isParlay = legs.length >= 2;
+  const combinedOdds = legs.reduce((p, leg) => p * leg.outcome.odds, 1);
+  const effectiveOdds = isParlay ? combinedOdds : (legs[0]?.outcome.odds ?? 1);
   const potentialPayoutCents =
-    selected && stakeCents > 0
-      ? Math.round(stakeCents * selected.outcome.odds)
+    legs.length > 0 && stakeCents > 0
+      ? Math.round(stakeCents * effectiveOdds)
       : 0;
+
   const stakeError =
     stakeCents > 0 && stakeCents > maxStakeCents
       ? `Max ${formatCents(maxStakeCents)}`
-      : stakeCents > 0 && stakeCents < 100
-        ? "Min $1.00"
+      : stakeCents > 0 && stakeCents < minStakeCents
+        ? `Min ${formatCents(minStakeCents)}`
         : null;
+
+  // ── Slip toggle — click to add, click again to remove ────────────────────
+
+  function toggleLeg(event: CachedEvent, market: Market, outcome: Outcome) {
+    setSubmitError(null);
+
+    // Already in slip → remove it
+    const existingIdx = legs.findIndex(
+      (l) =>
+        l.event.event === event.event &&
+        l.market.key === market.key &&
+        l.outcome.name === outcome.name,
+    );
+    if (existingIdx !== -1) {
+      setLegs((prev) => prev.filter((_, i) => i !== existingIdx));
+      return;
+    }
+
+    // Different outcome from same game already in slip → replace it
+    const sameGameIdx = legs.findIndex((l) => l.event.event === event.event);
+    if (sameGameIdx !== -1) {
+      setLegs((prev) =>
+        prev.map((l, i) =>
+          i === sameGameIdx
+            ? { event, marketType: market.type, market, outcome }
+            : l,
+        ),
+      );
+      return;
+    }
+
+    // Max 4 legs
+    if (legs.length >= 4) {
+      setSubmitError(t.parlayMaxLegs);
+      return;
+    }
+
+    setLegs((prev) => [
+      ...prev,
+      { event, marketType: market.type, market, outcome },
+    ]);
+    if (!stakeInput) setStakeInput("");
+  }
+
+  function removeLeg(idx: number) {
+    setLegs((prev) => prev.filter((_, i) => i !== idx));
+    setSubmitError(null);
+  }
+
+  function clearSlip() {
+    setLegs([]);
+    setStakeInput("");
+    setSubmitError(null);
+  }
+
+  function isInSlip(eventId: string, marketKey: string, outcomeName: string) {
+    return legs.some(
+      (l) =>
+        l.event.event === eventId &&
+        l.market.key === marketKey &&
+        l.outcome.name === outcomeName,
+    );
+  }
 
   // ── Submit ────────────────────────────────────────────────────────────────
 
   const handleSubmit = useCallback(async () => {
-    if (!selected || stakeCents < 100 || stakeCents > maxStakeCents) return;
+    if (
+      legs.length === 0 ||
+      stakeCents < minStakeCents ||
+      stakeCents > maxStakeCents
+    )
+      return;
     setIsSubmitting(true);
     setSubmitError(null);
 
     try {
-      const res = await fetch("/api/picks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          challengeId: challenge.id,
-          sport: selected.event.sport,
-          league: selected.event.league,
-          event: selected.event.id,
-          eventName: selected.event.eventName,
-          marketType: selected.marketType,
-          selection: selected.outcome.name,
-          odds: selected.outcome.odds,
-          linePoint: selected.outcome.point ?? null,
-          stake: stakeCents,
-          eventStart: selected.event.startTime,
-        }),
-      });
+      let res: Response;
+
+      if (legs.length === 1) {
+        // Single pick
+        const leg = legs[0];
+        res = await fetch("/api/picks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            challengeId: challenge.id,
+            sport: leg.event.sport,
+            league: leg.event.league,
+            event: leg.event.event,
+            eventName: leg.event.eventName,
+            marketType: leg.marketType,
+            selection: leg.outcome.name,
+            odds: leg.outcome.odds,
+            linePoint: leg.outcome.point ?? null,
+            stake: stakeCents,
+          }),
+        });
+      } else {
+        // Parlay
+        res = await fetch("/api/picks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            challengeId: challenge.id,
+            stake: stakeCents,
+            isParlay: true,
+            legs: legs.map((leg) => ({
+              sport: leg.event.sport,
+              league: leg.event.league,
+              event: leg.event.event,
+              eventName: leg.event.eventName,
+              marketType: leg.marketType,
+              selection: leg.outcome.name,
+              odds: leg.outcome.odds,
+              linePoint: leg.outcome.point ?? null,
+            })),
+          }),
+        });
+      }
 
       const data = (await res.json()) as {
         pick?: PickRecord;
@@ -240,8 +411,7 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
 
       if (data.pick) setPicks((prev) => [data.pick!, ...prev]);
       if (data.newBalance !== undefined) setBalance(data.newBalance);
-      setSelected(null);
-      setStakeInput("");
+      clearSlip();
       setJustPlaced(true);
       setTimeout(() => setJustPlaced(false), 3000);
       router.refresh();
@@ -250,20 +420,19 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selected, stakeCents, maxStakeCents, challenge.id, router]);
+  }, [legs, stakeCents, minStakeCents, maxStakeCents, challenge.id, router]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-5">
-      {/* ── FTMO-style Challenge Stats Bar ───────────────────────────────── */}
+      {/* ── Challenge Stats Bar ───────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
         className="rounded-xl border border-border bg-card overflow-hidden"
       >
-        {/* Phase indicator strip */}
         <div className="h-1 w-full bg-muted">
           <motion.div
             className="h-full bg-pf-brand rounded-full"
@@ -272,17 +441,13 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
             transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
           />
         </div>
-
         <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-5">
-          {/* Balance */}
           <div>
             <p className="text-xs text-muted-foreground mb-1">{t.balance}</p>
             <p className="text-2xl font-bold tabular-nums tracking-tight">
               {formatCents(balance)}
             </p>
           </div>
-
-          {/* Phase */}
           <div>
             <p className="text-xs text-muted-foreground mb-1">{t.phase}</p>
             <div className="flex items-center gap-1.5">
@@ -294,8 +459,6 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
               {challenge.tier.name}
             </p>
           </div>
-
-          {/* Target */}
           {targetCents !== Infinity && (
             <div>
               <p className="text-xs text-muted-foreground mb-1">{t.target}</p>
@@ -307,8 +470,6 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
               </p>
             </div>
           )}
-
-          {/* Max stake */}
           <div>
             <p className="text-xs text-muted-foreground mb-1">{t.maxStake}</p>
             <p className="text-base font-semibold tabular-nums">
@@ -322,7 +483,7 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
         </div>
       </motion.div>
 
-      {/* ── Pick placed success banner ─────────────────────────────────── */}
+      {/* ── Pick placed success banner ─────────────────────────────────────── */}
       <AnimatePresence>
         {justPlaced && (
           <motion.div
@@ -333,14 +494,14 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
             className="rounded-xl border border-pf-brand/30 bg-pf-brand/10 text-pf-brand px-4 py-3 text-sm font-medium flex items-center gap-2"
           >
             <Zap className="w-4 h-4 shrink-0" />
-            {t.pickPlaced}
+            {isParlay ? t.parlayPlaced : t.pickPlaced}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Main 2-col layout: event browser + bet slip ─────────────────── */}
+      {/* ── Main 2-col layout ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* ── Left col: Event Browser (2/3) ─────────────────────────────── */}
+        {/* ── Left col: Event Browser ───────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-3">
           {/* Sport tabs */}
           <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
@@ -350,8 +511,8 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
                 onClick={() => setActiveSport(tab.key)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
                   activeSport === tab.key
-                    ? "bg-pf-brand text-white shadow-sm"
-                    : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-pf-brand/40"
+                    ? "bg-pf-pink text-white shadow-sm"
+                    : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-pf-pink/40"
                 }`}
               >
                 <span>{tab.icon}</span>
@@ -386,7 +547,6 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
             >
               {Object.entries(eventsByLeague).map(([league, leagueEvents]) => (
                 <div key={league}>
-                  {/* League header */}
                   <div className="flex items-center gap-2 px-1 mb-2">
                     <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       {league}
@@ -404,17 +564,10 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
                             expandedEvent === event.id ? null : event.id,
                           )
                         }
-                        onSelectOutcome={(outcome, market) => {
-                          setSelected({
-                            event,
-                            marketType: market.type,
-                            market,
-                            outcome,
-                          });
-                          setStakeInput("");
-                          setSubmitError(null);
-                        }}
-                        selected={selected}
+                        onSelectOutcome={(outcome, market) =>
+                          toggleLeg(event, market, outcome)
+                        }
+                        isInSlip={isInSlip}
                         t={t}
                       />
                     ))}
@@ -425,64 +578,110 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
           )}
         </div>
 
-        {/* ── Right col: Bet Slip + Recent Picks (1/3) ─────────────────── */}
+        {/* ── Right col: Unified Bet Slip + Recent Picks ────────────────── */}
         <div className="space-y-4">
           {/* Bet Slip */}
           <AnimatePresence mode="wait">
-            {selected ? (
+            {legs.length > 0 ? (
               <motion.div
                 key="betslip"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
-                className="rounded-xl border border-pf-brand/50 bg-card overflow-hidden"
+                className={`rounded-xl border bg-card overflow-hidden ${
+                  isParlay ? "border-pf-pink/50" : "border-pf-brand/50"
+                }`}
               >
                 {/* Slip header */}
-                <div className="flex items-center justify-between px-4 py-3 bg-pf-brand/10 border-b border-pf-brand/20">
-                  <span className="text-xs font-semibold text-pf-brand uppercase tracking-wide">
-                    Bet Slip
-                  </span>
+                <div
+                  className={`flex items-center justify-between px-4 py-3 border-b ${
+                    isParlay
+                      ? "bg-pf-pink/10 border-pf-pink/20"
+                      : "bg-pf-brand/10 border-pf-brand/20"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-xs font-semibold uppercase tracking-wide ${
+                        isParlay ? "text-pf-pink" : "text-pf-brand"
+                      }`}
+                    >
+                      {isParlay ? `${t.parlay} (${legs.length})` : "Bet Slip"}
+                    </span>
+                    {isParlay && (
+                      <span className="text-xs text-muted-foreground">
+                        ×{combinedOdds.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
                   <button
-                    onClick={() => {
-                      setSelected(null);
-                      setStakeInput("");
-                      setSubmitError(null);
-                    }}
+                    onClick={clearSlip}
                     className="text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
 
-                <div className="p-4 space-y-4">
-                  {/* Selected outcome */}
-                  <div>
-                    <p className="font-semibold text-sm leading-snug">
-                      {selected.outcome.name}
-                      {selected.outcome.point !== undefined
-                        ? ` ${selected.outcome.point > 0 ? "+" : ""}${selected.outcome.point}`
-                        : ""}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                      {selected.event.eventName ?? selected.event.id}
-                    </p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-muted-foreground">
-                        {selected.marketType === "moneyline"
-                          ? t.moneyline
-                          : selected.marketType === "spread"
-                            ? t.spread
-                            : t.total}
-                      </span>
-                      <span className="text-xl font-bold tabular-nums text-pf-brand">
-                        {selected.outcome.odds.toFixed(2)}
-                      </span>
-                    </div>
+                <div className="p-4 space-y-3">
+                  {/* Legs list */}
+                  <div className="space-y-2">
+                    {legs.map((leg, idx) => (
+                      <div
+                        key={`${leg.event.event}-${leg.market.key}-${leg.outcome.name}`}
+                        className="flex items-start justify-between gap-2"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold leading-snug">
+                            {leg.outcome.name}
+                            {leg.outcome.point !== undefined
+                              ? ` ${leg.outcome.point > 0 ? "+" : ""}${leg.outcome.point}`
+                              : ""}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">
+                            {leg.event.eventName ?? leg.event.event}
+                          </p>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-xs text-muted-foreground">
+                              {leg.marketType === "moneyline"
+                                ? t.moneyline
+                                : leg.marketType === "spread"
+                                  ? t.spread
+                                  : t.total}
+                            </span>
+                            <span
+                              className={`text-sm font-bold tabular-nums ${
+                                isParlay ? "text-pf-pink" : "text-pf-brand"
+                              }`}
+                            >
+                              {leg.outcome.odds.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => removeLeg(idx)}
+                          className="text-muted-foreground hover:text-foreground transition-colors mt-0.5 shrink-0"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
 
+                  {/* Divider + combined odds for parlay */}
+                  {isParlay && (
+                    <div className="flex items-center justify-between pt-2 border-t border-border">
+                      <span className="text-xs text-muted-foreground">
+                        {t.combinedOdds}
+                      </span>
+                      <span className="text-lg font-bold tabular-nums text-pf-pink">
+                        {combinedOdds.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Stake input */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 pt-1 border-t border-border">
                     <label
                       className="text-xs font-medium text-muted-foreground"
                       htmlFor="stake-input"
@@ -496,7 +695,7 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
                       <input
                         id="stake-input"
                         type="number"
-                        min="1"
+                        min={(minStakeCents / 100).toFixed(2)}
                         step="0.01"
                         value={stakeInput}
                         onChange={(e) => {
@@ -504,7 +703,7 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
                           setSubmitError(null);
                         }}
                         placeholder="0.00"
-                        className="w-full pl-7 pr-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-pf-brand/40 transition-shadow"
+                        className="w-full pl-7 pr-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-pf-pink/40 transition-shadow"
                       />
                     </div>
                     {stakeError ? (
@@ -526,7 +725,7 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="flex justify-between items-center py-3 border-t border-border"
+                        className="flex justify-between items-center py-2 border-t border-border"
                       >
                         <span className="text-sm text-muted-foreground">
                           {t.potentialPayout}
@@ -546,10 +745,19 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
 
                   <button
                     onClick={() => void handleSubmit()}
-                    disabled={isSubmitting || !!stakeError || stakeCents < 100}
-                    className="w-full py-3 rounded-lg bg-pf-brand text-white text-sm font-semibold disabled:opacity-50 hover:bg-pf-brand-dark transition-colors"
+                    disabled={
+                      isSubmitting ||
+                      !!stakeError ||
+                      stakeCents < minStakeCents ||
+                      legs.length === 0
+                    }
+                    className="w-full py-3 rounded-lg bg-pf-pink text-white text-sm font-semibold disabled:opacity-50 hover:bg-pf-pink-dark transition-colors"
                   >
-                    {isSubmitting ? t.placing : t.confirmPick}
+                    {isSubmitting
+                      ? t.placing
+                      : isParlay
+                        ? t.confirmParlay
+                        : t.confirmPick}
                   </button>
                 </div>
               </motion.div>
@@ -568,56 +776,108 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
             )}
           </AnimatePresence>
 
-          {/* Recent Picks */}
+          {/* Current Bets (pending) */}
           <div className="space-y-2">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
-              {t.recentPicks}
+              {t.currentBets}
             </h2>
-            {picks.length === 0 ? (
-              <p className="text-sm text-muted-foreground px-1">{t.noPicks}</p>
+            {picks.filter((p) => p.status === "pending").length === 0 ? (
+              <p className="text-sm text-muted-foreground px-1">
+                {t.noPendingBets}
+              </p>
             ) : (
               <div className="rounded-xl border border-border bg-card overflow-hidden">
-                {picks.slice(0, 10).map((pick, i) => (
-                  <motion.div
-                    key={pick.id}
-                    initial={{ opacity: 0, x: 8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.04, duration: 0.2 }}
-                    className={`flex items-center justify-between px-4 py-3 gap-3 ${
-                      i < Math.min(picks.length, 10) - 1
-                        ? "border-b border-border"
-                        : ""
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium truncate">
-                        {pick.selection}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {pick.eventName ?? pick.league} ·{" "}
-                        <span className="tabular-nums">
-                          {pick.odds.toFixed(2)}
+                {picks
+                  .filter((p) => p.status === "pending")
+                  .map((pick, i, arr) => (
+                    <motion.div
+                      key={pick.id}
+                      initial={{ opacity: 0, x: 8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.04, duration: 0.2 }}
+                      className={`flex items-center justify-between px-4 py-3 gap-3 ${
+                        i < arr.length - 1 ? "border-b border-border" : ""
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium truncate">
+                          {pick.selection}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {pick.eventName ?? pick.league} ·{" "}
+                          <span className="tabular-nums">
+                            {pick.odds.toFixed(2)}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 space-y-1">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                            STATUS_STYLES[pick.status] ??
+                            "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {t[pick.status] ?? pick.status}
                         </span>
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0 space-y-1">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                          STATUS_STYLES[pick.status] ??
-                          "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {t[pick.status] ?? pick.status}
-                      </span>
-                      <p className="text-xs text-muted-foreground tabular-nums">
-                        {formatCents(pick.stake)}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
+                        <p className="text-xs text-muted-foreground tabular-nums">
+                          {formatCents(pick.stake)}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
               </div>
             )}
           </div>
+
+          {/* Past Bets (settled) */}
+          {picks.filter((p) => p.status !== "pending").length > 0 && (
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
+                {t.pastBets}
+              </h2>
+              <div className="rounded-xl border border-border bg-card overflow-hidden">
+                {picks
+                  .filter((p) => p.status !== "pending")
+                  .slice(0, 10)
+                  .map((pick, i, arr) => (
+                    <motion.div
+                      key={pick.id}
+                      initial={{ opacity: 0, x: 8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.04, duration: 0.2 }}
+                      className={`flex items-center justify-between px-4 py-3 gap-3 ${
+                        i < arr.length - 1 ? "border-b border-border" : ""
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium truncate">
+                          {pick.selection}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {pick.eventName ?? pick.league} ·{" "}
+                          <span className="tabular-nums">
+                            {pick.odds.toFixed(2)}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 space-y-1">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                            STATUS_STYLES[pick.status] ??
+                            "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {t[pick.status] ?? pick.status}
+                        </span>
+                        <p className="text-xs text-muted-foreground tabular-nums">
+                          {formatCents(pick.stake)}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -631,14 +891,18 @@ function EventRow({
   isExpanded,
   onToggle,
   onSelectOutcome,
-  selected,
+  isInSlip,
   t,
 }: {
   event: CachedEvent;
   isExpanded: boolean;
   onToggle: () => void;
   onSelectOutcome: (outcome: Outcome, market: Market) => void;
-  selected: SelectedOutcome | null;
+  isInSlip: (
+    eventId: string,
+    marketKey: string,
+    outcomeName: string,
+  ) => boolean;
   t: Record<string, string>;
 }) {
   const startDate = new Date(event.startTime);
@@ -651,13 +915,12 @@ function EventRow({
     day: "numeric",
   });
 
-  // Show top market (moneyline first, else first available) inline
   const topMarket =
     event.markets.find((m) => m.type === "moneyline") ?? event.markets[0];
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden hover:border-border/80 transition-colors">
-      {/* Top row: event name + time + quick odds */}
+      {/* Top row */}
       <div className="flex items-center gap-3 px-3 py-2.5">
         {/* Time */}
         <div className="text-center shrink-0 w-10">
@@ -684,22 +947,19 @@ function EventRow({
           )}
         </div>
 
-        {/* Inline moneyline odds (compact) */}
+        {/* Inline moneyline odds */}
         {topMarket && (
           <div className="flex gap-1 shrink-0">
             {topMarket.outcomes.slice(0, 3).map((outcome) => {
-              const isSelected =
-                selected?.event.id === event.id &&
-                selected.market.key === topMarket.key &&
-                selected.outcome.name === outcome.name;
+              const active = isInSlip(event.event, topMarket.key, outcome.name);
               return (
                 <button
                   key={outcome.name}
                   onClick={() => onSelectOutcome(outcome, topMarket)}
                   className={`flex flex-col items-center px-2 py-1.5 rounded-lg text-xs transition-colors min-w-[52px] ${
-                    isSelected
-                      ? "bg-pf-brand text-white font-semibold"
-                      : "bg-secondary hover:bg-pf-brand/10 hover:text-pf-brand border border-border"
+                    active
+                      ? "bg-pf-pink text-white font-semibold"
+                      : "bg-secondary hover:bg-pf-pink/10 hover:text-pf-pink border border-border"
                   }`}
                 >
                   <span className="truncate max-w-[48px] text-center leading-tight">
@@ -753,18 +1013,19 @@ function EventRow({
                   </p>
                   <div className="grid grid-cols-3 gap-1.5">
                     {market.outcomes.map((outcome) => {
-                      const isSelected =
-                        selected?.event.id === event.id &&
-                        selected.market.key === market.key &&
-                        selected.outcome.name === outcome.name;
+                      const active = isInSlip(
+                        event.event,
+                        market.key,
+                        outcome.name,
+                      );
                       return (
                         <button
                           key={outcome.name}
                           onClick={() => onSelectOutcome(outcome, market)}
                           className={`flex flex-col items-center justify-center p-2 rounded-lg border text-xs transition-colors ${
-                            isSelected
-                              ? "border-pf-brand bg-pf-brand/10 text-pf-brand font-semibold"
-                              : "border-border hover:border-pf-brand/40 hover:bg-muted/60"
+                            active
+                              ? "border-pf-pink bg-pf-pink/10 text-pf-pink font-semibold"
+                              : "border-border hover:border-pf-pink/40 hover:bg-muted/60"
                           }`}
                         >
                           <span className="truncate max-w-full text-center leading-tight">

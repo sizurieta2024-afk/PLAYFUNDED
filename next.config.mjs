@@ -1,17 +1,19 @@
 import createNextIntlPlugin from 'next-intl/plugin'
+import { withSentryConfig } from '@sentry/nextjs'
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts')
+const isProduction = process.env.NODE_ENV === 'production'
 
 const cspDirectives = [
   "default-src 'self'",
   "base-uri 'self'",
   "frame-ancestors 'none'",
   "object-src 'none'",
-  "script-src 'self' 'unsafe-inline' https://js.stripe.com https://sdk.mercadopago.com",
+  `script-src 'self' 'unsafe-inline'${isProduction ? '' : " 'unsafe-eval'"} https://js.stripe.com https://sdk.mercadopago.com`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://api.stripe.com https://api.mercadopago.com https://api.nowpayments.io https://api.anthropic.com https://*.supabase.co",
+  `connect-src 'self'${isProduction ? '' : ' ws://localhost:* ws://127.0.0.1:* wss://localhost:* wss://127.0.0.1:*'} https://api.stripe.com https://api.mercadopago.com https://api.nowpayments.io https://api.anthropic.com https://*.supabase.co https://*.ingest.sentry.io`,
   "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.mercadopago.com https://sdk.mercadopago.com",
   "form-action 'self' https://checkout.stripe.com https://www.mercadopago.com",
   'upgrade-insecure-requests',
@@ -51,4 +53,14 @@ const nextConfig = {
   },
 }
 
-export default withNextIntl(nextConfig)
+const sentryConfig = {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent: true,
+  widenClientFileUpload: true,
+  hideSourceMaps: true,
+  disableLogger: true,
+  automaticVercelMonitors: true,
+}
+
+export default withSentryConfig(withNextIntl(nextConfig), sentryConfig)

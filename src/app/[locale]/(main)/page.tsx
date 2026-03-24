@@ -501,7 +501,7 @@ export default async function HomePage({
                           $100
                         </td>
                         <td className="font-mono text-[9px] text-pf-pink pb-2 uppercase tracking-wider">
-                          LIVE
+                          {t("mock_pick_live")}
                         </td>
                       </tr>
                     </tbody>
@@ -1001,7 +1001,7 @@ export default async function HomePage({
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-px bg-pf-brand" />
               <span className="font-mono text-xs text-pf-brand uppercase tracking-[0.2em]">
-                FAQ
+                {t("eyebrow_faq")}
               </span>
             </div>
             <h2 className="font-display font-bold text-3xl sm:text-4xl text-foreground mb-2">

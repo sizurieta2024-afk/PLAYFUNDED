@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 interface Testimonial {
   name: string;
   handle: string;
@@ -119,6 +121,7 @@ function TestimonialCard({ t }: { t: Testimonial }) {
 }
 
 export function TestimonialsMarquee() {
+  const t = useTranslations("home");
   const doubled = [...TESTIMONIALS, ...TESTIMONIALS];
 
   return (
@@ -127,16 +130,15 @@ export function TestimonialsMarquee() {
         <div className="flex items-center justify-center gap-3 mb-4">
           <div className="w-8 h-px bg-pf-brand flex-shrink-0" />
           <span className="font-mono text-xs text-pf-brand uppercase tracking-[0.15em]">
-            Traders
+            {t("eyebrow_testimonials")}
           </span>
           <div className="w-8 h-px bg-pf-brand flex-shrink-0" />
         </div>
         <h2 className="font-display font-bold text-3xl sm:text-4xl text-foreground">
-          {/* En producción estos serán traders reales */}
-          What traders are saying
+          {t("testimonials_title")}
         </h2>
         <p className="text-muted-foreground text-sm mt-3">
-          From Starter to Legend — real results from real traders.
+          {t("testimonials_subtitle")}
         </p>
       </div>
 

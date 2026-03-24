@@ -231,17 +231,33 @@ export default async function HowItWorksPage({
           {[
             {
               emoji: "⚽",
-              name: "Soccer",
-              detail: "Liga MX · Libertadores · Premier League",
+              name: t("sport_soccer"),
+              detail: t("sport_soccer_detail"),
             },
-            { emoji: "🏀", name: "Basketball", detail: "NBA" },
-            { emoji: "🏈", name: "NFL", detail: "American Football" },
-            { emoji: "🎾", name: "Tennis", detail: "ATP · WTA" },
-            { emoji: "🥊", name: "MMA", detail: "UFC · Bellator" },
+            {
+              emoji: "🏀",
+              name: t("sport_basketball"),
+              detail: t("sport_basketball_detail"),
+            },
+            {
+              emoji: "🏈",
+              name: t("sport_nfl"),
+              detail: t("sport_nfl_detail"),
+            },
+            {
+              emoji: "🎾",
+              name: t("sport_tennis"),
+              detail: t("sport_tennis_detail"),
+            },
+            {
+              emoji: "🥊",
+              name: t("sport_mma"),
+              detail: t("sport_mma_detail"),
+            },
             {
               emoji: "📊",
-              name: "Markets",
-              detail: "Moneyline · Spread · Totals",
+              name: t("sport_markets"),
+              detail: t("sport_markets_detail"),
             },
           ].map(({ emoji, name, detail }) => (
             <div

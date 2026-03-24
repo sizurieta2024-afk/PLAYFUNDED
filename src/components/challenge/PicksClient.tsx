@@ -14,6 +14,13 @@ interface Outcome {
   point?: number;
 }
 
+interface ParlayLeg {
+  event: CachedEvent;
+  marketType: string;
+  market: Market;
+  outcome: Outcome;
+}
+
 interface Market {
   type: string;
   key: string;
@@ -133,11 +140,14 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
   const [activeSport, setActiveSport] = useState<string>("all");
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
 
+  const [betMode, setBetMode] = useState<"single" | "parlay">("single");
   const [selected, setSelected] = useState<SelectedOutcome | null>(null);
+  const [parlayLegs, setParlayLegs] = useState<ParlayLeg[]>([]);
   const [stakeInput, setStakeInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [justPlaced, setJustPlaced] = useState(false);
+  const [parlayPlaced, setParlayPlaced] = useState(false);
   const [eventsTick, setEventsTick] = useState(() => Date.now());
 
   useEffect(() => {
@@ -267,6 +277,16 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
         ? `Min ${formatCents(minStakeCents)}`
         : null;
 
+  // Parlay derived values
+  const combinedOdds = parlayLegs.reduce(
+    (product, leg) => product * leg.outcome.odds,
+    1,
+  );
+  const parlayPayoutCents =
+    parlayLegs.length >= 2 && stakeCents > 0
+      ? Math.round(stakeCents * combinedOdds)
+      : 0;
+
   useEffect(() => {
     if (!selected) return;
     if (isEventStillOpen(selected.event)) return;
@@ -338,6 +358,107 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
     router,
   ]);
 
+  const handleParlaySubmit = useCallback(async () => {
+    if (
+      parlayLegs.length < 2 ||
+      parlayLegs.length > 4 ||
+      stakeCents < minStakeCents ||
+      stakeCents > maxStakeCents
+    )
+      return;
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const res = await fetch("/api/picks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          challengeId: challenge.id,
+          stake: stakeCents,
+          isParlay: true,
+          legs: parlayLegs.map((leg) => ({
+            sport: leg.event.sport,
+            league: leg.event.league,
+            event: leg.event.event,
+            eventName: leg.event.eventName,
+            marketType: leg.marketType,
+            selection: leg.outcome.name,
+            odds: leg.outcome.odds,
+            linePoint: leg.outcome.point ?? null,
+          })),
+        }),
+      });
+
+      const data = (await res.json()) as {
+        pick?: PickRecord;
+        newBalance?: number;
+        error?: string;
+      };
+
+      if (!res.ok) {
+        setSubmitError(data.error ?? "Failed to place parlay");
+        return;
+      }
+
+      if (data.pick) setPicks((prev) => [data.pick!, ...prev]);
+      if (data.newBalance !== undefined) setBalance(data.newBalance);
+      setParlayLegs([]);
+      setStakeInput("");
+      setParlayPlaced(true);
+      setTimeout(() => setParlayPlaced(false), 3000);
+      router.refresh();
+    } catch {
+      setSubmitError("Network error. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    parlayLegs,
+    stakeCents,
+    minStakeCents,
+    maxStakeCents,
+    challenge.id,
+    router,
+  ]);
+
+  // ── Parlay leg helpers ────────────────────────────────────────────────────
+
+  function addParlayLeg(event: CachedEvent, market: Market, outcome: Outcome) {
+    // Same-game check
+    if (parlayLegs.some((leg) => leg.event.event === event.event)) {
+      setSubmitError(t.sameGameParlay);
+      return;
+    }
+    // Max 4 legs
+    if (parlayLegs.length >= 4) {
+      setSubmitError(t.parlayMaxLegs);
+      return;
+    }
+    setSubmitError(null);
+    setParlayLegs((prev) => [
+      ...prev,
+      { event, marketType: market.type, market, outcome },
+    ]);
+  }
+
+  function removeParlayLeg(idx: number) {
+    setParlayLegs((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function isLegSelected(
+    eventId: string,
+    marketKey: string,
+    outcomeName: string,
+  ): boolean {
+    return parlayLegs.some(
+      (leg) =>
+        leg.event.event === eventId &&
+        leg.market.key === marketKey &&
+        leg.outcome.name === outcomeName,
+    );
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -408,9 +529,41 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
         </div>
       </motion.div>
 
-      {/* ── Pick placed success banner ─────────────────────────────────── */}
+      {/* ── Single / Parlay mode toggle ─────────────────────────────────── */}
+      <div className="flex gap-1 p-1 rounded-xl bg-card border border-border w-fit">
+        <button
+          onClick={() => {
+            setBetMode("single");
+            setSubmitError(null);
+          }}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            betMode === "single"
+              ? "bg-pf-pink text-white shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {t.single}
+        </button>
+        <button
+          onClick={() => {
+            setBetMode("parlay");
+            setSelected(null);
+            setStakeInput("");
+            setSubmitError(null);
+          }}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            betMode === "parlay"
+              ? "bg-pf-pink text-white shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {t.parlay}
+        </button>
+      </div>
+
+      {/* ── Pick / Parlay placed success banner ─────────────────────────── */}
       <AnimatePresence>
-        {justPlaced && (
+        {(justPlaced || parlayPlaced) && (
           <motion.div
             initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -419,7 +572,7 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
             className="rounded-xl border border-pf-brand/30 bg-pf-brand/10 text-pf-brand px-4 py-3 text-sm font-medium flex items-center gap-2"
           >
             <Zap className="w-4 h-4 shrink-0" />
-            {t.pickPlaced}
+            {parlayPlaced ? t.parlayPlaced : t.pickPlaced}
           </motion.div>
         )}
       </AnimatePresence>
@@ -491,16 +644,22 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
                           )
                         }
                         onSelectOutcome={(outcome, market) => {
-                          setSelected({
-                            event,
-                            marketType: market.type,
-                            market,
-                            outcome,
-                          });
-                          setStakeInput("");
-                          setSubmitError(null);
+                          if (betMode === "parlay") {
+                            addParlayLeg(event, market, outcome);
+                          } else {
+                            setSelected({
+                              event,
+                              marketType: market.type,
+                              market,
+                              outcome,
+                            });
+                            setStakeInput("");
+                            setSubmitError(null);
+                          }
                         }}
                         selected={selected}
+                        parlayLegs={betMode === "parlay" ? parlayLegs : []}
+                        isLegSelected={isLegSelected}
                         t={t}
                       />
                     ))}
@@ -513,65 +672,236 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
 
         {/* ── Right col: Bet Slip + Recent Picks (1/3) ─────────────────── */}
         <div className="space-y-4">
-          {/* Bet Slip */}
-          <AnimatePresence mode="wait">
-            {selected ? (
-              <motion.div
-                key="betslip"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="rounded-xl border border-pf-brand/50 bg-card overflow-hidden"
-              >
-                {/* Slip header */}
-                <div className="flex items-center justify-between px-4 py-3 bg-pf-brand/10 border-b border-pf-brand/20">
-                  <span className="text-xs font-semibold text-pf-brand uppercase tracking-wide">
-                    Bet Slip
-                  </span>
+          {/* ── SINGLE BET SLIP ──────────────────────────────────────────── */}
+          {betMode === "single" && (
+            <AnimatePresence mode="wait">
+              {selected ? (
+                <motion.div
+                  key="betslip"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="rounded-xl border border-pf-brand/50 bg-card overflow-hidden"
+                >
+                  {/* Slip header */}
+                  <div className="flex items-center justify-between px-4 py-3 bg-pf-brand/10 border-b border-pf-brand/20">
+                    <span className="text-xs font-semibold text-pf-brand uppercase tracking-wide">
+                      Bet Slip
+                    </span>
+                    <button
+                      onClick={() => {
+                        setSelected(null);
+                        setStakeInput("");
+                        setSubmitError(null);
+                      }}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="p-4 space-y-4">
+                    {/* Selected outcome */}
+                    <div>
+                      <p className="font-semibold text-sm leading-snug">
+                        {selected.outcome.name}
+                        {selected.outcome.point !== undefined
+                          ? ` ${selected.outcome.point > 0 ? "+" : ""}${selected.outcome.point}`
+                          : ""}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        {selected.event.eventName ?? selected.event.id}
+                      </p>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xs text-muted-foreground">
+                          {selected.marketType === "moneyline"
+                            ? t.moneyline
+                            : selected.marketType === "spread"
+                              ? t.spread
+                              : t.total}
+                        </span>
+                        <span className="text-xl font-bold tabular-nums text-pf-brand">
+                          {selected.outcome.odds.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Stake input */}
+                    <div className="space-y-1.5">
+                      <label
+                        className="text-xs font-medium text-muted-foreground"
+                        htmlFor="stake-input"
+                      >
+                        {t.stakeLabel}
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
+                          $
+                        </span>
+                        <input
+                          id="stake-input"
+                          type="number"
+                          min={(minStakeCents / 100).toFixed(2)}
+                          step="0.01"
+                          value={stakeInput}
+                          onChange={(e) => {
+                            setStakeInput(e.target.value);
+                            setSubmitError(null);
+                          }}
+                          placeholder="0.00"
+                          className="w-full pl-7 pr-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-pf-pink/40 transition-shadow"
+                        />
+                      </div>
+                      {stakeError ? (
+                        <p className="text-xs text-destructive">{stakeError}</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          {t.stakeHint.replace(
+                            "{max}",
+                            formatCents(maxStakeCents),
+                          )}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Payout preview */}
+                    <AnimatePresence>
+                      {potentialPayoutCents > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="flex justify-between items-center py-3 border-t border-border"
+                        >
+                          <span className="text-sm text-muted-foreground">
+                            {t.potentialPayout}
+                          </span>
+                          <span className="font-bold text-pf-brand tabular-nums">
+                            {formatCents(potentialPayoutCents)}
+                          </span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {submitError && (
+                      <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">
+                        {submitError}
+                      </p>
+                    )}
+
+                    <button
+                      onClick={() => void handleSubmit()}
+                      disabled={
+                        isSubmitting ||
+                        !!stakeError ||
+                        stakeCents < minStakeCents
+                      }
+                      className="w-full py-3 rounded-lg bg-pf-pink text-white text-sm font-semibold disabled:opacity-50 hover:bg-pf-pink-dark transition-colors"
+                    >
+                      {isSubmitting ? t.placing : t.confirmPick}
+                    </button>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="empty-slip"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="rounded-xl border border-dashed border-border bg-card/50 p-6 text-center"
+                >
+                  <p className="text-sm text-muted-foreground">
+                    {t.selectOutcome}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
+
+          {/* ── PARLAY SLIP ──────────────────────────────────────────────── */}
+          {betMode === "parlay" && (
+            <div className="rounded-xl border border-pf-pink/40 bg-card overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 bg-pf-pink/10 border-b border-pf-pink/20">
+                <span className="text-xs font-semibold text-pf-pink uppercase tracking-wide">
+                  {t.parlayMode}{" "}
+                  {parlayLegs.length > 0 && (
+                    <span className="ml-1 bg-pf-pink text-white rounded-full px-1.5 py-0.5 text-xs">
+                      {parlayLegs.length}
+                    </span>
+                  )}
+                </span>
+                {parlayLegs.length > 0 && (
                   <button
                     onClick={() => {
-                      setSelected(null);
+                      setParlayLegs([]);
                       setStakeInput("");
                       setSubmitError(null);
                     }}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    <X className="w-4 h-4" />
+                    {t.removeLeg} all
                   </button>
-                </div>
+                )}
+              </div>
 
-                <div className="p-4 space-y-4">
-                  {/* Selected outcome */}
-                  <div>
-                    <p className="font-semibold text-sm leading-snug">
-                      {selected.outcome.name}
-                      {selected.outcome.point !== undefined
-                        ? ` ${selected.outcome.point > 0 ? "+" : ""}${selected.outcome.point}`
-                        : ""}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                      {selected.event.eventName ?? selected.event.id}
-                    </p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-muted-foreground">
-                        {selected.marketType === "moneyline"
-                          ? t.moneyline
-                          : selected.marketType === "spread"
-                            ? t.spread
-                            : t.total}
-                      </span>
-                      <span className="text-xl font-bold tabular-nums text-pf-brand">
-                        {selected.outcome.odds.toFixed(2)}
-                      </span>
-                    </div>
+              <div className="p-4 space-y-4">
+                {/* Parlay legs list */}
+                {parlayLegs.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    {t.parlayEmpty}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {parlayLegs.map((leg, idx) => (
+                      <div
+                        key={`${leg.event.event}-${leg.market.key}-${leg.outcome.name}`}
+                        className="flex items-start justify-between gap-2 p-2.5 rounded-lg bg-background border border-border"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold leading-tight">
+                            {leg.outcome.name}
+                            {leg.outcome.point !== undefined
+                              ? ` ${leg.outcome.point > 0 ? "+" : ""}${leg.outcome.point}`
+                              : ""}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">
+                            {leg.event.eventName ?? leg.event.event}
+                          </p>
+                          <p className="text-xs text-pf-brand font-bold mt-0.5 tabular-nums">
+                            {leg.outcome.odds.toFixed(2)}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => removeParlayLeg(idx)}
+                          className="text-muted-foreground hover:text-destructive transition-colors mt-0.5 shrink-0"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
+                )}
 
-                  {/* Stake input */}
+                {/* Combined odds display */}
+                {parlayLegs.length >= 2 && (
+                  <div className="flex items-center justify-between py-2 border-t border-border">
+                    <span className="text-xs text-muted-foreground">
+                      {t.combinedOdds}
+                    </span>
+                    <span className="text-lg font-bold tabular-nums text-pf-pink">
+                      {combinedOdds.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Stake input */}
+                {parlayLegs.length >= 2 && (
                   <div className="space-y-1.5">
                     <label
                       className="text-xs font-medium text-muted-foreground"
-                      htmlFor="stake-input"
+                      htmlFor="parlay-stake-input"
                     >
                       {t.stakeLabel}
                     </label>
@@ -580,7 +910,7 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
                         $
                       </span>
                       <input
-                        id="stake-input"
+                        id="parlay-stake-input"
                         type="number"
                         min={(minStakeCents / 100).toFixed(2)}
                         step="0.01"
@@ -604,57 +934,59 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
                       </p>
                     )}
                   </div>
+                )}
 
-                  {/* Payout preview */}
-                  <AnimatePresence>
-                    {potentialPayoutCents > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="flex justify-between items-center py-3 border-t border-border"
-                      >
-                        <span className="text-sm text-muted-foreground">
-                          {t.potentialPayout}
-                        </span>
-                        <span className="font-bold text-pf-brand tabular-nums">
-                          {formatCents(potentialPayoutCents)}
-                        </span>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {submitError && (
-                    <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">
-                      {submitError}
-                    </p>
+                {/* Parlay payout preview */}
+                <AnimatePresence>
+                  {parlayPayoutCents > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="flex justify-between items-center py-3 border-t border-border"
+                    >
+                      <span className="text-sm text-muted-foreground">
+                        {t.parlayPayout}
+                      </span>
+                      <span className="font-bold text-pf-brand tabular-nums">
+                        {formatCents(parlayPayoutCents)}
+                      </span>
+                    </motion.div>
                   )}
+                </AnimatePresence>
 
+                {submitError && (
+                  <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">
+                    {submitError}
+                  </p>
+                )}
+
+                {parlayLegs.length < 2 ? (
+                  <p className="text-xs text-muted-foreground text-center">
+                    {t.parlayMinLegs}
+                  </p>
+                ) : (
                   <button
-                    onClick={() => void handleSubmit()}
+                    onClick={() => void handleParlaySubmit()}
                     disabled={
-                      isSubmitting || !!stakeError || stakeCents < minStakeCents
+                      isSubmitting ||
+                      !!stakeError ||
+                      stakeCents < minStakeCents ||
+                      parlayLegs.length < 2
                     }
                     className="w-full py-3 rounded-lg bg-pf-pink text-white text-sm font-semibold disabled:opacity-50 hover:bg-pf-pink-dark transition-colors"
                   >
-                    {isSubmitting ? t.placing : t.confirmPick}
+                    {isSubmitting
+                      ? t.placing
+                      : t.confirmParlay.replace(
+                          "{count}",
+                          String(parlayLegs.length),
+                        )}
                   </button>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="empty-slip"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="rounded-xl border border-dashed border-border bg-card/50 p-6 text-center"
-              >
-                <p className="text-sm text-muted-foreground">
-                  {t.selectOutcome}
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Current Bets (pending) */}
           <div className="space-y-2">
@@ -772,6 +1104,8 @@ function EventRow({
   onToggle,
   onSelectOutcome,
   selected,
+  parlayLegs,
+  isLegSelected,
   t,
 }: {
   event: CachedEvent;
@@ -779,6 +1113,12 @@ function EventRow({
   onToggle: () => void;
   onSelectOutcome: (outcome: Outcome, market: Market) => void;
   selected: SelectedOutcome | null;
+  parlayLegs: ParlayLeg[];
+  isLegSelected: (
+    eventId: string,
+    marketKey: string,
+    outcomeName: string,
+  ) => boolean;
   t: Record<string, string>;
 }) {
   const startDate = new Date(event.startTime);
@@ -832,12 +1172,17 @@ function EventRow({
                 selected?.event.id === event.id &&
                 selected.market.key === topMarket.key &&
                 selected.outcome.name === outcome.name;
+              const inParlay = isLegSelected(
+                event.event,
+                topMarket.key,
+                outcome.name,
+              );
               return (
                 <button
                   key={outcome.name}
                   onClick={() => onSelectOutcome(outcome, topMarket)}
                   className={`flex flex-col items-center px-2 py-1.5 rounded-lg text-xs transition-colors min-w-[52px] ${
-                    isSelected
+                    isSelected || inParlay
                       ? "bg-pf-pink text-white font-semibold"
                       : "bg-secondary hover:bg-pf-pink/10 hover:text-pf-pink border border-border"
                   }`}
@@ -897,12 +1242,17 @@ function EventRow({
                         selected?.event.id === event.id &&
                         selected.market.key === market.key &&
                         selected.outcome.name === outcome.name;
+                      const inParlay = isLegSelected(
+                        event.event,
+                        market.key,
+                        outcome.name,
+                      );
                       return (
                         <button
                           key={outcome.name}
                           onClick={() => onSelectOutcome(outcome, market)}
                           className={`flex flex-col items-center justify-center p-2 rounded-lg border text-xs transition-colors ${
-                            isSelected
+                            isSelected || inParlay
                               ? "border-pf-pink bg-pf-pink/10 text-pf-pink font-semibold"
                               : "border-border hover:border-pf-pink/40 hover:bg-muted/60"
                           }`}

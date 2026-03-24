@@ -137,10 +137,6 @@ model User {
   role               UserRole  @default(user)
   isBanned           Boolean   @default(false)
   banReason          String?
-  selfExcludedUntil  DateTime?
-  isPermExcluded     Boolean   @default(false)
-  weeklyDepositLimit Int?      // USD cents
-
   // Supabase Auth ID (links to auth.users)
   supabaseId String? @unique
 
@@ -155,8 +151,9 @@ model User {
   picks            Pick[]
   payments         Payment[]
   payouts          Payout[]
-  affiliate        Affiliate?
-  affiliateConversions AffiliateConversion[]
+  affiliate            Affiliate?
+  affiliateApplications AffiliateApplication[]
+  affiliateConversions  AffiliateConversion[]
   marketRequests   MarketRequest[]
   kycSubmission    KycSubmission?
   payoutProfile    PayoutProfile?
@@ -304,6 +301,7 @@ model ParlayLeg {
   marketType  String
   selection   String
   odds        Float      // Decimal odds for this leg
+  linePoint   Float?     // Spread or total line (null for moneyline)
   status      PickStatus @default(pending)
 
   // Relations
@@ -476,9 +474,10 @@ model Affiliate {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user   User             @relation(fields: [userId], references: [id])
-  clicks AffiliateClick[]
+  user        User                       @relation(fields: [userId], references: [id])
+  clicks      AffiliateClick[]
   conversions AffiliateConversion[]
+  codeRequests AffiliateCodeChangeRequest[]
 
   @@index([code])
 }
@@ -692,4 +691,53 @@ model Follow {
   @@unique([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
+}
+
+// ============================================================
+// AFFILIATE APPLICATION
+// ============================================================
+
+model AffiliateApplication {
+  id          String   @id @default(uuid())
+  userId      String
+  fullName    String
+  country     String
+  reason      String   @db.Text
+  socialHandles Json?  // { tiktok, instagram, twitter, youtube }
+  audienceSize  String? // "under_1k" | "1k_5k" | "5k_20k" | "20k_plus"
+  website       String?
+  status        String @default("pending") // pending | approved | rejected
+  reviewNote    String?
+  reviewedAt    DateTime?
+  reviewedByAdminId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId])
+  @@index([userId])
+  @@index([status])
+}
+
+// ============================================================
+// AFFILIATE CODE CHANGE REQUEST
+// ============================================================
+
+model AffiliateCodeChangeRequest {
+  id            String    @id @default(uuid())
+  affiliateId   String
+  requestedCode String
+  status        String    @default("pending") // pending | approved | rejected
+  reviewNote    String?
+  reviewedAt    DateTime?
+  reviewedByAdminId String?
+
+  createdAt DateTime @default(now())
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id])
+
+  @@index([affiliateId])
+  @@index([status])
 }

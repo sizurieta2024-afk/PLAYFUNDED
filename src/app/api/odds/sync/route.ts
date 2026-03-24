@@ -105,8 +105,21 @@ async function runSync(req: NextRequest) {
   const totalErrors = results.filter((r) => r.error).length;
   const syncedAt = new Date().toISOString();
 
+  // External quota/rate errors mean our cron ran correctly — only flag internal failures
+  const EXTERNAL_ERROR_PATTERNS = [
+    "OUT_OF_USAGE_CREDITS",
+    "EXCEEDED_FREQ_LIMIT",
+    "Usage quota has been reached",
+    "Requests are too frequent",
+  ];
+  const internalErrors = results.filter(
+    (r) =>
+      r.error && !EXTERNAL_ERROR_PATTERNS.some((p) => r.error!.includes(p)),
+  ).length;
+
   await recordOpsEvent({
-    type: totalErrors > 0 ? "cron_odds_sync_failed" : "cron_odds_sync_completed",
+    type:
+      internalErrors > 0 ? "cron_odds_sync_failed" : "cron_odds_sync_completed",
     level: totalErrors > 0 ? "warn" : "info",
     source: "api:odds:sync",
     subjectType: "cron",
@@ -115,6 +128,7 @@ async function runSync(req: NextRequest) {
       syncedAt,
       totalFetched,
       totalErrors,
+      internalErrors,
       failedLeagues: results.filter((r) => r.error).map((r) => r.league),
     },
   });

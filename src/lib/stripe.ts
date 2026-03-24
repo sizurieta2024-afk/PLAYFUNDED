@@ -36,6 +36,8 @@ export const stripe = {
 function buildStripeCheckoutForm(input: {
   currency: string;
   unitAmount: number;
+  processingFeeAmount: number;
+  processingFeeLabel: string;
   userEmail: string;
   successUrl: string;
   cancelUrl: string;
@@ -55,6 +57,16 @@ function buildStripeCheckoutForm(input: {
     input.productDescription,
   );
   form.set("line_items[0][quantity]", "1");
+  form.set("line_items[1][price_data][currency]", input.currency);
+  form.set(
+    "line_items[1][price_data][unit_amount]",
+    String(input.processingFeeAmount),
+  );
+  form.set(
+    "line_items[1][price_data][product_data][name]",
+    input.processingFeeLabel,
+  );
+  form.set("line_items[1][quantity]", "1");
   form.set("billing_address_collection", "auto");
   form.set("success_url", input.successUrl);
   form.set("cancel_url", input.cancelUrl);
@@ -84,6 +96,8 @@ function shouldFallbackToStripeRest(error: unknown): boolean {
 async function createCheckoutSessionViaRest(input: {
   currency: string;
   unitAmount: number;
+  processingFeeAmount: number;
+  processingFeeLabel: string;
   userEmail: string;
   successUrl: string;
   cancelUrl: string;
@@ -191,11 +205,20 @@ export async function createCheckoutSession({
   // Card (LATAM/international): 3.9% + $0.30 fixed → gross up so after fee we net feeInCents.
   // Pix (BRL): 1.99% flat, no fixed fee.
   // Formula: grossAmount = ceil((amount + fixedFee) / (1 - pctFee))
-  if (enablePix) {
-    unitAmount = Math.ceil(unitAmount / (1 - 0.0199));
-  } else {
-    unitAmount = Math.ceil((unitAmount + 30) / (1 - 0.039));
-  }
+  // Calculate processing fee as a separate line item so the user sees
+  // the original tier price + a labeled "Processing fee" on checkout.
+  // Card (LATAM/intl): 3.9% + $0.30 fixed. Pix: 1.99% flat.
+  const grossAmount = enablePix
+    ? Math.ceil(unitAmount / (1 - 0.0199))
+    : Math.ceil((unitAmount + 30) / (1 - 0.039));
+  const processingFeeAmount = grossAmount - unitAmount;
+
+  const processingFeeLabel =
+    locale === "en"
+      ? "Processing fee"
+      : locale === "pt-BR"
+        ? "Taxa de processamento"
+        : "Cargo por procesamiento";
 
   const productDescription = (() => {
     if (locale === "en") {
@@ -216,6 +239,8 @@ export async function createCheckoutSession({
   const sessionInput = {
     currency,
     unitAmount,
+    processingFeeAmount,
+    processingFeeLabel,
     userEmail,
     successUrl: `${baseUrl}${localePath}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
     cancelUrl: `${baseUrl}${localePath}/checkout/cancel`,
@@ -255,6 +280,16 @@ export async function createCheckoutSession({
             product_data: {
               name: sessionInput.productName,
               description: productDescription,
+            },
+          },
+          quantity: 1,
+        },
+        {
+          price_data: {
+            currency,
+            unit_amount: processingFeeAmount,
+            product_data: {
+              name: processingFeeLabel,
             },
           },
           quantity: 1,

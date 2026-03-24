@@ -5,6 +5,7 @@ on:
     branches: [dev]
   pull_request:
     branches: [dev]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,33 +16,49 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
+      - name: Install gitleaks
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.30.0/gitleaks_8.30.0_linux_x64.tar.gz \
+            | tar -xz
+          sudo mv gitleaks /usr/local/bin/gitleaks
+
       - name: Secret scan
-        uses: gitleaks/gitleaks-action@v2
+        run: gitleaks git --redact --no-banner .
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: detect --source . --redact --verbose
 
   lint-build:
     name: lint-build
     runs-on: ubuntu-latest
     needs: gitleaks
+    env:
+      PRISMA_DISABLE_WARNINGS: "true"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
 
+      - name: Pin npm
+        run: npm install -g npm@11.9.0
+
       - name: Install
-        run: npm ci
+        run: |
+          set -o pipefail
+          npm ci 2>&1 | awk '!/The configuration property `package.json#prisma`/ && !/The Prisma config file in prisma.config.ts overrides the deprecated `package.json#prisma` property in package.json\./ && !/For more information, see: https:\/\/pris.ly\/prisma-config/'
+
+      - name: Generate Prisma client
+        run: |
+          set -o pipefail
+          npx prisma generate 2>&1 | awk '!/The configuration property `package.json#prisma`/ && !/The Prisma config file in prisma.config.ts overrides the deprecated `package.json#prisma` property in package.json\./ && !/For more information, see: https:\/\/pris.ly\/prisma-config/'
 
       - name: Lint
         run: npm run lint
@@ -49,22 +66,162 @@ jobs:
       - name: Build
         run: npm run build
 
+  proofs:
+    name: proofs
+    runs-on: ubuntu-latest
+    needs: gitleaks
+    env:
+      PRISMA_DISABLE_WARNINGS: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Pin npm
+        run: npm install -g npm@11.9.0
+
+      - name: Install
+        run: |
+          set -o pipefail
+          npm ci 2>&1 | awk '!/The configuration property `package.json#prisma`/ && !/The Prisma config file in prisma.config.ts overrides the deprecated `package.json#prisma` property in package.json\./ && !/For more information, see: https:\/\/pris.ly\/prisma-config/'
+
+      - name: Generate Prisma client
+        run: |
+          set -o pipefail
+          npx prisma generate 2>&1 | awk '!/The configuration property `package.json#prisma`/ && !/The Prisma config file in prisma.config.ts overrides the deprecated `package.json#prisma` property in package.json\./ && !/For more information, see: https:\/\/pris.ly\/prisma-config/'
+
+      - name: Hardening proof
+        run: TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"node"}' node -r ts-node/register/transpile-only scripts/prove-hardening.js
+
+      - name: Payment webhook proof
+        run: node scripts/prove-payment-webhooks.js
+
+      - name: Payout gating proof
+        run: node scripts/prove-payout-gating.js
+
+      - name: Proof-based validation
+        run: TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"node"}' node -r ts-node/register/transpile-only scripts/validate-proof-based.js
+
+  launch-smokes:
+    name: launch-smokes
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    needs: [lint-build, proofs]
+    env:
+      PRISMA_DISABLE_WARNINGS: "true"
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+      NOWPAYMENTS_API_KEY: ${{ secrets.NOWPAYMENTS_API_KEY }}
+      NOWPAYMENTS_IPN_SECRET: ${{ secrets.NOWPAYMENTS_IPN_SECRET }}
+      ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+      API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+      NEXT_PUBLIC_APP_URL: http://localhost:3004
+      SUPPORT_EMAIL: ${{ secrets.SUPPORT_EMAIL }}
+      PF_BASE_URL: http://localhost:3004
+      PF_CRON_SECRET: ${{ secrets.CRON_SECRET }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Pin npm
+        run: npm install -g npm@11.9.0
+
+      - name: Install
+        run: |
+          set -o pipefail
+          npm ci 2>&1 | awk '!/The configuration property `package.json#prisma`/ && !/The Prisma config file in prisma.config.ts overrides the deprecated `package.json#prisma` property in package.json\./ && !/For more information, see: https:\/\/pris.ly\/prisma-config/'
+
+      - name: Generate Prisma client
+        run: |
+          set -o pipefail
+          npx prisma generate 2>&1 | awk '!/The configuration property `package.json#prisma`/ && !/The Prisma config file in prisma.config.ts overrides the deprecated `package.json#prisma` property in package.json\./ && !/For more information, see: https:\/\/pris.ly\/prisma-config/'
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Validate launch-smoke secrets
+        run: |
+          test -n "${DATABASE_URL}"
+          test -n "${DIRECT_URL}"
+          test -n "${NEXT_PUBLIC_SUPABASE_URL}"
+          test -n "${NEXT_PUBLIC_SUPABASE_ANON_KEY}"
+          test -n "${SUPABASE_SERVICE_ROLE_KEY}"
+          test -n "${CRON_SECRET}"
+
+      - name: CI env audit
+        run: CI_AUDIT_SCOPE=launch_smokes node scripts/audit-launch-env-ci.mjs
+
+      - name: Build
+        run: npm run build
+
+      - name: Start app
+        run: PORT=3004 npm start > /tmp/playfunded-ci.log 2>&1 &
+
+      - name: Wait for app
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3004/en >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/playfunded-ci.log
+          exit 1
+
+      - name: Admin smoke
+        run: BASE_URL=http://localhost:3004 node scripts/run-admin-smoke.mjs
+
+      - name: Payout KYC smoke
+        run: BASE_URL=http://localhost:3004 node scripts/run-payout-kyc-ui-check.mjs
+
+      - name: Admin support smoke
+        run: BASE_URL=http://localhost:3004 node scripts/run-admin-support-smoke.mjs
+
   audit:
     name: audit
     runs-on: ubuntu-latest
     needs: gitleaks
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
 
+      - name: Pin npm
+        run: npm install -g npm@11.9.0
+
       - name: Install
-        run: npm ci
+        run: |
+          set -o pipefail
+          npm ci 2>&1 | awk '!/The configuration property `package.json#prisma`/ && !/The Prisma config file in prisma.config.ts overrides the deprecated `package.json#prisma` property in package.json\./ && !/For more information, see: https:\/\/pris.ly\/prisma-config/'
 
       - name: Production dependency audit
-        run: npm audit --omit=dev --audit-level=high
+        # GHSA-38f7-945m-qr2g: effect vuln in @prisma/config — fix requires Prisma downgrade (breaking)
+        # Suppressed until Prisma ships a fixed @prisma/config. See scripts/audit-filter.mjs
+        run: npm audit --omit=dev --audit-level=high --json 2>/dev/null | node scripts/audit-filter.mjs
+        env:
+          AUDIT_SUPPRESS: "GHSA-38f7-945m-qr2g"

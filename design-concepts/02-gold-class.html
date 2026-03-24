@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlayFunded — Gold Class</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        display: ['Playfair Display', 'serif'],
+        sans: ['Inter', 'sans-serif'],
+      },
+      colors: {
+        void: '#060404',
+        'void-2': '#0e0909',
+        'void-3': '#160f0f',
+        gold: '#C9A84C',
+        'gold-light': '#E8C96E',
+        'gold-dim': '#8B6B2E',
+      }
+    }
+  }
+}
+</script>
+<style>
+  /* ── Design tokens ─────────────────────────────────────── */
+  :root {
+    --color-bg:          #060404;
+    --color-bg-2:        #0e0909;
+    --color-bg-3:        #160f0f;
+    --color-gold:        #C9A84C;
+    --color-gold-light:  #E8C96E;
+    --color-gold-dim:    #8B6B2E;
+    --color-text:        #f5f0e8;
+    --color-muted:       #6b7280;
+    --border-gold-faint: rgba(201,168,76,0.12);
+    --border-gold-mid:   rgba(201,168,76,0.25);
+    --border-gold-strong:rgba(201,168,76,0.45);
+    --transition-fast:   150ms ease;
+    --transition-mid:    250ms ease;
+    --radius-card:       12px;
+
+    --fs-xs:   clamp(0.65rem, 1.5vw, 0.75rem);
+    --fs-sm:   clamp(0.8rem,  2vw,   0.875rem);
+    --fs-base: clamp(0.9rem,  2.5vw, 1rem);
+    --fs-lg:   clamp(1rem,    3vw,   1.125rem);
+    --fs-h1:   clamp(2.75rem, 7.5vw, 5.5rem);
+    --fs-h2:   clamp(1.75rem, 4vw,   2.5rem);
+  }
+
+  /* ── Base ──────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; }
+  body { background: var(--color-bg); color: var(--color-text); font-family: 'Inter', sans-serif; overflow-x: hidden; }
+  a, button { cursor: pointer; }
+
+  /* ── Gold gradient text ────────────────────────────────── */
+  .gold-gradient {
+    background: linear-gradient(135deg, #C9A84C 0%, #E8C96E 40%, #C9A84C 70%, #8B6B2E 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Gold glow ─────────────────────────────────────────── */
+  .gold-glow { box-shadow: 0 0 50px rgba(201,168,76,0.12); }
+  .gold-glow-strong { box-shadow: 0 0 60px rgba(201,168,76,0.22); }
+
+  /* ── Cards ─────────────────────────────────────────────── */
+  .card-gold {
+    background: linear-gradient(140deg, var(--color-bg-2) 0%, var(--color-bg-3) 100%);
+    border: 1px solid var(--border-gold-faint);
+    border-radius: var(--radius-card);
+    transition: border-color var(--transition-mid), box-shadow var(--transition-mid);
+  }
+  .card-gold:hover { border-color: var(--border-gold-mid); }
+
+  /* ── Dividers ──────────────────────────────────────────── */
+  .divider {
+    background: linear-gradient(90deg, transparent, rgba(201,168,76,0.35), transparent);
+    height: 1px;
+  }
+
+  /* ── Hero radial bg ────────────────────────────────────── */
+  .hero-bg {
+    background:
+      radial-gradient(ellipse 80% 55% at 50% 0%, rgba(201,168,76,0.07) 0%, transparent 70%),
+      var(--color-bg);
+  }
+
+  /* ── CTA button ────────────────────────────────────────── */
+  .cta-btn {
+    background: linear-gradient(135deg, #C9A84C, #E8C96E, #C9A84C);
+    color: #060404;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    transition: box-shadow var(--transition-mid), transform var(--transition-fast);
+    display: inline-block;
+    text-align: center;
+  }
+  .cta-btn:hover { box-shadow: 0 0 32px rgba(201,168,76,0.45); transform: translateY(-1px); }
+
+  /* ── Outline button ────────────────────────────────────── */
+  .outline-gold {
+    border: 1px solid var(--border-gold-mid);
+    color: var(--color-gold);
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+    display: inline-block;
+    text-align: center;
+  }
+  .outline-gold:hover { border-color: var(--border-gold-strong); background: rgba(201,168,76,0.05); }
+
+  /* ── Ticker ────────────────────────────────────────────── */
+  .ticker-wrap { overflow: hidden; white-space: nowrap; }
+  .ticker-track { display: inline-block; animation: ticker 40s linear infinite; }
+  @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+  /* ── Live pulse ────────────────────────────────────────── */
+  .live-dot {
+    width: 7px; height: 7px; background: var(--color-gold);
+    border-radius: 50%; display: inline-block;
+    animation: goldpulse 2s ease-in-out infinite;
+  }
+  @keyframes goldpulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+
+  /* ── Sparkline ─────────────────────────────────────────── */
+  .sparkline-path { stroke-dasharray: 290; stroke-dashoffset: 290; animation: drawgold 2s ease forwards 0.6s; }
+  @keyframes drawgold { to { stroke-dashoffset: 0; } }
+
+  /* ── Picks table ───────────────────────────────────────── */
+  .pick-row { border-bottom: 1px solid var(--border-gold-faint); transition: background var(--transition-fast); }
+  .pick-row:last-child { border-bottom: none; }
+  .pick-row:hover { background: rgba(201,168,76,0.03); }
+
+  /* ── Tier featured ring ────────────────────────────────── */
+  .tier-featured { border-color: var(--border-gold-strong) !important; box-shadow: 0 0 50px rgba(201,168,76,0.18); }
+
+  /* ── Reduced motion ────────────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    .ticker-track, .sparkline-path, .live-dot { animation: none !important; }
+    .cta-btn, .outline-gold, .card-gold, .pick-row { transition: none !important; }
+    .cta-btn:hover { transform: none; }
+    .sparkline-path { stroke-dashoffset: 0; }
+  }
+
+  /* ── Mobile ────────────────────────────────────────────── */
+  @media (max-width: 640px) {
+    .hide-mobile { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     NAV
+════════════════════════════════════════════════════════════ -->
+<header class="fixed top-0 w-full z-50 backdrop-blur-xl" style="border-bottom:1px solid rgba(201,168,76,0.08);background:rgba(6,4,4,0.96)">
+  <div class="max-w-7xl mx-auto px-4 sm:px-8 h-16 flex items-center justify-between">
+    <!-- Logo -->
+    <div class="flex items-center gap-3">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/>
+      </svg>
+      <span class="font-display font-bold text-lg tracking-wider" style="color:var(--color-gold-light)">PlayFunded</span>
+    </div>
+    <!-- Desktop nav -->
+    <nav class="hidden md:flex items-center gap-8" aria-label="Primary">
+      <a href="#challenges" class="text-xs tracking-widest uppercase font-semibold text-gray-400 hover:text-gold transition-colors" style="transition-duration:150ms;color:#9ca3af">Challenges</a>
+      <a href="#how-it-works" class="text-xs tracking-widest uppercase font-semibold text-gray-400 hover:text-gold transition-colors" style="transition-duration:150ms;color:#9ca3af">How It Works</a>
+      <a href="#testimonials" class="text-xs tracking-widest uppercase font-semibold text-gray-400 hover:text-gold transition-colors" style="transition-duration:150ms;color:#9ca3af">Results</a>
+    </nav>
+    <!-- Actions -->
+    <div class="flex items-center gap-4">
+      <a href="#" class="text-sm text-gray-400 hover:text-gray-200 transition-colors hidden sm:inline" style="transition-duration:150ms">Sign in</a>
+      <a href="#challenges" class="cta-btn px-5 py-2.5 rounded text-xs uppercase tracking-widest">Get Started</a>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LIVE TICKER — styled in gold
+════════════════════════════════════════════════════════════ -->
+<div class="fixed top-16 w-full z-40 ticker-wrap" style="background:rgba(14,9,9,0.98);border-bottom:1px solid rgba(201,168,76,0.1);padding:8px 0" aria-label="Live trader activity" aria-live="polite">
+  <div class="ticker-track">
+    <!-- set 1 -->
+    <span class="inline-flex items-center gap-1.5 mx-6 text-xs font-semibold tracking-widest uppercase" style="color:rgba(201,168,76,0.5)">
+      <span class="live-dot" aria-hidden="true"></span> LIVE RESULTS
+    </span>
+    <span class="text-xs font-semibold mx-2" style="color:var(--color-gold-light)">JM Rodriguez</span>
+    <span class="text-xs text-gray-500 mx-1">+$4,240 · Phase 2 Complete</span>
+    <span class="text-xs mx-3" style="color:rgba(201,168,76,0.2)" aria-hidden="true">&mdash;</span>
+    <span class="text-xs font-semibold mx-2" style="color:var(--color-gold-light)">Andrea Rios</span>
+    <span class="text-xs text-gray-500 mx-1">+$6,100 · Payout Sent · 48h</span>
+    <span class="text-xs mx-3" style="color:rgba(201,168,76,0.2)" aria-hidden="true">&mdash;</span>
+    <span class="text-xs font-semibold mx-2" style="color:var(--color-gold-light)">Carlos Vega</span>
+    <span class="text-xs text-gray-500 mx-1">+$1,890 · Funded Account</span>
+    <span class="text-xs mx-3" style="color:rgba(201,168,76,0.2)" aria-hidden="true">&mdash;</span>
+    <span class="text-xs font-semibold mx-2" style="color:var(--color-gold-light)">Marcos T.</span>
+    <span class="text-xs text-gray-500 mx-1">+$6,100 · Elite Funded</span>
+    <span class="text-xs mx-3" style="color:rgba(201,168,76,0.2)" aria-hidden="true">&mdash;</span>
+    <span class="text-xs font-semibold mx-2" style="color:var(--color-gold-light)">Miguel T.</span>
+    <span class="text-xs text-gray-500 mx-1">+$2,350 · Phase 1 Passed</span>
+    <span class="text-xs mx-3" style="color:rgba(201,168,76,0.2)" aria-hidden="true">&mdash;</span>
+    <!-- set 2 -->
+    <span class="inline-flex items-center gap-1.5 mx-6 text-xs font-semibold tracking-widest uppercase" style="color:rgba(201,168,76,0.5)">
+      <span class="live-dot" aria-hidden="true"></span> LIVE RESULTS
+    </span>
+    <span class="text-xs font-semibold mx-2" style="color:var(--color-gold-light)">JM Rodriguez</span>
+    <span class="text-xs text-gray-500 mx-1">+$4,240 · Phase 2 Complete</span>
+    <span class="text-xs mx-3" style="color:rgba(201,168,76,0.2)" aria-hidden="true">&mdash;</span>
+    <span class="text-xs font-semibold mx-2" style="color:var(--color-gold-light)">Andrea Rios</span>
+    <span class="text-xs text-gray-500 mx-1">+$6,100 · Payout Sent · 48h</span>
+    <span class="text-xs mx-3" style="color:rgba(201,168,76,0.2)" aria-hidden="true">&mdash;</span>
+    <span class="text-xs font-semibold mx-2" style="color:var(--color-gold-light)">Carlos Vega</span>
+    <span class="text-xs text-gray-500 mx-1">+$1,890 · Funded Account</span>
+    <span class="text-xs mx-3" style="color:rgba(201,168,76,0.2)" aria-hidden="true">&mdash;</span>
+    <span class="text-xs font-semibold mx-2" style="color:var(--color-gold-light)">Marcos T.</span>
+    <span class="text-xs text-gray-500 mx-1">+$6,100 · Elite Funded</span>
+    <span class="text-xs mx-3" style="color:rgba(201,168,76,0.2)" aria-hidden="true">&mdash;</span>
+    <span class="text-xs font-semibold mx-2" style="color:var(--color-gold-light)">Miguel T.</span>
+    <span class="text-xs text-gray-500 mx-1">+$2,350 · Phase 1 Passed</span>
+    <span class="text-xs mx-3" style="color:rgba(201,168,76,0.2)" aria-hidden="true">&mdash;</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     HERO
+════════════════════════════════════════════════════════════ -->
+<main>
+<section class="hero-bg min-h-screen flex items-center" style="padding-top:8rem">
+  <div class="max-w-7xl mx-auto px-4 sm:px-8 py-16 sm:py-24 w-full">
+    <div class="grid lg:grid-cols-2 gap-14 xl:gap-20 items-center">
+
+      <!-- LEFT: COPY -->
+      <div class="max-w-xl">
+        <!-- Eyebrow -->
+        <div class="flex items-center gap-4 mb-10">
+          <div class="divider w-12" aria-hidden="true"></div>
+          <span class="text-xs tracking-[0.3em] uppercase font-semibold" style="color:rgba(201,168,76,0.7)">Sports Prop Trading · Latin America</span>
+          <div class="divider w-12" aria-hidden="true"></div>
+        </div>
+
+        <h1 class="font-display font-black leading-none mb-8" style="font-size:var(--fs-h1)">
+          <span style="color:rgba(255,255,255,0.9)">Your picks.</span><br>
+          <span class="gold-gradient">Our capital.</span><br>
+          <span style="color:rgba(255,255,255,0.9)">Your profits.</span>
+        </h1>
+
+        <p class="text-gray-400 mb-12 leading-relaxed max-w-md" style="font-size:var(--fs-lg)">
+          The first sports prop trading firm built for Latin America.
+          Trade up to <strong class="text-white">$25,000</strong> of our capital.
+          Keep up to <strong class="text-white">80%</strong> of every winning pick.
+          Payouts in <strong class="text-white">48 hours</strong>.
+        </p>
+
+        <!-- CTAs -->
+        <div class="flex flex-col sm:flex-row gap-4 mb-14">
+          <a href="#challenges" class="cta-btn px-8 py-4 rounded text-sm uppercase tracking-[0.15em]">Begin Your Challenge</a>
+          <a href="#testimonials" class="outline-gold px-8 py-4 rounded text-sm uppercase tracking-[0.15em]">View Proof of Earnings</a>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-6" role="list" aria-label="Key statistics">
+          <div role="listitem" class="text-center sm:text-left">
+            <div class="font-display text-2xl font-black gold-gradient mb-1">$183K</div>
+            <div class="text-xs text-gray-500 tracking-widest uppercase">Paid Out</div>
+          </div>
+          <div role="listitem" class="text-center sm:text-left">
+            <div class="font-display text-2xl font-black gold-gradient mb-1">247</div>
+            <div class="text-xs text-gray-500 tracking-widest uppercase">Funded</div>
+          </div>
+          <div role="listitem" class="text-center sm:text-left">
+            <div class="font-display text-2xl font-black gold-gradient mb-1">48h</div>
+            <div class="text-xs text-gray-500 tracking-widest uppercase">Payout Speed</div>
+          </div>
+          <div role="listitem" class="text-center sm:text-left">
+            <div class="font-display text-2xl font-black gold-gradient mb-1">80%</div>
+            <div class="text-xs text-gray-500 tracking-widest uppercase">Max Split</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: ACCOUNT CARD with gold accents + sparkline -->
+      <div class="hidden lg:block" aria-label="Live account preview">
+        <div class="card-gold gold-glow p-0 overflow-hidden">
+          <!-- Card header -->
+          <div class="px-6 py-4" style="border-bottom:1px solid var(--border-gold-faint);background:linear-gradient(135deg,rgba(201,168,76,0.06),transparent)">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs tracking-widest uppercase font-semibold" style="color:rgba(201,168,76,0.6)">Gold Class Account</span>
+              <span class="inline-flex items-center gap-1.5 text-xs font-semibold tracking-wide" style="color:var(--color-gold)">
+                <span class="live-dot" aria-hidden="true"></span> LIVE
+              </span>
+            </div>
+            <div class="font-display text-2xl font-bold text-white">PRO — $10,000</div>
+          </div>
+
+          <!-- Metrics -->
+          <div class="px-6 py-4 grid grid-cols-2 gap-4" style="border-bottom:1px solid var(--border-gold-faint)">
+            <div>
+              <div class="text-xs text-gray-500 tracking-wide uppercase mb-1">Current Balance</div>
+              <div class="font-display text-2xl font-bold text-white">$11,432</div>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500 tracking-wide uppercase mb-1">Phase</div>
+              <div class="font-display text-2xl font-bold" style="color:var(--color-gold)">2 / Active</div>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500 tracking-wide uppercase mb-1">Drawdown</div>
+              <div class="text-white font-semibold">6.2% of 10% max</div>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500 tracking-wide uppercase mb-1">To Target</div>
+              <div style="color:var(--color-gold)" class="font-semibold">$500 remain</div>
+            </div>
+          </div>
+
+          <!-- Sparkline -->
+          <div class="px-6 py-4" style="border-bottom:1px solid var(--border-gold-faint)" aria-label="Account balance chart">
+            <div class="text-xs text-gray-500 tracking-wide uppercase mb-3">Balance History</div>
+            <svg width="100%" height="65" viewBox="0 0 340 65" preserveAspectRatio="none" role="img" aria-label="Upward trending balance sparkline">
+              <defs>
+                <linearGradient id="goldfill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#C9A84C" stop-opacity="0.22"/>
+                  <stop offset="100%" stop-color="#C9A84C" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <line x1="0" y1="16" x2="340" y2="16" stroke="rgba(201,168,76,0.07)" stroke-width="1"/>
+              <line x1="0" y1="33" x2="340" y2="33" stroke="rgba(201,168,76,0.07)" stroke-width="1"/>
+              <line x1="0" y1="50" x2="340" y2="50" stroke="rgba(201,168,76,0.07)" stroke-width="1"/>
+              <path d="M0 55 L28 52 L55 48 L80 50 L100 45 L125 40 L150 36 L175 33 L198 28 L218 30 L240 22 L265 16 L295 11 L340 6 L340 65 L0 65 Z"
+                    fill="url(#goldfill)"/>
+              <path class="sparkline-path"
+                    d="M0 55 L28 52 L55 48 L80 50 L100 45 L125 40 L150 36 L175 33 L198 28 L218 30 L240 22 L265 16 L295 11 L340 6"
+                    fill="none" stroke="#C9A84C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="340" cy="6" r="3.5" fill="#E8C96E"/>
+            </svg>
+          </div>
+
+          <!-- Picks mini-table -->
+          <div class="px-6 py-4" style="border-bottom:1px solid var(--border-gold-faint)">
+            <div class="text-xs text-gray-500 tracking-wide uppercase mb-3">Recent Picks</div>
+            <table class="w-full text-xs" aria-label="Recent picks">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border-gold-faint)">
+                  <th class="text-left font-normal text-gray-500 pb-2 tracking-wide">PICK</th>
+                  <th class="text-right font-normal text-gray-500 pb-2 tracking-wide">ODDS</th>
+                  <th class="text-right font-normal text-gray-500 pb-2 tracking-wide">P&amp;L</th>
+                  <th class="text-right font-normal text-gray-500 pb-2 tracking-wide">RESULT</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="pick-row">
+                  <td class="text-gray-200 py-2">Lakers ML</td>
+                  <td class="text-right text-gray-400">+165</td>
+                  <td class="text-right font-semibold" style="color:var(--color-gold)">+$330</td>
+                  <td class="text-right"><span class="px-1.5 py-0.5 rounded text-xs font-semibold" style="background:rgba(201,168,76,0.12);color:var(--color-gold)">WIN</span></td>
+                </tr>
+                <tr class="pick-row">
+                  <td class="text-gray-200 py-2">Chiefs -3.5</td>
+                  <td class="text-right text-gray-400">-110</td>
+                  <td class="text-right text-red-400 font-semibold">-$110</td>
+                  <td class="text-right"><span class="px-1.5 py-0.5 rounded text-xs font-semibold bg-red-500/10 text-red-400">LOSS</span></td>
+                </tr>
+                <tr class="pick-row">
+                  <td class="text-gray-200 py-2">América O2.5</td>
+                  <td class="text-right text-gray-400">-105</td>
+                  <td class="text-right text-gray-500 font-semibold">TBD</td>
+                  <td class="text-right"><span class="px-1.5 py-0.5 rounded text-xs font-semibold bg-yellow-500/10 text-yellow-400">LIVE</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Payout eligibility -->
+          <div class="px-6 py-4 flex items-center justify-between">
+            <div>
+              <div class="text-xs text-gray-500 tracking-wide uppercase mb-0.5">Payout Eligible</div>
+              <div class="font-display text-sm font-bold text-white">$1,146.20 &rarr; 48h processing</div>
+            </div>
+            <a href="#" class="cta-btn px-4 py-2 rounded text-xs uppercase tracking-widest">Request</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     DIVIDER
+════════════════════════════════════════════════════════════ -->
+<div class="divider mx-8" aria-hidden="true"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     CHALLENGE TIERS
+════════════════════════════════════════════════════════════ -->
+<section id="challenges" class="py-24 px-4 sm:px-8">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center mb-14">
+      <div class="flex items-center justify-center gap-4 mb-4">
+        <div class="divider w-12" aria-hidden="true"></div>
+        <span class="text-xs tracking-[0.3em] uppercase font-semibold" style="color:rgba(201,168,76,0.5)">Choose Your Level</span>
+        <div class="divider w-12" aria-hidden="true"></div>
+      </div>
+      <h2 class="font-display font-black text-white" style="font-size:var(--fs-h2)">The Gold Class Accounts</h2>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6">
+
+      <!-- Starter -->
+      <div class="card-gold gold-glow p-8 cursor-pointer">
+        <div class="text-xs tracking-[0.25em] uppercase mb-4" style="color:rgba(201,168,76,0.6)">Starter</div>
+        <div class="font-display text-4xl font-black text-white mb-1">$5,000</div>
+        <div class="text-sm mb-8" style="color:rgba(201,168,76,0.5)">Entry: $500</div>
+        <div class="space-y-3 mb-8 text-sm">
+          <div class="flex justify-between"><span class="text-gray-400">Profit split</span><span style="color:var(--color-gold)" class="font-semibold">70%</span></div>
+          <div class="flex justify-between"><span class="text-gray-400">Drawdown limit</span><span class="text-white">10%</span></div>
+          <div class="flex justify-between"><span class="text-gray-400">Profit target</span><span class="text-white">10%</span></div>
+          <div class="flex justify-between"><span class="text-gray-400">Payout speed</span><span class="text-white">48h</span></div>
+        </div>
+        <a href="#" class="outline-gold block text-center py-3 rounded text-sm uppercase tracking-widest">Select Starter</a>
+      </div>
+
+      <!-- Pro (featured) -->
+      <div class="card-gold tier-featured p-8 relative cursor-pointer">
+        <div class="absolute -top-3.5 left-1/2 -translate-x-1/2">
+          <span class="cta-btn px-4 py-1 rounded-full text-xs uppercase tracking-widest">Most Popular</span>
+        </div>
+        <div class="text-xs tracking-[0.25em] uppercase mb-4" style="color:rgba(201,168,76,0.6)">Pro</div>
+        <div class="font-display text-4xl font-black text-white mb-1">$10,000</div>
+        <div class="text-sm mb-8" style="color:rgba(201,168,76,0.5)">Entry: $1,000</div>
+        <div class="space-y-3 mb-8 text-sm">
+          <div class="flex justify-between"><span class="text-gray-400">Profit split</span><span style="color:var(--color-gold-light)" class="font-bold">75%</span></div>
+          <div class="flex justify-between"><span class="text-gray-400">Drawdown limit</span><span class="text-white">10%</span></div>
+          <div class="flex justify-between"><span class="text-gray-400">Profit target</span><span class="text-white">10%</span></div>
+          <div class="flex justify-between"><span class="text-gray-400">Payout speed</span><span class="text-white">48h</span></div>
+        </div>
+        <a href="#" class="cta-btn block text-center py-3 rounded text-sm uppercase tracking-widest">Select Pro</a>
+      </div>
+
+      <!-- Elite -->
+      <div class="card-gold gold-glow p-8 cursor-pointer">
+        <div class="text-xs tracking-[0.25em] uppercase mb-4" style="color:rgba(201,168,76,0.6)">Elite</div>
+        <div class="font-display text-4xl font-black text-white mb-1">$25,000</div>
+        <div class="text-sm mb-8" style="color:rgba(201,168,76,0.5)">Entry: $2,500</div>
+        <div class="space-y-3 mb-8 text-sm">
+          <div class="flex justify-between"><span class="text-gray-400">Profit split</span><span style="color:var(--color-gold-light)" class="font-bold">80%</span></div>
+          <div class="flex justify-between"><span class="text-gray-400">Drawdown limit</span><span class="text-white">10%</span></div>
+          <div class="flex justify-between"><span class="text-gray-400">Profit target</span><span class="text-white">10%</span></div>
+          <div class="flex justify-between"><span class="text-gray-400">Payout speed</span><span class="text-white">48h</span></div>
+        </div>
+        <a href="#" class="outline-gold block text-center py-3 rounded text-sm uppercase tracking-widest">Select Elite</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     HOW IT WORKS
+════════════════════════════════════════════════════════════ -->
+<section id="how-it-works" class="py-20 px-4 sm:px-8" style="border-top:1px solid rgba(201,168,76,0.07)">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center mb-14">
+      <div class="flex items-center justify-center gap-4 mb-4">
+        <div class="divider w-12" aria-hidden="true"></div>
+        <span class="text-xs tracking-[0.3em] uppercase font-semibold" style="color:rgba(201,168,76,0.5)">The Path to Funded</span>
+        <div class="divider w-12" aria-hidden="true"></div>
+      </div>
+      <h2 class="font-display font-black text-white" style="font-size:var(--fs-h2)">Three Steps to Your Account</h2>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-8">
+
+      <div class="card-gold p-8 text-center">
+        <div class="w-12 h-12 rounded-full mx-auto mb-5 flex items-center justify-center font-display font-black text-lg" style="background:rgba(201,168,76,0.1);color:var(--color-gold)">1</div>
+        <h3 class="font-display font-bold text-white text-xl mb-3">Buy a Challenge</h3>
+        <p class="text-gray-500 text-sm leading-relaxed">
+          Pay the one-time evaluation fee from $500. Instant access to your challenge account at your chosen size.
+        </p>
+      </div>
+
+      <div class="card-gold p-8 text-center">
+        <div class="w-12 h-12 rounded-full mx-auto mb-5 flex items-center justify-center font-display font-black text-lg" style="background:rgba(201,168,76,0.1);color:var(--color-gold)">2</div>
+        <h3 class="font-display font-bold text-white text-xl mb-3">Pass Two Phases</h3>
+        <p class="text-gray-500 text-sm leading-relaxed">
+          Hit your profit targets in Phase 1 and Phase 2 while respecting the 10% drawdown limit. Prove your edge.
+        </p>
+      </div>
+
+      <div class="card-gold p-8 text-center">
+        <div class="w-12 h-12 rounded-full mx-auto mb-5 flex items-center justify-center font-display font-black text-lg" style="background:rgba(201,168,76,0.1);color:var(--color-gold)">3</div>
+        <h3 class="font-display font-bold text-white text-xl mb-3">Get Funded &amp; Paid</h3>
+        <p class="text-gray-500 text-sm leading-relaxed">
+          Receive your real funded account. Trade, win, and collect your payout in <strong class="text-white">48 hours</strong>.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TESTIMONIALS
+════════════════════════════════════════════════════════════ -->
+<section id="testimonials" class="py-20 px-4 sm:px-8" style="border-top:1px solid rgba(201,168,76,0.05)">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center mb-12">
+      <h2 class="font-display text-3xl font-black text-white mb-3">Traders earning real money</h2>
+      <p class="text-gray-500 text-sm">Verified payouts — no actors, no fake screenshots</p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-5">
+
+      <div class="card-gold p-6">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0" style="background:rgba(201,168,76,0.15);color:var(--color-gold)">JR</div>
+          <div class="min-w-0">
+            <div class="font-semibold text-sm text-white">Juan R.</div>
+            <div class="text-xs text-gray-500">México · Elite Account</div>
+          </div>
+          <div class="ml-auto font-display font-bold text-xl" style="color:var(--color-gold)">+$4,200</div>
+        </div>
+        <p class="text-gray-400 text-sm leading-relaxed italic">
+          "Phase 2 took me 3 weeks. The platform is legit — payout hit my account in 48 hours, no questions asked."
+        </p>
+      </div>
+
+      <div class="card-gold p-6">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0" style="background:rgba(201,168,76,0.15);color:var(--color-gold)">AP</div>
+          <div class="min-w-0">
+            <div class="font-semibold text-sm text-white">Andrea P.</div>
+            <div class="text-xs text-gray-500">Colombia · Pro Account</div>
+          </div>
+          <div class="ml-auto font-display font-bold text-xl" style="color:var(--color-gold)">+$1,875</div>
+        </div>
+        <p class="text-gray-400 text-sm leading-relaxed italic">
+          "Finalmente una plataforma seria para Latinoamérica. Los pagos son reales y rápidos."
+        </p>
+      </div>
+
+      <div class="card-gold p-6">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0" style="background:rgba(201,168,76,0.15);color:var(--color-gold)">MT</div>
+          <div class="min-w-0">
+            <div class="font-semibold text-sm text-white">Marcos T.</div>
+            <div class="text-xs text-gray-500">Argentina · Elite Account</div>
+          </div>
+          <div class="ml-auto font-display font-bold text-xl" style="color:var(--color-gold)">+$6,100</div>
+        </div>
+        <p class="text-gray-400 text-sm leading-relaxed italic">
+          "Mejor que cualquier bookie. Aquí el conocimiento de deportes se convierte en plata real."
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════════════════════ -->
+<div class="divider mx-8" aria-hidden="true"></div>
+<footer class="py-8 px-4 sm:px-8">
+  <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+    <span class="text-gray-600 text-xs tracking-wide">© 2025 PlayFunded. All rights reserved.</span>
+    <span class="text-gray-700 text-xs tracking-widest uppercase">Concept 02 — Gold Class</span>
+  </div>
+</footer>
+
+</body>
+</html>

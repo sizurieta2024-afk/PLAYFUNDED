@@ -26,6 +26,7 @@ interface ChallengeCardProps {
   };
   settledPicksCount: number; // won + lost + push (toward minimum)
   pendingPicksCount: number;
+  pendingStakeCents: number; // sum of stakes for pending picks — used so bars only move on settled losses
   t: Record<string, string>;
 }
 
@@ -52,10 +53,14 @@ export function ChallengeCard({
   challenge,
   settledPicksCount,
   pendingPicksCount,
+  pendingStakeCents,
   t,
 }: ChallengeCardProps) {
+  // Effective balance: add back pending stakes so bars only move on settled losses
+  const effectiveBalance = challenge.balance + pendingStakeCents;
+
   // ── P&L ──────────────────────────────────────────────────────────────────
-  const pnlCents = challenge.balance - challenge.startBalance;
+  const pnlCents = effectiveBalance - challenge.startBalance;
   const pnlPct = ((pnlCents / challenge.startBalance) * 100).toFixed(1);
   const isProfitable = pnlCents >= 0;
 
@@ -64,8 +69,7 @@ export function ChallengeCard({
     challenge.phase === "phase1"
       ? (challenge.phase1StartBalance ?? challenge.startBalance)
       : (challenge.phase2StartBalance ?? challenge.startBalance);
-  const targetPct =
-    challenge.phase === "funded" ? 0 : challenge.phase === "phase2" ? 10 : 20;
+  const targetPct = challenge.phase === "funded" ? 0 : 20;
   const profitTargetBalance = Math.floor(
     phaseStartBalance * (1 + targetPct / 100),
   );
@@ -76,21 +80,23 @@ export function ChallengeCard({
           0,
           Math.min(
             100,
-            Math.round(((challenge.balance - phaseStartBalance) / range) * 100),
+            Math.round(((effectiveBalance - phaseStartBalance) / range) * 100),
           ),
         )
       : 100;
 
-  // ── Drawdown bar ─────────────────────────────────────────────────────────
-  const peak = challenge.peakBalance || challenge.startBalance;
-  const drawdownCents = Math.max(0, peak - challenge.balance);
-  const drawdownPct = (drawdownCents / peak) * 100;
+  // ── Drawdown bar ──────────────────────────────────────────────────────────
+  // Always measured from startBalance (15% floor from original bankroll).
+  const isFunded = challenge.phase === "funded";
+  const drawdownRef = challenge.startBalance;
+  const drawdownCents = Math.max(0, drawdownRef - effectiveBalance);
+  const drawdownPct = (drawdownCents / drawdownRef) * 100;
   const drawdownBarPct = Math.min(100, Math.round((drawdownPct / 15) * 100));
   const drawdownDisplay = drawdownPct.toFixed(1) + "%";
 
-  // ── Daily loss bar ────────────────────────────────────────────────────────
+  // ── Daily loss bar — phases only (funded has no daily loss limit) ──────────
   const daily = challenge.dailyStartBalance || challenge.startBalance;
-  const dailyLossCents = Math.max(0, daily - challenge.balance);
+  const dailyLossCents = Math.max(0, daily - effectiveBalance);
   const dailyLossPct = daily > 0 ? (dailyLossCents / daily) * 100 : 0;
   const dailyBarPct = Math.min(100, Math.round((dailyLossPct / 10) * 100));
   const dailyDisplay = dailyLossPct.toFixed(1) + "%";
@@ -190,13 +196,15 @@ export function ChallengeCard({
             limitLabel="15%"
             variant="drawdown"
           />
-          <MetricBar
-            label={t.dailyLossLabel}
-            currentPct={dailyBarPct}
-            displayValue={dailyDisplay}
-            limitLabel="10%"
-            variant="daily"
-          />
+          {!isFunded && (
+            <MetricBar
+              label={t.dailyLossLabel}
+              currentPct={dailyBarPct}
+              displayValue={dailyDisplay}
+              limitLabel="10%"
+              variant="daily"
+            />
+          )}
         </div>
 
         {/* Picks progress */}
@@ -222,7 +230,7 @@ export function ChallengeCard({
         <div className="flex gap-2 pt-1">
           <Link
             href={`/dashboard/picks`}
-            className="flex-1 text-center py-2 rounded-lg bg-pf-brand text-white text-xs font-semibold hover:bg-pf-brand/90 transition-colors"
+            className="flex-1 text-center py-2 rounded-lg bg-pf-pink text-white text-xs font-semibold hover:bg-pf-pink-dark transition-colors"
           >
             {t.placePick}
           </Link>

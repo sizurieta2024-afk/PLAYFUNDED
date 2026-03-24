@@ -1,12 +1,14 @@
+import { PLATFORM_POLICY } from "@/lib/platform-policy";
+
 // ============================================================
-// EVENT LOCK — funded traders cannot place picks within 30 min of event start
-// Challenge-phase and standard-phase users are not subject to this rule.
+// EVENT LOCK — no picks allowed once an event is too close to start.
+// Live betting is never permitted.
 // ============================================================
 
-const LOCK_MINUTES = 30;
-const LOCK_MS = LOCK_MINUTES * 60 * 1000;
+export const EVENT_LOCK_MINUTES = PLATFORM_POLICY.trading.eventLockMinutes;
+const LOCK_MS = EVENT_LOCK_MINUTES * 60 * 1000;
 
-// Returns true if the event is within the 30-minute lock window.
+// Returns true if the event is within the pre-start lock window.
 export function isEventLocked(eventStart: Date | null | undefined): boolean {
   if (!eventStart) return false;
   const now = Date.now();

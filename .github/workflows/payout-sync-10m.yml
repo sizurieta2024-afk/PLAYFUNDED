@@ -1,0 +1,44 @@
+name: Sync Crypto Payouts (Every 10 Minutes)
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: payout-sync-10m
+  cancel-in-progress: false
+
+jobs:
+  payout-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate required secrets
+        run: |
+          test -n "${{ secrets.PF_BASE_URL }}"
+          test -n "${{ secrets.PF_CRON_SECRET }}"
+
+      - name: Call payout sync endpoint
+        env:
+          PF_BASE_URL: ${{ secrets.PF_BASE_URL }}
+          PF_CRON_SECRET: ${{ secrets.PF_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          url="${PF_BASE_URL%/}/api/payouts/sync"
+          body_file="$(mktemp)"
+          status="$(curl -sS --retry 2 --retry-delay 1 --max-time 30 \
+            -H "Authorization: Bearer ${PF_CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -o "${body_file}" \
+            -w "%{http_code}" \
+            "${url}")"
+
+          echo "HTTP ${status}"
+          cat "${body_file}"
+          echo
+
+          if [ "${status}" -ne 200 ]; then
+            echo "Payout sync failed with HTTP ${status}" >&2
+            exit 1
+          fi

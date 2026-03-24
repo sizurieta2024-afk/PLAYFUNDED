@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
-import { createServerClient } from "@/lib/supabase";
-import { FollowButton } from "@/components/community/FollowButton";
+import { getNonFixtureChallengeWhere } from "@/lib/fixture-data";
 
 export default async function TraderProfilePage({
   params,
@@ -12,18 +11,19 @@ export default async function TraderProfilePage({
   const { id } = await params;
   const t = await getTranslations("leaderboard");
 
-  const challenge = await prisma.challenge.findUnique({
-    where: { id, status: "funded" },
+  const challenge = await prisma.challenge.findFirst({
+    where: getNonFixtureChallengeWhere({ id, status: "funded" }),
     include: {
       user: {
         select: {
           id: true,
           name: true,
           avatar: true,
-          followers: { select: { followerId: true } },
         },
       },
-      tier: { select: { name: true, fundedBankroll: true, profitSplitPct: true } },
+      tier: {
+        select: { name: true, fundedBankroll: true, profitSplitPct: true },
+      },
       picks: {
         where: { status: { in: ["won", "lost", "push", "void"] } },
         orderBy: { placedAt: "desc" },
@@ -43,28 +43,6 @@ export default async function TraderProfilePage({
 
   if (!challenge) notFound();
 
-  const supabase = createServerClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  let currentUserId: string | null = null;
-  let isFollowing = false;
-  let isSelf = false;
-
-  if (session) {
-    const me = await prisma.user.findFirst({
-      where: { supabaseId: session.user.id },
-      select: { id: true },
-    });
-    currentUserId = me?.id ?? null;
-    isSelf = currentUserId === challenge.user.id;
-    isFollowing = challenge.user.followers.some(
-      (f) => f.followerId === currentUserId,
-    );
-  }
-
-  const followerCount = challenge.user.followers.length;
   const pnl = challenge.balance - challenge.tier.fundedBankroll;
   const pnlPct = (pnl / challenge.tier.fundedBankroll) * 100;
   const settled = challenge.picks.filter(
@@ -72,7 +50,8 @@ export default async function TraderProfilePage({
   );
   const winRate =
     settled.length > 0
-      ? (settled.filter((p) => p.status === "won").length / settled.length) * 100
+      ? (settled.filter((p) => p.status === "won").length / settled.length) *
+        100
       : 0;
 
   const STATUS_STYLES: Record<string, string> = {
@@ -97,7 +76,7 @@ export default async function TraderProfilePage({
             {(challenge.user.name ?? "?")[0].toUpperCase()}
           </div>
           <div>
-            <h1 className="text-2xl font-bold">
+            <h1 className="font-display font-bold font-serif italic text-2xl">
               {challenge.user.name ?? t("anonymous")}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -105,18 +84,6 @@ export default async function TraderProfilePage({
             </p>
           </div>
         </div>
-        {!isSelf && currentUserId && (
-          <FollowButton
-            traderId={challenge.user.id}
-            isFollowing={isFollowing}
-            followerCount={followerCount}
-          />
-        )}
-        {!currentUserId && (
-          <span className="text-xs text-muted-foreground">
-            {followerCount} followers
-          </span>
-        )}
       </div>
 
       {/* Stats */}
@@ -143,9 +110,14 @@ export default async function TraderProfilePage({
             color: "text-foreground",
           },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl border border-border bg-card p-4">
+          <div
+            key={s.label}
+            className="rounded-xl border border-border bg-card p-4"
+          >
             <p className="text-xs text-muted-foreground mb-1">{s.label}</p>
-            <p className={`text-xl font-bold tabular-nums ${s.color}`}>{s.value}</p>
+            <p className={`text-xl font-bold tabular-nums ${s.color}`}>
+              {s.value}
+            </p>
           </div>
         ))}
       </div>

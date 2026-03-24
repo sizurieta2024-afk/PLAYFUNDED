@@ -1,7 +1,8 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
-import { isGeoBlocked } from "@/lib/geo";
+import { lookupCountryByIp } from "@/lib/geo";
+import { getCountryPolicy, resolveCountry } from "@/lib/country-policy";
 import { routing } from "@/i18n/routing";
 
 const intlMiddleware = createIntlMiddleware(routing);
@@ -19,6 +20,30 @@ const GEO_EXEMPT_PREFIXES = [
   "/dashboard",
   "/admin",
 ];
+
+// Search engine and AI crawler user agents — bypass geo-block so content is indexable
+const CRAWLER_UA_PATTERNS = [
+  "googlebot",
+  "google-inspectiontool",
+  "bingbot",
+  "slurp", // Yahoo
+  "duckduckbot",
+  "baiduspider",
+  "yandexbot",
+  "applebot",
+  "gptbot", // OpenAI
+  "chatgpt-user",
+  "anthropic-ai",
+  "claudebot",
+  "perplexitybot",
+  "cohere-ai",
+];
+
+function isCrawler(ua: string | null): boolean {
+  if (!ua) return false;
+  const lower = ua.toLowerCase();
+  return CRAWLER_UA_PATTERNS.some((p) => lower.includes(p));
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -42,25 +67,51 @@ export async function middleware(request: NextRequest) {
 
   // ── 3. Geo-block: only check public-facing pages ─────────────────────
   // Strip locale prefix for exempt check (e.g. /en/auth/geo-blocked → /auth/geo-blocked)
-  const pathnameWithoutLocale = pathname.replace(/^\/(es-419|en)/, "") || "/";
+  const pathnameWithoutLocale =
+    pathname.replace(/^\/(es-419|pt-BR|en)/, "") || "/";
   const isGeoExempt = GEO_EXEMPT_PREFIXES.some(
     (p) => pathnameWithoutLocale.startsWith(p) || pathname.startsWith(p),
   );
 
-  if (!isGeoExempt) {
+  const ua = request.headers.get("user-agent");
+  if (!isGeoExempt && !isCrawler(ua)) {
     const ip =
       request.headers.get("x-real-ip") ??
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
       "127.0.0.1";
+    const headerCountry = resolveCountry(
+      request.headers.get("x-vercel-ip-country"),
+      request.headers.get("cf-ipcountry"),
+    );
+    const derivedCountry = headerCountry ?? (await lookupCountryByIp(ip));
+    const policy = getCountryPolicy(derivedCountry);
 
-    const blocked = await isGeoBlocked(ip);
-    if (blocked) {
+    if (!policy.publicAccess) {
       return NextResponse.redirect(new URL("/auth/geo-blocked", request.url));
     }
   }
 
-  // ── 4. Run next-intl middleware (locale detection + routing) ──────────
+  // ── 4. Geo-based locale default: Brazil → pt-BR ──────────────────────
+  // If the user has no explicit locale cookie and is from Brazil, set
+  // NEXT_LOCALE=pt-BR in the response. next-intl reads this cookie on the
+  // next request, automatically serving Brazilian Portuguese.
+  // Uses Vercel's x-vercel-ip-country header — zero latency, no API call.
+  const hasLocaleCookie = !!request.cookies.get("NEXT_LOCALE");
+  const geoCountry = resolveCountry(
+    request.headers.get("x-vercel-ip-country"),
+    request.headers.get("cf-ipcountry"),
+  );
+
+  // ── 5. Run next-intl middleware (locale detection + routing) ──────────
   const intlResponse = intlMiddleware(request);
+
+  if (!hasLocaleCookie && geoCountry === "BR") {
+    intlResponse.cookies.set("NEXT_LOCALE", "pt-BR", {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax",
+    });
+  }
 
   // If intl wants to redirect (e.g. normalise locale prefix), honour it
   if (
@@ -71,7 +122,7 @@ export async function middleware(request: NextRequest) {
     return intlResponse;
   }
 
-  // ── 5. Supabase session refresh ───────────────────────────────────────
+  // ── 6. Supabase session refresh ───────────────────────────────────────
   let response = intlResponse;
 
   const supabase = createServerClient(
@@ -101,8 +152,10 @@ export async function middleware(request: NextRequest) {
   );
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+  const isAuthenticated = !authError && !!authUser;
 
   // Normalise path (strip locale prefix) for protected-route checks
   const cleanPath = pathnameWithoutLocale || pathname;
@@ -110,19 +163,19 @@ export async function middleware(request: NextRequest) {
     cleanPath.startsWith(prefix),
   );
 
-  // ── 6. Unauthenticated → protected route ─────────────────────────────
-  if (isProtected && !session) {
+  // ── 7. Unauthenticated → protected route ─────────────────────────────
+  if (isProtected && !isAuthenticated) {
     const loginUrl = new URL("/auth/login", request.url);
     loginUrl.searchParams.set("redirectTo", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // ── 7. Admin route — server-side role check ───────────────────────────
-  if (cleanPath.startsWith("/admin") && session) {
+  // ── 8. Admin route — server-side role check ───────────────────────────
+  if (cleanPath.startsWith("/admin") && isAuthenticated && authUser) {
     const { data: user } = await supabase
       .from("User")
       .select("role")
-      .eq("supabaseId", session.user.id)
+      .eq("supabaseId", authUser.id)
       .single();
 
     if (!user || user.role !== "admin") {
@@ -130,9 +183,9 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // ── 8. Authenticated user hitting auth pages → redirect to dashboard ──
+  // ── 9. Authenticated user hitting auth pages → redirect to dashboard ──
   if (
-    session &&
+    isAuthenticated &&
     (cleanPath.startsWith("/auth/login") ||
       cleanPath.startsWith("/auth/signup"))
   ) {
@@ -144,6 +197,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

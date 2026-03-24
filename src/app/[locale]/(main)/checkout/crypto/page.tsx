@@ -71,7 +71,7 @@ export default function CryptoCheckoutPage() {
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="text-center space-y-1">
-          <h1 className="text-2xl font-bold text-foreground">
+          <h1 className="text-2xl font-display font-bold text-foreground">
             {currencyLabel(currency)}
           </h1>
           <p className="text-muted-foreground text-sm">{t("cryptoScanQr")}</p>
@@ -79,7 +79,7 @@ export default function CryptoCheckoutPage() {
 
         {/* QR Code */}
         <div className="flex justify-center">
-          <div className="rounded-2xl border border-border bg-white p-4">
+          <div className="rounded-2xl border border-border bg-card p-4">
             <QRCodeSVG value={address} size={180} />
           </div>
         </div>

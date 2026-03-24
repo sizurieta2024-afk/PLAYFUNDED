@@ -1,246 +1,272 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useTranslations } from "next-intl";
-import { becomeAffiliate, requestAffiliatePayout } from "@/app/actions/affiliate";
-import type { PayoutMethod } from "@prisma/client";
+import { Copy, Check, AlertCircle, Clock } from "lucide-react";
+import { requestAffiliateCodeChange } from "@/app/actions/affiliate";
+
+interface Conversion {
+  id: string;
+  paidAmount: number;
+  commissionEarned: number;
+  createdAt: Date | string;
+}
+
+interface CodeRequest {
+  id: string;
+  requestedCode: string;
+  createdAt: Date | string;
+}
 
 interface AffiliateData {
   id: string;
   code: string;
-  commissionRate: "five" | "ten";
+  discountPct: number;
+  commissionRate: string;
+  isActive: boolean;
   totalClicks: number;
   totalConversions: number;
   totalEarned: number;
   pendingPayout: number;
-  conversions: {
-    id: string;
-    conversionAmount: number | null;
-    commissionEarned: number | null;
-    createdAt: string;
-  }[];
+  createdAt: Date | string;
+  conversions: Conversion[];
+  codeRequests: CodeRequest[];
 }
-
-const PAYOUT_METHODS: { value: PayoutMethod; labelKey: string }[] = [
-  { value: "bank_wire", labelKey: "bankWire" },
-  { value: "usdt", labelKey: "usdt" },
-  { value: "usdc", labelKey: "usdc" },
-  { value: "btc", labelKey: "btc" },
-  { value: "paypal", labelKey: "paypal" },
-];
 
 function formatUSD(cents: number) {
-  return `$${(cents / 100).toLocaleString("en-US", {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  }).format(cents / 100);
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-xs text-muted-foreground mb-1">{label}</p>
-      <p className="text-2xl font-bold tabular-nums text-foreground">{value}</p>
-    </div>
-  );
+function commissionLabel(rate: string) {
+  if (rate === "ten") return "10%";
+  return "5%";
 }
 
 export function AffiliateClient({
-  affiliate: initial,
+  affiliate,
   appUrl,
+  t,
 }: {
-  affiliate: AffiliateData | null;
+  affiliate: AffiliateData;
   appUrl: string;
+  t: Record<string, string>;
 }) {
-  const t = useTranslations("affiliate");
-  const [affiliate, setAffiliate] = useState(initial);
-  const [method, setMethod] = useState<PayoutMethod>("usdt");
+  const referralUrl = `${appUrl}?ref=${affiliate.code}`;
   const [copied, setCopied] = useState(false);
-  const [payoutSubmitted, setPayoutSubmitted] = useState(false);
-  const [payoutError, setPayoutError] = useState<string | null>(null);
+  const [newCode, setNewCode] = useState("");
+  const [codeMsg, setCodeMsg] = useState<{ ok: boolean; text: string } | null>(
+    null,
+  );
   const [pending, startTransition] = useTransition();
 
-  const refLink = affiliate
-    ? `${appUrl}/ref/${affiliate.code}`
-    : "";
+  const hasPendingRequest = affiliate.codeRequests.length > 0;
 
-  function copyLink() {
-    navigator.clipboard.writeText(refLink).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+  function handleCopy() {
+    navigator.clipboard.writeText(referralUrl).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
-  function handleBecomeAffiliate() {
+  function handleCodeRequest() {
+    if (!newCode.trim()) return;
     startTransition(async () => {
-      const result = await becomeAffiliate();
-      if (result.code) {
-        // Refresh page to get full affiliate data
-        window.location.reload();
-      }
-    });
-  }
-
-  function handleRequestPayout() {
-    setPayoutError(null);
-    startTransition(async () => {
-      const result = await requestAffiliatePayout(method);
-      if (result.error) {
-        setPayoutError(result.error);
+      const res = await requestAffiliateCodeChange(newCode);
+      if (res.error) {
+        const errMap: Record<string, string> = {
+          code_taken: t.codeTaken,
+          same_code: t.sameCode,
+          invalid_code: t.invalidCode,
+          request_pending: t.codeChangePending,
+        };
+        setCodeMsg({ ok: false, text: errMap[res.error] ?? res.error });
       } else {
-        setPayoutSubmitted(true);
+        setCodeMsg({ ok: true, text: t.codeChangeSuccess });
+        setNewCode("");
       }
     });
   }
-
-  // Not yet an affiliate — show join CTA
-  if (!affiliate) {
-    return (
-      <div className="space-y-8">
-        {/* Hero join */}
-        <div className="rounded-2xl border border-border bg-card p-8 text-center space-y-4">
-          <div className="w-14 h-14 rounded-full bg-pf-brand/10 flex items-center justify-center mx-auto text-2xl">
-            💰
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-foreground">
-              {t("becomeAffiliate")}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-              {t("becomeAffiliateDesc")}
-            </p>
-          </div>
-          <button
-            onClick={handleBecomeAffiliate}
-            disabled={pending}
-            className="px-6 py-2.5 rounded-xl bg-pf-brand text-white font-semibold text-sm hover:bg-pf-brand/90 transition-colors disabled:opacity-50"
-          >
-            {pending ? t("submitting") : t("becomeAffiliate")}
-          </button>
-        </div>
-
-        {/* How it works */}
-        <HowItWorks />
-      </div>
-    );
-  }
-
-  const ratePct = affiliate.commissionRate === "ten" ? "10%" : "5%";
 
   return (
-    <div className="space-y-8">
-      {/* Referral link */}
-      <div className="rounded-xl border border-border bg-card p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-semibold text-foreground">{t("yourLink")}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {t("yourCode")}:{" "}
-              <span className="font-mono text-pf-brand">{affiliate.code}</span>{" "}
-              · {ratePct} commission
-            </p>
-          </div>
-          <button
-            onClick={copyLink}
-            className="px-4 py-2 rounded-lg border border-border text-xs font-medium hover:bg-secondary transition-colors"
-          >
-            {copied ? t("copied") : t("copyLink")}
-          </button>
+    <div className="space-y-6">
+      {!affiliate.isActive && (
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 flex items-start gap-3">
+          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-400">{t.inactiveNotice}</p>
         </div>
-        <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
-          <p className="text-xs font-mono text-muted-foreground truncate flex-1">
-            {refLink}
+      )}
+
+      {/* Referral link */}
+      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+        <div>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono mb-1">
+            {t.yourCode}
           </p>
+          <p className="font-mono text-2xl font-bold text-pf-brand">
+            {affiliate.code}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground mb-2">{t.referralLink}</p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 text-xs bg-secondary px-3 py-2 rounded-lg border border-border text-muted-foreground truncate font-mono">
+              {referralUrl}
+            </code>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border hover:border-pf-brand/40 text-muted-foreground hover:text-foreground text-xs font-medium transition-all"
+            >
+              {copied ? (
+                <Check className="w-3.5 h-3.5 text-pf-brand" />
+              ) : (
+                <Copy className="w-3.5 h-3.5" />
+              )}
+              {copied ? t.copied : t.copyLink}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Stats */}
-      <div>
-        <h2 className="text-sm font-semibold text-foreground mb-3">{t("stats")}</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label={t("clicks")} value={affiliate.totalClicks.toString()} />
-          <StatCard label={t("conversions")} value={affiliate.totalConversions.toString()} />
-          <StatCard label={t("lifetimeEarned")} value={formatUSD(affiliate.totalEarned)} />
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
-            <p className="text-xs text-amber-400 mb-1">{t("pendingPayout")}</p>
-            <p className="text-2xl font-bold tabular-nums text-amber-400">
-              {formatUSD(affiliate.pendingPayout)}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          {
+            label: t.totalClicks,
+            value: affiliate.totalClicks.toLocaleString(),
+          },
+          {
+            label: t.totalConversions,
+            value: affiliate.totalConversions.toLocaleString(),
+          },
+          { label: t.totalEarned, value: formatUSD(affiliate.totalEarned) },
+          { label: t.pendingPayout, value: formatUSD(affiliate.pendingPayout) },
+        ].map(({ label, value }) => (
+          <div
+            key={label}
+            className="rounded-xl border border-border bg-card p-4"
+          >
+            <p className="text-xs text-muted-foreground mb-1">{label}</p>
+            <p className="font-semibold tabular-nums text-foreground">
+              {value}
             </p>
           </div>
+        ))}
+      </div>
+
+      {/* Terms */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground mb-1">
+            {t.discountOffered}
+          </p>
+          <p className="font-semibold text-pf-brand">
+            {affiliate.discountPct}% off
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground mb-1">
+            {t.commissionRate}
+          </p>
+          <p className="font-semibold text-pf-brand">
+            {commissionLabel(affiliate.commissionRate)}
+          </p>
         </div>
       </div>
 
-      {/* Payout request */}
-      {affiliate.pendingPayout > 0 && !payoutSubmitted && (
-        <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-foreground">{t("requestPayout")}</h2>
-          <div className="flex flex-wrap gap-2 items-center">
-            <select
-              value={method}
-              onChange={(e) => setMethod(e.target.value as PayoutMethod)}
-              className="text-sm px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-pf-brand/40"
-            >
-              {PAYOUT_METHODS.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {t(m.labelKey as Parameters<typeof t>[0])}
-                </option>
-              ))}
-            </select>
+      {/* Code change request */}
+      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">
+            {t.changeCode}
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {t.changeCodeDesc}
+          </p>
+        </div>
+
+        {hasPendingRequest ? (
+          <div className="flex items-center gap-2 text-sm text-amber-400">
+            <Clock className="w-4 h-4 shrink-0" />
+            <span>
+              {t.pendingCodeRequest}:{" "}
+              <strong className="font-mono">
+                {affiliate.codeRequests[0].requestedCode}
+              </strong>
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={newCode}
+              onChange={(e) => {
+                setNewCode(
+                  e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""),
+                );
+                setCodeMsg(null);
+              }}
+              placeholder={t.changeCodePlaceholder}
+              maxLength={20}
+              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-1 focus:ring-pf-pink/40"
+            />
             <button
-              onClick={handleRequestPayout}
-              disabled={pending}
-              className="px-5 py-2 rounded-xl bg-pf-brand text-white font-semibold text-sm hover:bg-pf-brand/90 transition-colors disabled:opacity-50"
+              onClick={handleCodeRequest}
+              disabled={pending || !newCode.trim()}
+              className="px-4 py-2 text-sm font-medium rounded-lg bg-pf-pink text-white hover:bg-pf-pink-dark transition-colors disabled:opacity-40"
             >
-              {pending ? t("submitting") : `${t("requestPayout")} · ${formatUSD(affiliate.pendingPayout)}`}
+              {t.requestChange}
             </button>
           </div>
-          {payoutError && (
-            <p className="text-xs text-red-400">
-              {payoutError === "pending_exists" ? t("pendingExists") : payoutError}
-            </p>
-          )}
-        </div>
-      )}
+        )}
 
-      {payoutSubmitted && (
-        <div className="rounded-xl border border-pf-brand/30 bg-pf-brand/5 px-5 py-4">
-          <p className="text-sm font-medium text-pf-brand">{t("submitted")}</p>
-        </div>
-      )}
+        {codeMsg && (
+          <p
+            className={`text-xs ${codeMsg.ok ? "text-pf-brand" : "text-red-400"}`}
+          >
+            {codeMsg.text}
+          </p>
+        )}
+      </div>
 
       {/* Conversion history */}
       <div>
-        <h2 className="text-sm font-semibold text-foreground mb-3">{t("history")}</h2>
+        <h2 className="text-base font-display font-bold text-foreground mb-4">
+          {t.conversionsHistory}
+        </h2>
         {affiliate.conversions.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">
-            {t("noHistory")}
-          </p>
+          <p className="text-sm text-muted-foreground">{t.noConversions}</p>
         ) : (
           <div className="rounded-xl border border-border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
-                  {[t("date"), t("conversionAmount"), t("commission")].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground"
-                    >
-                      {h}
-                    </th>
-                  ))}
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">
+                    Date
+                  </th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">
+                    Sale
+                  </th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">
+                    Your cut
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {affiliate.conversions.map((c) => (
-                  <tr key={c.id} className="border-b border-border last:border-0">
-                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                  <tr
+                    key={c.id}
+                    className="border-b border-border last:border-0"
+                  >
+                    <td className="px-4 py-3 text-muted-foreground">
                       {new Date(c.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-4 py-3 tabular-nums text-xs">
-                      {c.conversionAmount ? formatUSD(c.conversionAmount) : "—"}
+                    <td className="px-4 py-3 tabular-nums">
+                      {formatUSD(c.paidAmount)}
                     </td>
-                    <td className="px-4 py-3 tabular-nums text-xs font-semibold text-pf-brand">
-                      {c.commissionEarned ? `+${formatUSD(c.commissionEarned)}` : "—"}
+                    <td className="px-4 py-3 tabular-nums text-pf-brand font-semibold">
+                      {formatUSD(c.commissionEarned)}
                     </td>
                   </tr>
                 ))}
@@ -248,33 +274,6 @@ export function AffiliateClient({
             </table>
           </div>
         )}
-      </div>
-
-      <HowItWorks />
-    </div>
-  );
-}
-
-function HowItWorks() {
-  const t = useTranslations("affiliate");
-  const steps = [
-    { n: "1", title: t("step1"), desc: t("step1Desc") },
-    { n: "2", title: t("step2"), desc: t("step2Desc") },
-    { n: "3", title: t("step3"), desc: t("step3Desc") },
-  ];
-  return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-      <h2 className="text-sm font-semibold text-foreground">{t("howItWorks")}</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {steps.map((s) => (
-          <div key={s.n} className="space-y-1.5">
-            <div className="w-7 h-7 rounded-full bg-pf-brand/15 text-pf-brand text-xs font-bold flex items-center justify-center">
-              {s.n}
-            </div>
-            <p className="text-sm font-medium text-foreground">{s.title}</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">{s.desc}</p>
-          </div>
-        ))}
       </div>
     </div>
   );

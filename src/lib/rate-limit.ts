@@ -1,13 +1,10 @@
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 interface RateLimitOptions {
   windowMs: number;
   max: number;
-}
-
-interface Bucket {
-  count: number;
-  resetAt: number;
 }
 
 export interface RateLimitResult {
@@ -17,15 +14,9 @@ export interface RateLimitResult {
   reset: number;
 }
 
-const globalBuckets = globalThis as unknown as {
-  __playfundedRateLimitBuckets?: Map<string, Bucket>;
-};
-
-function getStore(): Map<string, Bucket> {
-  if (!globalBuckets.__playfundedRateLimitBuckets) {
-    globalBuckets.__playfundedRateLimitBuckets = new Map<string, Bucket>();
-  }
-  return globalBuckets.__playfundedRateLimitBuckets;
+interface RateLimitRow {
+  count: number;
+  resetAt: Date;
 }
 
 function extractClientIp(request: NextRequest): string {
@@ -43,41 +34,92 @@ function extractClientIp(request: NextRequest): string {
   return candidates.find(Boolean) ?? "unknown";
 }
 
-function pruneExpired(store: Map<string, Bucket>, now: number) {
-  // Guard memory growth in long-lived processes.
-  if (store.size < 5000) return;
-  store.forEach((value, key) => {
-    if (value.resetAt <= now) store.delete(key);
-  });
+function extractClientKey(request: NextRequest): string {
+  const ip = extractClientIp(request);
+  const userAgent = request.headers.get("user-agent") ?? "unknown";
+  return `${ip}:${userAgent.slice(0, 120)}`;
 }
 
-export function enforceRateLimit(
+async function pruneExpiredBuckets(now: Date) {
+  try {
+    await prisma.$executeRaw(Prisma.sql`
+      DELETE FROM "RateLimitBucket"
+      WHERE "resetAt" < ${new Date(now.getTime() - 24 * 60 * 60 * 1000)}
+    `);
+  } catch {
+    // Pruning is best-effort only.
+  }
+}
+
+async function incrementBucket(
+  routeKey: string,
+  clientKey: string,
+  options: RateLimitOptions,
+  now: Date,
+): Promise<RateLimitRow> {
+  const key = `${routeKey}:${clientKey}`;
+  const nextReset = new Date(now.getTime() + options.windowMs);
+
+  const rows = await prisma.$queryRaw<RateLimitRow[]>(Prisma.sql`
+    INSERT INTO "RateLimitBucket" (
+      "key",
+      "routeKey",
+      "clientKey",
+      "count",
+      "resetAt",
+      "createdAt",
+      "updatedAt"
+    )
+    VALUES (
+      ${key},
+      ${routeKey},
+      ${clientKey},
+      1,
+      ${nextReset},
+      ${now},
+      ${now}
+    )
+    ON CONFLICT ("key") DO UPDATE
+    SET
+      "count" = CASE
+        WHEN "RateLimitBucket"."resetAt" <= ${now} THEN 1
+        ELSE "RateLimitBucket"."count" + 1
+      END,
+      "resetAt" = CASE
+        WHEN "RateLimitBucket"."resetAt" <= ${now} THEN ${nextReset}
+        ELSE "RateLimitBucket"."resetAt"
+      END,
+      "updatedAt" = ${now}
+    RETURNING "count", "resetAt"
+  `);
+
+  const bucket = rows[0];
+  if (!bucket) {
+    throw new Error("RATE_LIMIT_WRITE_FAILED");
+  }
+  return bucket;
+}
+
+export async function enforceRateLimit(
   request: NextRequest,
   routeKey: string,
   options: RateLimitOptions,
-): RateLimitResult {
-  const now = Date.now();
-  const store = getStore();
-  pruneExpired(store, now);
+): Promise<RateLimitResult> {
+  const now = new Date();
+  const clientKey = extractClientKey(request);
+  const bucket = await incrementBucket(routeKey, clientKey, options, now);
 
-  const ip = extractClientIp(request);
-  const key = `${routeKey}:${ip}`;
-  const current = store.get(key);
-
-  const bucket =
-    current && current.resetAt > now
-      ? current
-      : { count: 0, resetAt: now + options.windowMs };
-
-  bucket.count += 1;
-  store.set(key, bucket);
+  // Only one request in ~100 does opportunistic cleanup.
+  if (Math.random() < 0.01) {
+    void pruneExpiredBuckets(now);
+  }
 
   const remaining = Math.max(0, options.max - bucket.count);
   return {
     allowed: bucket.count <= options.max,
     limit: options.max,
     remaining,
-    reset: Math.ceil(bucket.resetAt / 1000),
+    reset: Math.ceil(bucket.resetAt.getTime() / 1000),
   };
 }
 
@@ -99,7 +141,9 @@ export function rateLimitExceededResponse(
       status: 429,
       headers: {
         ...buildRateLimitHeaders(result),
-        "Retry-After": String(Math.max(1, result.reset - Math.floor(Date.now() / 1000))),
+        "Retry-After": String(
+          Math.max(1, result.reset - Math.floor(Date.now() / 1000)),
+        ),
       },
     },
   );

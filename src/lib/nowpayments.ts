@@ -1,3 +1,6 @@
+import { timingSafeEqual } from "node:crypto";
+import { fetchWithTimeout } from "@/lib/net/fetch-with-timeout";
+
 const BASE_URL = "https://api.nowpayments.io/v1";
 
 function getApiKey(): string {
@@ -39,23 +42,27 @@ export async function createCryptoInvoice({
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
   const localePath = locale === "es-419" ? "" : `/${locale}`;
 
-  const res = await fetch(`${BASE_URL}/payment`, {
-    method: "POST",
-    headers: {
-      "x-api-key": apiKey,
-      "Content-Type": "application/json",
+  const res = await fetchWithTimeout(
+    `${BASE_URL}/payment`,
+    {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        price_amount: feeInCents / 100,
+        price_currency: "usd",
+        pay_currency: currency,
+        order_id: `${tierId}:${userId}:${Date.now()}`,
+        order_description: `PlayFunded — ${tierName}`,
+        ipn_callback_url: `${baseUrl}/api/webhooks/nowpayments`,
+        success_url: `${baseUrl}${localePath}/checkout/success`,
+        cancel_url: `${baseUrl}${localePath}/checkout/cancel`,
+      }),
     },
-    body: JSON.stringify({
-      price_amount: feeInCents / 100,
-      price_currency: "usd",
-      pay_currency: currency,
-      order_id: `${tierId}:${userId}:${Date.now()}`,
-      order_description: `PlayFunded — ${tierName}`,
-      ipn_callback_url: `${baseUrl}/api/webhooks/nowpayments`,
-      success_url: `${baseUrl}${localePath}/checkout/success`,
-      cancel_url: `${baseUrl}${localePath}/checkout/cancel`,
-    }),
-  });
+    10_000,
+  );
 
   if (!res.ok) {
     const err = await res.text();
@@ -86,10 +93,15 @@ export async function createCryptoInvoice({
 // Verify IPN signature: HMAC-SHA512 of sorted JSON body
 export async function verifyNowPaymentsSignature(
   body: string,
-  signature: string
+  signature: string,
 ): Promise<boolean> {
   const secret = process.env.NOWPAYMENTS_IPN_SECRET;
-  if (!secret) return false;
+  if (!secret) {
+    console.error(
+      "[NOWPayments webhook] NOWPAYMENTS_IPN_SECRET is not configured — rejecting all IPN requests",
+    );
+    return false;
+  }
 
   const encoder = new TextEncoder();
 
@@ -97,7 +109,10 @@ export async function verifyNowPaymentsSignature(
   const parsed = JSON.parse(body) as Record<string, unknown>;
   const sorted = Object.keys(parsed)
     .sort()
-    .reduce<Record<string, unknown>>((acc, k) => { acc[k] = parsed[k]; return acc; }, {});
+    .reduce<Record<string, unknown>>((acc, k) => {
+      acc[k] = parsed[k];
+      return acc;
+    }, {});
   const sortedBody = JSON.stringify(sorted);
 
   const key = await crypto.subtle.importKey(
@@ -105,7 +120,7 @@ export async function verifyNowPaymentsSignature(
     encoder.encode(secret),
     { name: "HMAC", hash: "SHA-512" },
     false,
-    ["sign"]
+    ["sign"],
   );
 
   const mac = await crypto.subtle.sign("HMAC", key, encoder.encode(sortedBody));
@@ -113,5 +128,13 @@ export async function verifyNowPaymentsSignature(
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 
-  return hex === signature;
+  const normalizedSignature = signature.trim().toLowerCase();
+  const expected = Buffer.from(hex, "utf8");
+  const received = Buffer.from(normalizedSignature, "utf8");
+
+  if (expected.length !== received.length) {
+    return false;
+  }
+
+  return timingSafeEqual(expected, received);
 }

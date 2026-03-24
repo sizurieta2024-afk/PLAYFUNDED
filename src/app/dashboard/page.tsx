@@ -3,12 +3,13 @@ import { redirect } from 'next/navigation'
 import { signOut } from '@/app/actions/auth'
 
 export default async function DashboardPage() {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser()
 
-  if (!session) {
+  if (authError || !authUser) {
     redirect('/auth/login')
   }
 
@@ -22,9 +23,9 @@ export default async function DashboardPage() {
         <p className="text-gray-400 text-sm">
           Bienvenido,{' '}
           <span className="text-white">
-            {session.user.user_metadata?.full_name ??
-              session.user.user_metadata?.name ??
-              session.user.email}
+            {authUser.user_metadata?.full_name ??
+              authUser.user_metadata?.name ??
+              authUser.email}
           </span>
         </p>
         <p className="text-gray-600 text-xs">

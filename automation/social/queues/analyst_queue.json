@@ -1,0 +1,20 @@
+[
+  {
+    "id": "kai-20260306-001",
+    "account": "analyst",
+    "status": "script_ready",
+    "persona": "KAI",
+    "hook": "Hoy no te voy a dar un pick viral, te voy a dar una ventaja.",
+    "script": [
+      "Partido: ejemplo educativo.",
+      "Mercado: ejemplo moneyline.",
+      "Criterio: valor de cuota + contexto tactico + gestion de stake.",
+      "Stake: 1 unidad. Nunca sobreexponer bankroll.",
+      "Disclaimer: contenido educativo, no garantia de ganancia."
+    ],
+    "cta": "Si quieres operar con reglas reales, revisa el link en bio de PlayFunded.",
+    "assetVideoPath": "",
+    "assetVoicePath": "",
+    "uploadStatus": "pending"
+  }
+]

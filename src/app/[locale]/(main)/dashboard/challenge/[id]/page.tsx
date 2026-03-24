@@ -121,15 +121,16 @@ export default async function ChallengeDetailPage({
 }) {
   const { locale, id } = await params;
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  if (!session) redirect("/auth/login");
+  if (authError || !authUser) redirect("/auth/login");
 
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
   });
   if (!user) redirect("/auth/login");
 
@@ -156,6 +157,10 @@ export default async function ChallengeDetailPage({
   const countLost = settledPicks.filter((p) => p.status === "lost").length;
   const countPush = settledPicks.filter((p) => p.status === "push").length;
   const countPending = picks.filter((p) => p.status === "pending").length;
+  const pendingStakeCents = picks
+    .filter((p) => p.status === "pending")
+    .reduce((sum, p) => sum + p.stake, 0);
+  const effectiveBalance = challenge.balance + pendingStakeCents;
   const countSettledForMin = countWon + countLost + countPush; // void excluded from minimum
 
   const winRate =
@@ -185,8 +190,7 @@ export default async function ChallengeDetailPage({
     challenge.phase === "phase1"
       ? (challenge.phase1StartBalance ?? challenge.startBalance)
       : (challenge.phase2StartBalance ?? challenge.startBalance);
-  const targetPct =
-    challenge.phase === "funded" ? 0 : challenge.phase === "phase2" ? 10 : 20;
+  const targetPct = challenge.phase === "funded" ? 0 : 20;
   const profitTargetBalance = Math.floor(
     phaseStartBalance * (1 + targetPct / 100),
   );
@@ -198,21 +202,23 @@ export default async function ChallengeDetailPage({
           Math.min(
             100,
             Math.round(
-              ((challenge.balance - phaseStartBalance) / profitRange) * 100,
+              ((effectiveBalance - phaseStartBalance) / profitRange) * 100,
             ),
           ),
         )
       : 100;
 
   // ── Drawdown ──────────────────────────────────────────────────────────────
-  const peak = challenge.peakBalance || challenge.startBalance;
-  const drawdownCents = Math.max(0, peak - challenge.balance);
-  const drawdownPct = (drawdownCents / peak) * 100;
+  // Always measured from startBalance.
+  const isFunded = challenge.phase === "funded";
+  const drawdownRef = challenge.startBalance;
+  const drawdownCents = Math.max(0, drawdownRef - effectiveBalance);
+  const drawdownPct = (drawdownCents / drawdownRef) * 100;
   const drawdownBarPct = Math.min(100, Math.round((drawdownPct / 15) * 100));
 
-  // ── Daily loss ────────────────────────────────────────────────────────────
+  // ── Daily loss — phases only (funded has no daily loss limit) ─────────────
   const daily = challenge.dailyStartBalance || challenge.startBalance;
-  const dailyLossCents = Math.max(0, daily - challenge.balance);
+  const dailyLossCents = Math.max(0, daily - effectiveBalance);
   const dailyLossPct = daily > 0 ? (dailyLossCents / daily) * 100 : 0;
   const dailyBarPct = Math.min(100, Math.round((dailyLossPct / 10) * 100));
 
@@ -318,7 +324,9 @@ export default async function ChallengeDetailPage({
       {/* ── Challenge header ────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">{challenge.tier.name}</h1>
+          <h1 className="text-2xl font-display font-bold">
+            {challenge.tier.name}
+          </h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             {t("startedAt")}:{" "}
             {challenge.startedAt.toLocaleDateString("en-US", {
@@ -331,7 +339,7 @@ export default async function ChallengeDetailPage({
         </div>
         <Link
           href="/dashboard/picks"
-          className="px-4 py-2 rounded-lg bg-pf-brand text-white text-sm font-semibold hover:bg-pf-brand/90 transition-colors shrink-0"
+          className="px-4 py-2 rounded-lg bg-pf-pink text-white text-sm font-semibold hover:bg-pf-pink-dark transition-colors shrink-0"
         >
           {t("placePick")}
         </Link>
@@ -418,13 +426,15 @@ export default async function ChallengeDetailPage({
           limitLabel="15%"
           variant="drawdown"
         />
-        <MetricBar
-          label={t("dailyLossLabel")}
-          currentPct={dailyBarPct}
-          displayValue={dailyLossPct.toFixed(1) + "%"}
-          limitLabel="10%"
-          variant="daily"
-        />
+        {!isFunded && (
+          <MetricBar
+            label={t("dailyLossLabel")}
+            currentPct={dailyBarPct}
+            displayValue={dailyLossPct.toFixed(1) + "%"}
+            limitLabel="10%"
+            variant="daily"
+          />
+        )}
       </div>
 
       {/* ── Balance history chart ────────────────────────────────────────── */}

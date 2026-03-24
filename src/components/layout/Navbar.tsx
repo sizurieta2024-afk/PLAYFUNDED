@@ -4,7 +4,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { ThemeToggle } from "./ThemeToggle";
 import { LanguageToggle } from "./LanguageToggle";
-import { Menu, X, TrendingUp, LogOut } from "lucide-react";
+import { Menu, X, LogOut } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createBrowserClient } from "@supabase/ssr";
@@ -28,33 +28,30 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
   }
 
   const navLinks = [
-    { key: "challenges", href: "/challenges" as const },
     { key: "howItWorks", href: "/how-it-works" as const },
+    { key: "challenges", href: "/challenges" as const },
     { key: "leaderboard", href: "/leaderboard" as const },
     { key: "faq", href: "/faq" as const },
   ] as const;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/90 backdrop-blur-md">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between gap-4">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/92 backdrop-blur-xl">
+      <div className="mx-auto max-w-[1200px] px-6 lg:px-16">
+        <div className="flex h-14 items-center justify-between gap-4">
           {/* ── Brand ─────────────────────────────────────────────── */}
-          <Link href="/" className="flex items-center gap-2 shrink-0 group">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-pf-brand/15 group-hover:bg-pf-brand/25 transition-colors">
-              <TrendingUp className="w-4 h-4 text-pf-brand" strokeWidth={2.5} />
-            </div>
-            <span className="text-base font-bold tracking-tight text-foreground">
+          <Link href="/" className="shrink-0">
+            <span className="font-display font-bold text-sm tracking-[0.15em] uppercase text-pf-brand hover:text-pf-gold-light transition-colors duration-200">
               {t("brand")}
             </span>
           </Link>
 
           {/* ── Desktop nav links ──────────────────────────────────── */}
-          <nav className="hidden md:flex items-center gap-0.5">
+          <nav className="hidden md:flex items-center gap-9">
             {navLinks.map(({ key, href }) => (
               <Link
                 key={key}
                 href={href}
-                className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                className="text-[13px] text-muted-foreground hover:text-foreground transition-colors duration-200"
               >
                 {t(key)}
               </Link>
@@ -70,25 +67,39 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
               <>
                 <Link
                   href="/dashboard"
-                  className="ml-1 flex items-center gap-2 px-4 h-9 rounded-md bg-pf-brand hover:bg-pf-brand-dark text-white text-sm font-semibold transition-colors"
+                  className="px-4 py-2 rounded text-[13px] font-medium text-muted-foreground border border-border hover:border-pf-brand/30 hover:text-foreground transition-all duration-200"
                 >
                   {t("dashboard")}
                 </Link>
+                <Link
+                  href="/challenges"
+                  className="press px-5 py-2 rounded bg-pf-pink hover:bg-pf-pink-dark text-white text-[13px] font-semibold transition-colors duration-200"
+                >
+                  {t("buyChallengeNav") ?? "Buy a Challenge"}
+                </Link>
                 <button
                   onClick={handleSignOut}
-                  className="flex items-center justify-center w-9 h-9 rounded-md border border-border text-muted-foreground hover:text-red-400 hover:border-red-500/50 transition-colors"
-                  aria-label="Sign out"
+                  className="flex items-center justify-center w-8 h-8 rounded border border-border text-muted-foreground hover:text-red-400 hover:border-red-500/50 transition-colors"
+                  aria-label={t("signout")}
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-3.5 h-3.5" />
                 </button>
               </>
             ) : (
-              <Link
-                href="/auth/login"
-                className="ml-1 px-5 h-9 flex items-center rounded-md bg-pf-brand hover:bg-pf-brand-dark text-white text-sm font-semibold transition-colors"
-              >
-                {t("login")}
-              </Link>
+              <>
+                <Link
+                  href="/auth/login"
+                  className="px-4 py-2 rounded text-[13px] font-medium text-muted-foreground border border-border hover:border-pf-brand/30 hover:text-foreground transition-all duration-200"
+                >
+                  {t("login")}
+                </Link>
+                <Link
+                  href="/challenges"
+                  className="press px-5 py-2 rounded bg-pf-pink hover:bg-pf-pink-dark text-white text-[13px] font-semibold transition-colors duration-200"
+                >
+                  {t("challenges")}
+                </Link>
+              </>
             )}
           </div>
 
@@ -98,7 +109,7 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
             <ThemeToggle />
             <button
               onClick={() => setMobileOpen((v) => !v)}
-              className="flex items-center justify-center w-9 h-9 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              className="flex items-center justify-center w-8 h-8 rounded border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
               aria-label="Toggle menu"
             >
               <AnimatePresence mode="wait" initial={false}>
@@ -139,7 +150,7 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
             transition={{ duration: 0.2, ease: "easeInOut" }}
             className="md:hidden overflow-hidden border-t border-border bg-background"
           >
-            <div className="mx-auto max-w-7xl px-4 py-3 space-y-1">
+            <div className="mx-auto max-w-[1200px] px-6 py-3 space-y-1">
               {navLinks.map(({ key, href }, i) => (
                 <motion.div
                   key={key}
@@ -150,7 +161,7 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
                   <Link
                     href={href}
                     onClick={() => setMobileOpen(false)}
-                    className="flex px-3 py-2.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                    className="flex px-3 py-2.5 rounded text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
                   >
                     {t(key)}
                   </Link>
@@ -160,14 +171,14 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
                 initial={{ x: -16, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: navLinks.length * 0.05, duration: 0.2 }}
-                className="pt-2 pb-1 border-t border-border"
+                className="pt-2 pb-1 border-t border-border flex flex-col gap-2"
               >
                 {isAuthenticated ? (
                   <>
                     <Link
                       href="/dashboard"
                       onClick={() => setMobileOpen(false)}
-                      className="flex px-3 py-2.5 rounded-md text-sm font-semibold text-pf-brand hover:bg-secondary transition-colors"
+                      className="flex px-3 py-2.5 rounded text-sm font-semibold text-pf-brand hover:bg-secondary transition-colors"
                     >
                       {t("dashboard")}
                     </Link>
@@ -176,17 +187,17 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
                         setMobileOpen(false);
                         handleSignOut();
                       }}
-                      className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium text-muted-foreground hover:text-red-400 hover:bg-secondary transition-colors"
+                      className="flex items-center gap-2 px-3 py-2.5 rounded text-sm font-medium text-muted-foreground hover:text-red-400 hover:bg-secondary transition-colors"
                     >
                       <LogOut className="w-4 h-4" />
-                      Sign out
+                      {t("signout")}
                     </button>
                   </>
                 ) : (
                   <Link
                     href="/auth/login"
                     onClick={() => setMobileOpen(false)}
-                    className="flex px-3 py-2.5 rounded-md text-sm font-semibold text-pf-brand hover:bg-secondary transition-colors"
+                    className="flex px-3 py-2.5 rounded text-sm font-semibold text-pf-brand hover:bg-secondary transition-colors"
                   >
                     {t("login")}
                   </Link>

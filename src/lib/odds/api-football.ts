@@ -55,7 +55,11 @@ function parseDecimalOdds(odd: string): number {
   return isNaN(n) ? 1.0 : n;
 }
 
-function buildMarketsFromOdds(odds: ApiFootballOdds | undefined): Market[] {
+function buildMarketsFromOdds(
+  odds: ApiFootballOdds | undefined,
+  homeTeam: string,
+  awayTeam: string,
+): Market[] {
   if (!odds?.bookmakers?.length) return [];
 
   // Prefer Bet365 bookmaker
@@ -70,7 +74,11 @@ function buildMarketsFromOdds(odds: ApiFootballOdds | undefined): Market[] {
     if (bet.id === 1) {
       const outcomes: Outcome[] = bet.values.map((v) => ({
         name:
-          v.value === "Home" ? "Home" : v.value === "Away" ? "Away" : "Draw",
+          v.value === "Home"
+            ? homeTeam
+            : v.value === "Away"
+              ? awayTeam
+              : "Draw",
         odds: parseDecimalOdds(v.odd),
       }));
       markets.push({ type: "moneyline", key: "match_winner", outcomes });
@@ -199,7 +207,11 @@ export class ApiFootballProvider implements OddsProvider {
             awayTeam: fixture.teams.away.name,
             startTime: new Date(fixture.fixture.date),
             isLive,
-            markets: buildMarketsFromOdds(odds),
+            markets: buildMarketsFromOdds(
+              odds,
+              fixture.teams.home.name,
+              fixture.teams.away.name,
+            ),
           };
         }),
       );

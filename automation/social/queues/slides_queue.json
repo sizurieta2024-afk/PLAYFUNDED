@@ -1,0 +1,62 @@
+[
+  {
+    "id": "slides-20260306-001",
+    "account": "slides",
+    "status": "rendered",
+    "topic": "Razones por las que la mayoria de apostadores pierde",
+    "slides": [
+      "Razones por las que la mayoria de apostadores pierde",
+      "Error 1: Apostar sin plan de stake",
+      "Error 2: Perseguir perdidas con apuestas mas grandes",
+      "Error 3: Apostar por impulso en vivo",
+      "Error 4: No medir ROI ni cierre de cuota",
+      "Error 5: Apostar ligas que no entiendes",
+      "Evitalos. Construye disciplina y aplica en PlayFunded. Link en bio."
+    ],
+    "caption": "La mayoria pierde por errores evitables. Aprende, ajusta, y opera con reglas.",
+    "hashtags": [
+      "#apuestasdeportivas",
+      "#tipster",
+      "#bankroll",
+      "#playfunded"
+    ],
+    "linkInBioCta": "Link en bio para aplicar a PlayFunded.",
+    "uploadStatus": "pending",
+    "renderedAt": "2026-03-06T14:39:18.848Z",
+    "renderedDir": "automation/social/generated/slides/slides-20260306-001-2026-03-06T14-39-17-337Z",
+    "files": [
+      "automation/social/generated/slides/slides-20260306-001-2026-03-06T14-39-17-337Z/01.png",
+      "automation/social/generated/slides/slides-20260306-001-2026-03-06T14-39-17-337Z/02.png",
+      "automation/social/generated/slides/slides-20260306-001-2026-03-06T14-39-17-337Z/03.png",
+      "automation/social/generated/slides/slides-20260306-001-2026-03-06T14-39-17-337Z/04.png",
+      "automation/social/generated/slides/slides-20260306-001-2026-03-06T14-39-17-337Z/05.png",
+      "automation/social/generated/slides/slides-20260306-001-2026-03-06T14-39-17-337Z/06.png",
+      "automation/social/generated/slides/slides-20260306-001-2026-03-06T14-39-17-337Z/07.png"
+    ],
+    "captionFinal": "La mayoria pierde por errores evitables. Aprende, ajusta, y opera con reglas.\n#apuestasdeportivas #tipster #bankroll #playfunded\nLink en bio para aplicar a PlayFunded."
+  },
+  {
+    "id": "slides-20260306-002",
+    "account": "slides",
+    "status": "ready",
+    "topic": "5 reglas para no quemar tu bankroll",
+    "slides": [
+      "5 reglas para no quemar tu bankroll",
+      "Regla 1: stake fijo entre 1% y 3%",
+      "Regla 2: nunca dobles por tilt",
+      "Regla 3: maximo 3 picks de alta conviccion al dia",
+      "Regla 4: evita parlays sin edge real",
+      "Regla 5: registra cada apuesta y revisa semanal",
+      "Disciplina > emocion. Link en bio."
+    ],
+    "caption": "Gestion de bankroll antes que picks virales.",
+    "hashtags": [
+      "#bankrollmanagement",
+      "#apuestas",
+      "#tradingdeportivo",
+      "#playfunded"
+    ],
+    "linkInBioCta": "Link en bio para aplicar a PlayFunded.",
+    "uploadStatus": "pending"
+  }
+]

@@ -1,16 +1,39 @@
-import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
+import { getNonFixtureChallengeWhere } from "@/lib/fixture-data";
+import type { Metadata } from "next";
 
-export default async function LeaderboardPage() {
-  const t = await getTranslations("leaderboard");
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "leaderboard" });
+  return {
+    title: `${t("pageTitle")} | PlayFunded`,
+    description: t("pageSubtitle"),
+    openGraph: {
+      title: `${t("pageTitle")} | PlayFunded`,
+      description: t("pageSubtitle"),
+      type: "website",
+      url: "https://playfunded.lat/leaderboard",
+    },
+  };
+}
+
+export default async function LeaderboardPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "leaderboard" });
 
   // Top funded traders by lifetime P&L (all funded challenges, best pnl%)
   const challenges = await prisma.challenge.findMany({
-    where: { status: "funded" },
-    orderBy: [
-      { balance: "desc" },
-    ],
+    where: getNonFixtureChallengeWhere({ status: "funded" }),
+    orderBy: [{ balance: "desc" }],
     take: 100,
     include: {
       user: { select: { id: true, name: true, avatar: true } },
@@ -50,7 +73,9 @@ export default async function LeaderboardPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">{t("pageTitle")}</h1>
+        <h1 className="font-display font-bold font-serif italic text-3xl">
+          {t("pageTitle")}
+        </h1>
         <p className="text-muted-foreground mt-1">{t("pageSubtitle")}</p>
       </div>
 
@@ -61,16 +86,21 @@ export default async function LeaderboardPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                {[t("rank"), t("trader"), t("tier"), t("pnlPct"), t("winRate"), t("picks"), ""].map(
-                  (h, i) => (
-                    <th
-                      key={i}
-                      className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap"
-                    >
-                      {h}
-                    </th>
-                  ),
-                )}
+                {[
+                  t("rank"),
+                  t("trader"),
+                  t("tier"),
+                  t("pnlPct"),
+                  t("winRate"),
+                  t("picks"),
+                ].map((h, i) => (
+                  <th
+                    key={i}
+                    className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap"
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -110,14 +140,6 @@ export default async function LeaderboardPage() {
                   </td>
                   <td className="px-4 py-3 tabular-nums text-xs text-muted-foreground">
                     {picks}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/traders/${c.id}`}
-                      className="text-xs px-2.5 py-1 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                    >
-                      {t("viewProfile")}
-                    </Link>
                   </td>
                 </tr>
               ))}

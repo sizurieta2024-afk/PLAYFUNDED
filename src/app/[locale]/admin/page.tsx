@@ -1,5 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { Link } from "@/i18n/navigation";
+import {
+  getNonFixtureChallengeWhere,
+  getNonFixtureKycWhere,
+  getNonFixturePaymentWhere,
+  getNonFixturePickWhere,
+  getNonFixturePayoutWhere,
+  getNonFixtureUserWhere,
+} from "@/lib/fixture-data";
 
 function fmt(cents: number) {
   return new Intl.NumberFormat("en-US", {
@@ -33,6 +41,41 @@ export default async function AdminDashboardPage() {
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1),
   );
   const endOfLastMonth = startOfMonth;
+  const completedPaymentWhere = getNonFixturePaymentWhere({
+    status: "completed",
+  });
+  const monthCompletedPaymentWhere = getNonFixturePaymentWhere({
+    status: "completed",
+    createdAt: { gte: startOfMonth },
+  });
+  const lastMonthCompletedPaymentWhere = getNonFixturePaymentWhere({
+    status: "completed",
+    createdAt: { gte: startOfLastMonth, lt: endOfLastMonth },
+  });
+  const paidPayoutWhere = getNonFixturePayoutWhere({
+    status: "paid",
+    isRollover: false,
+    isAffiliate: false,
+  });
+  const monthPaidPayoutWhere = getNonFixturePayoutWhere({
+    status: "paid",
+    isRollover: false,
+    isAffiliate: false,
+    requestedAt: { gte: startOfMonth },
+  });
+  const pendingPayoutWhere = getNonFixturePayoutWhere({
+    status: "pending",
+    isRollover: false,
+  });
+  const activeChallengeWhere = getNonFixtureChallengeWhere({
+    status: "active",
+  });
+  const fundedChallengeWhere = getNonFixtureChallengeWhere({
+    status: "funded",
+  });
+  const failedChallengeWhere = getNonFixtureChallengeWhere({
+    status: "failed",
+  });
 
   const [
     // Revenue
@@ -71,101 +114,109 @@ export default async function AdminDashboardPage() {
   ] = await Promise.all([
     // All-time completed revenue
     prisma.payment.aggregate({
-      where: { status: "completed" },
+      where: completedPaymentWhere,
       _sum: { amount: true },
     }),
     // This month revenue
     prisma.payment.aggregate({
-      where: { status: "completed", createdAt: { gte: startOfMonth } },
+      where: monthCompletedPaymentWhere,
       _sum: { amount: true },
     }),
     // Last month revenue
     prisma.payment.aggregate({
-      where: {
-        status: "completed",
-        createdAt: { gte: startOfLastMonth, lt: endOfLastMonth },
-      },
+      where: lastMonthCompletedPaymentWhere,
       _sum: { amount: true },
     }),
     // All-time paid payouts
     prisma.payout.aggregate({
-      where: { status: "paid", isRollover: false, isAffiliate: false },
+      where: paidPayoutWhere,
       _sum: { amount: true },
     }),
     // This month paid payouts
     prisma.payout.aggregate({
-      where: {
-        status: "paid",
-        isRollover: false,
-        isAffiliate: false,
-        requestedAt: { gte: startOfMonth },
-      },
+      where: monthPaidPayoutWhere,
       _sum: { amount: true },
     }),
     // Revenue by tier this month
     prisma.payment.groupBy({
       by: ["tierId"],
-      where: { status: "completed", createdAt: { gte: startOfMonth } },
+      where: monthCompletedPaymentWhere,
       _sum: { amount: true },
       orderBy: { _sum: { amount: "desc" } },
     }),
     // Revenue by payment method this month
     prisma.payment.groupBy({
       by: ["method"],
-      where: { status: "completed", createdAt: { gte: startOfMonth } },
+      where: monthCompletedPaymentWhere,
       _sum: { amount: true },
       orderBy: { _sum: { amount: "desc" } },
     }),
     // Total users
-    prisma.user.count(),
+    prisma.user.count({ where: getNonFixtureUserWhere() }),
     // New users this month
-    prisma.user.count({ where: { createdAt: { gte: startOfMonth } } }),
+    prisma.user.count({
+      where: getNonFixtureUserWhere({ createdAt: { gte: startOfMonth } }),
+    }),
     // Active challenges
-    prisma.challenge.count({ where: { status: "active" } }),
+    prisma.challenge.count({ where: activeChallengeWhere }),
     // Funded
-    prisma.challenge.count({ where: { status: "funded" } }),
+    prisma.challenge.count({ where: fundedChallengeWhere }),
     // Failed
-    prisma.challenge.count({ where: { status: "failed" } }),
+    prisma.challenge.count({ where: failedChallengeWhere }),
     // Phase 1
-    prisma.challenge.count({ where: { status: "active", phase: "phase1" } }),
+    prisma.challenge.count({
+      where: getNonFixtureChallengeWhere({ status: "active", phase: "phase1" }),
+    }),
     // Phase 2
-    prisma.challenge.count({ where: { status: "active", phase: "phase2" } }),
+    prisma.challenge.count({
+      where: getNonFixtureChallengeWhere({ status: "active", phase: "phase2" }),
+    }),
     // Total funded balance (risk exposure)
     prisma.challenge.aggregate({
-      where: { status: "funded" },
+      where: fundedChallengeWhere,
       _sum: { balance: true },
     }),
     // Picks placed today
-    prisma.pick.count({ where: { placedAt: { gte: startOfToday } } }),
+    prisma.pick.count({
+      where: getNonFixturePickWhere({ placedAt: { gte: startOfToday } }),
+    }),
     // Won today
     prisma.pick.count({
-      where: { status: "won", settledAt: { gte: startOfToday } },
+      where: getNonFixturePickWhere({
+        status: "won",
+        settledAt: { gte: startOfToday },
+      }),
     }),
     // Lost today
     prisma.pick.count({
-      where: { status: "lost", settledAt: { gte: startOfToday } },
+      where: getNonFixturePickWhere({
+        status: "lost",
+        settledAt: { gte: startOfToday },
+      }),
     }),
     // Pending payouts count
-    prisma.payout.count({ where: { status: "pending", isRollover: false } }),
+    prisma.payout.count({ where: pendingPayoutWhere }),
     // Pending payouts total amount
     prisma.payout.aggregate({
-      where: { status: "pending", isRollover: false },
+      where: pendingPayoutWhere,
       _sum: { amount: true },
     }),
     // Pending KYC
-    prisma.kycSubmission.count({ where: { status: "pending" } }),
+    prisma.kycSubmission.count({
+      where: getNonFixtureKycWhere({ status: "pending" }),
+    }),
     // Top funded traders by balance
     prisma.challenge.findMany({
-      where: { status: "funded" },
+      where: fundedChallengeWhere,
       orderBy: { balance: "desc" },
       take: 8,
       include: {
         user: { select: { email: true, name: true } },
-        tier: { select: { name: true, fundedBankroll: true } },
       },
     }),
     // Recent audit log
     prisma.auditLog.findMany({
+      where: { admin: { is: getNonFixtureUserWhere() } },
       orderBy: { createdAt: "desc" },
       take: 8,
       include: { admin: { select: { name: true, email: true } } },
@@ -179,6 +230,16 @@ export default async function AdminDashboardPage() {
     select: { id: true, name: true },
   });
   const tierMap = Object.fromEntries(tiers.map((t) => [t.id, t.name]));
+  const fundedTraderTierIds = Array.from(
+    new Set(topFundedTraders.map((challenge) => challenge.tierId)),
+  );
+  const fundedTraderTiers = await prisma.tier.findMany({
+    where: { id: { in: fundedTraderTierIds } },
+    select: { id: true, name: true, fundedBankroll: true },
+  });
+  const fundedTraderTierMap = new Map(
+    fundedTraderTiers.map((tier) => [tier.id, tier]),
+  );
 
   // Derived numbers
   const thisMonthRev = monthRevenue._sum.amount ?? 0;
@@ -472,7 +533,8 @@ export default async function AdminDashboardPage() {
                 </thead>
                 <tbody>
                   {topFundedTraders.map((c) => {
-                    const pnl = c.balance - c.tier.fundedBankroll;
+                    const tier = fundedTraderTierMap.get(c.tierId);
+                    const pnl = c.balance - (tier?.fundedBankroll ?? c.startBalance);
                     return (
                       <tr key={c.id} className="border-b border-border last:border-0">
                         <td className="px-4 py-2.5">
@@ -483,7 +545,9 @@ export default async function AdminDashboardPage() {
                             {c.user.email}
                           </p>
                         </td>
-                        <td className="px-4 py-2.5 text-xs text-muted-foreground">{c.tier.name}</td>
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground">
+                          {tier?.name ?? "Unknown tier"}
+                        </td>
                         <td className="px-4 py-2.5 text-right tabular-nums text-xs">{fmt(c.balance)}</td>
                         <td className={`px-4 py-2.5 text-right tabular-nums text-xs font-semibold ${pnl >= 0 ? "text-pf-brand" : "text-red-400"}`}>
                           {pnl >= 0 ? "+" : ""}{fmt(pnl)}

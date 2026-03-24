@@ -1,0 +1,319 @@
+# Playfunded Proof-Based Validation Report
+
+Generated: 2026-03-21T16:11:18.981Z
+
+This report follows a Shannon-style rule: claims must be backed by executable or source-level proof. Anything not proven is listed as unverified.
+
+## Summary
+
+- Verified checks: 34
+- Failed checks: 0
+- Unverified claims: 5
+
+## Verified And Failed Checks
+
+### VERIFIED auth.protected-routes
+Area: auth and session handling
+Claim: Protected routes require a live Supabase session and preserve a redirect target.
+Detail: All required proof points were found in source.
+Evidence:
+- Session is read from Supabase: L132: } = await supabase.auth.getUser();
+- Protected prefixes are declared: L10: const PROTECTED_PREFIXES = ["/dashboard", "/admin"];
+- Redirect target is preserved on login redirect: L144: loginUrl.searchParams.set("redirectTo", pathname);
+
+### VERIFIED admin.server-role-check
+Area: admin authorization
+Claim: Admin access is enforced with a server-side role lookup.
+Detail: All required proof points were found in source.
+Evidence:
+- Admin role is queried from the User table: L151: .from("User")
+- Role field is selected: L152: .select("role")
+- Non-admin users are redirected away: L156: if (!user || user.role !== "admin") {
+
+### VERIFIED payments.stripe-signature
+Area: payments and webhooks
+Claim: Stripe fulfillment only runs after signature verification and duplicate-safe locking.
+Detail: All required proof points were found in source.
+Evidence:
+- Stripe signature header is required: L219: const sig = req.headers.get("stripe-signature");
+- constructEvent verifies the webhook body: L231: event = stripe.webhooks.constructEvent(
+- Invalid signatures are rejected: L239: { error: "Invalid webhook signature" },
+- Fulfillment is wrapped in a webhook duplicate lock: L59: const fulfillment = await withWebhookLock(prisma, "stripe", session.id, async (tx) => {
+
+### VERIFIED payments.nowpayments-signature
+Area: payments and webhooks
+Claim: NOWPayments callbacks require a verified provider signature, reject malformed payloads, and deduplicate fulfillment.
+Detail: All required proof points were found in source.
+Evidence:
+- NOWPayments signature header is read: L22: const signature = request.headers.get("x-nowpayments-sig") ?? "";
+- Signature verifier is called: L26: isValid = await verifyNowPaymentsSignature(body, signature);
+- Invalid signatures are rejected: L32: console.error("[NOWPayments webhook] Invalid signature");
+- Malformed payloads are rejected: L48: data = JSON.parse(body) as typeof data;
+- Fulfillment is delegated to the shared NOWPayments payment service: L82: const outcome = await fulfillNowPaymentsPayment({
+
+### VERIFIED payments.nowpayments-fulfillment-service
+Area: payments and webhooks
+Claim: NOWPayments fulfillment upgrades pending checkout payments and creates the challenge inside one locked transaction.
+Detail: All required proof points were found in source.
+Evidence:
+- Fulfillment is wrapped in a webhook lock: L62: return withWebhookLock(
+- Pending checkout payments are upgraded in place: L83: status: "completed",
+- Challenge provisioning happens in the same transaction: L126: await tx.challenge.create({
+
+### VERIFIED ops.launch-smokes-dispatchable
+Area: payments and webhooks
+Claim: The CI workflow can run launch smokes from either push or manual dispatch once secrets exist.
+Detail: All required proof points were found in source.
+Evidence:
+- CI supports workflow_dispatch: L8: workflow_dispatch:
+- Launch smokes are not limited to push-only events: L112: if: ${{ github.event_name != 'pull_request' }}
+- Launch smokes run the admin support smoke: L198: run: BASE_URL=http://localhost:3004 node scripts/run-admin-support-smoke.mjs
+
+### VERIFIED ops.admin-launch-kyc-status
+Area: payout flows
+Claim: The admin launch page exposes whether KYC scanning is configured plus the resolved deploy environment and scan mode.
+Detail: All required proof points were found in source.
+Evidence:
+- The admin launch page reads the resolved KYC deploy environment: L33: const kycDeployEnvironment = getKycDeployEnvironment();
+- The admin launch page reads the KYC scan mode: L34: const kycScanMode = getKycScanMode();
+- The page shows the KYC scanning card: L76: <p className="text-xs text-muted-foreground mb-1">KYC scanning</p>
+- The page shows the scanner configured vs unconfigured state: L78: {clamavConfigured ? "ClamAV configured" : "Scanner not configured"}
+- The page shows the deploy environment alongside the mode: L81: {kycDeployEnvironment} · mode {kycScanMode}
+
+### VERIFIED payments.mercadopago-checkout-disabled
+Area: payments and webhooks
+Claim: Mercado Pago checkout is explicitly disabled for launch rather than left half-available.
+Detail: All required proof points were found in source.
+Evidence:
+- Checkout route returns an explicit disabled code: L26: code: "PAYMENT_METHOD_DISABLED",
+- Checkout route records the disabled-provider event: L27: reason: "Mercado Pago has been disabled for launch.",
+
+### VERIFIED payments.mercadopago-webhook-disabled
+Area: payments and webhooks
+Claim: Mercado Pago webhook handling is explicitly disabled for launch.
+Detail: All required proof points were found in source.
+Evidence:
+- Webhook route returns an explicit disabled code: L23: code: "PAYMENT_METHOD_DISABLED",
+- Webhook route records the disabled-provider event: L24: reason: "Mercado Pago webhook received after provider was disabled.",
+
+### VERIFIED payout.transactional-request
+Area: payout flows
+Claim: Payout creation rechecks pending state inside a serializable transaction before debiting balance.
+Detail: All required proof points were found in source.
+Evidence:
+- Payout flow runs inside an interactive transaction: L50: return await input.db.$transaction(
+- Transaction isolation is serializable: L133: isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+- Pending payouts are checked inside the transaction: L65: status: "pending",
+- Challenge balance is updated inside the transaction: L119: await tx.challenge.update({
+
+### VERIFIED payout.owner-scoped-query
+Area: payout flows
+Claim: Payout eligibility is scoped to the requesting user and funded challenges only.
+Detail: All required proof points were found in source.
+Evidence:
+- Payout flow is delegated to the shared payout service: L52: const decision = await createPayoutRequest({
+- Authenticated user is still required before payout request: L38: const user = await getAuthenticatedUser();
+
+### VERIFIED admin.payout-audit
+Area: admin authorization
+Claim: Admin payout review uses the transactional review service and notifies the user.
+Detail: All required proof points were found in source.
+Evidence:
+- Transactional review service is called: L68: const updated = await reviewPayoutByAdmin({
+- Conflict responses return 409 from the admin payouts route: L80: { status: 409 },
+- Payout approval email is available: L102: const { subject, html } = payoutPaidEmail(
+- Payout rejection email is available: L110: const { subject, html } = payoutRejectedEmail(
+
+### VERIFIED admin.payout-ui-conflict-message
+Area: admin authorization
+Claim: Admin payouts UI shows an explicit already-reviewed message when a concurrent review conflict happens.
+Detail: All required proof points were found in source.
+Evidence:
+- The admin payouts UI handles RETRYABLE_CONFLICT explicitly: L34: if (result.code === "RETRYABLE_CONFLICT") {
+- The admin payouts UI shows the already-reviewed message: L37: [id]: "Already reviewed by another admin. The queue is refreshing.",
+- The queue refreshes after the conflict message: L39: router.refresh();
+
+### VERIFIED admin.payout-review-transaction
+Area: admin authorization
+Claim: Admin payout review writes payout status and audit log in one serializable transaction.
+Detail: All required proof points were found in source.
+Evidence:
+- Pending payouts are updated with compare-and-set semantics: L152: const updated = await tx.payout.updateMany({
+- Pending status is part of the write guard: L155: status: "pending",
+- Payout review creates an audit log entry: L173: targetType: "payout",
+- Serializable conflicts are normalized instead of leaking 500s: L356: error.code === "P2034"
+- Transaction isolation is serializable: L192: isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+
+### VERIFIED admin.kyc-audit
+Area: admin authorization
+Claim: Admin KYC review uses the transactional review service and notifies the user.
+Detail: All required proof points were found in source.
+Evidence:
+- Transactional review service is called: L105: const updated = await reviewKycByAdmin({
+- KYC approval email is available: L120: const { subject, html } = kycApprovedEmail(updated.user.name);
+- KYC rejection email is available: L123: const { subject, html } = kycRejectedEmail(updated.user.name, reviewNote);
+
+### VERIFIED admin.kyc-review-transaction
+Area: admin authorization
+Claim: Admin KYC review writes submission status and audit log in one serializable transaction.
+Detail: All required proof points were found in source.
+Evidence:
+- Pending submissions are updated with compare-and-set semantics: L381: const updated = await tx.kycSubmission.updateMany({
+- Pending status is part of the write guard: L155: status: "pending",
+- KYC review creates an audit log entry: L400: targetType: "kyc",
+- Transaction isolation is serializable: L192: isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+
+### VERIFIED settlement.admin-role-gate
+Area: pick settlement logic
+Claim: Manual settlement is limited to authenticated admins.
+Detail: All required proof points were found in source.
+Evidence:
+- Admin requests are authenticated via Supabase: L29: } = await supabase.auth.getUser();
+- Admin role is checked server-side: L40: where: { supabaseId: authUser.id, role: "admin" },
+- Non-admins receive a forbidden response: L44: { error: "Forbidden", code: "FORBIDDEN" },
+
+### VERIFIED settlement.cron-secret
+Area: pick settlement logic
+Claim: Automated settlement requires the CRON secret bearer token.
+Detail: All required proof points were found in source.
+Evidence:
+- CRON secret is loaded from environment: L3: // POST /api/settle  (Bearer CRON_SECRET required)
+- Authorization header is checked: L29: return req.headers.get("authorization") === `Bearer ${secret}`;
+- Unauthorized requests are rejected: L53: { error: "Unauthorized", code: "UNAUTHORIZED" },
+
+### VERIFIED settlement.multi-provider-auto
+Area: pick settlement logic
+Claim: Automated settlement fetches final scores for both The Odds API and API-Football leagues.
+Detail: All required proof points were found in source.
+Evidence:
+- The Odds API scoring path is used: L130: ? await fetchOddsApiScores(config.providerKey)
+- API-Football scoring path is used: L131: : await fetchApiFootballScores(eventIds);
+- Provider-specific branching chooses the scoring source: L129: config.provider === "odds_api"
+
+### VERIFIED picks.optimistic-balance-update
+Area: challenge risk rules
+Claim: Pick placement uses optimistic concurrency when deducting challenge balance.
+Detail: All required proof points were found in source.
+Evidence:
+- Stake cap is rechecked inside the transaction: L72: const stakeViolation = baseCheckStakeCap(
+- Balance update is conditional on the fresh balance: L94: balance: freshChallenge.balance,
+- Conflicts return a concrete retry error: L102: "CHALLENGE_BALANCE_CHANGED",
+
+### VERIFIED geo.public-geo-block
+Area: geo-blocking and rate limiting
+Claim: Public pages are gated by country policy and redirected to the geo-block screen.
+Detail: All required proof points were found in source.
+Evidence:
+- Country policy is resolved in middleware: L62: const policy = getCountryPolicy(derivedCountry);
+- Blocked countries are redirected: L16: "/auth/geo-blocked",
+
+### VERIFIED rate-limit.webhooks-and-admin-settlement
+Area: geo-blocking and rate limiting
+Claim: Webhook and manual settlement routes apply route-specific rate limiting.
+Detail: All required proof points were found in source.
+Evidence:
+- Manual settlement uses enforceRateLimit: L16: const limit = await enforceRateLimit(req, "api:admin:picks:settle", {
+- Rate-limit failures return a structured response: L13: import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
+
+### VERIFIED risk.drawdown-breach
+Area: challenge risk rules
+Claim: Drawdown fails once balance drops below 85% of the peak balance.
+Detail: Scenario matched the expected outcome.
+Evidence:
+- Violation code: DRAWDOWN_BREACH
+- Message: Balance dropped more than 15% from peak ($100.00)
+
+### VERIFIED risk.daily-loss-breach
+Area: challenge risk rules
+Claim: Daily loss fails once balance drops more than 10% below daily start balance.
+Detail: Scenario matched the expected outcome.
+Evidence:
+- Violation code: DAILY_LOSS_BREACH
+- Message: Daily loss limit reached (max $10.00/day)
+
+### VERIFIED risk.stake-cap-breach
+Area: challenge risk rules
+Claim: Stake cap blocks picks above 5% of the challenge start balance.
+Detail: Scenario matched the expected outcome.
+Evidence:
+- Violation code: STAKE_CAP_EXCEEDED
+- Message: Stake exceeds 5% limit. Max allowed: $5.00
+
+### VERIFIED risk.minimum-stake-breach
+Area: challenge risk rules
+Claim: Minimum stake is always 1% of the challenge start balance, with a $1 floor.
+Detail: Scenario matched the expected outcome.
+Evidence:
+- Violation code: STAKE_MIN_VIOLATED
+- Message: Stake is below the 1% minimum. Min allowed: $2.00
+
+### VERIFIED payout.rejects-kyc-missing
+Area: payout flows
+Claim: Payout requests fail without approved KYC.
+Detail: Scenario matched the expected outcome.
+Evidence:
+- Code: KYC_REQUIRED
+
+### VERIFIED payout.rejects-profit-overdraw
+Area: payout flows
+Claim: Payout requests cannot exceed available gross profit.
+Detail: Scenario matched the expected outcome.
+Evidence:
+- Code: EXCEEDS_PROFIT
+
+### VERIFIED payout.computes-amount-and-new-balance
+Area: payout flows
+Claim: Successful payout requests compute user share and remaining challenge balance deterministically.
+Detail: Scenario matched the expected outcome.
+Evidence:
+- Gross profit: 2000
+- Payout amount: 1200
+- New balance: 10500
+
+### VERIFIED kyc.upload-eligibility-gates
+Area: payout flows
+Claim: KYC upload eligibility is blocked until payouts are enabled and the user has funded profit available.
+Detail: Scenario matched the expected outcome.
+Evidence:
+- No challenge: no_funded_challenge
+- No profit: no_profit_available
+- Eligible: eligible
+
+### VERIFIED settlement.moneyline-draw-push
+Area: pick settlement logic
+Claim: Moneyline draw handling returns push unless the selection is explicit draw.
+Detail: Scenario matched the expected outcome.
+Evidence:
+- Home selection -> push
+- Draw selection -> won
+
+### VERIFIED settlement.spread-exact-cover-push
+Area: pick settlement logic
+Claim: Spread grading treats exact cover as a push.
+Detail: Scenario matched the expected outcome.
+Evidence:
+- Spread result: push
+
+### VERIFIED settlement.total-over-under
+Area: pick settlement logic
+Claim: Total grading distinguishes over, under, and push correctly.
+Detail: Scenario matched the expected outcome.
+Evidence:
+- Over 44.5 -> won
+- Under 45 -> push
+
+### VERIFIED settlement.pick-payout-on-win-only
+Area: pick settlement logic
+Claim: Pick grading only stores actual payout for winning outcomes.
+Detail: Scenario matched the expected outcome.
+Evidence:
+- Winning payout: 1950
+- Losing payout: 0
+
+## Unverified Claims
+
+- payments and webhooks: Provider console settings, secret rotation, and callback allowlists are configured safely. -- Unverified because those controls live outside this repository.
+- geo-blocking and rate limiting: Rate limiting is effective across all production instances and regions. -- Unverified under real production traffic across regions, even though the implementation now uses shared Postgres state.
+- geo-blocking and rate limiting: Geo-IP derivation always reflects the user's real jurisdiction. -- Unverified because it depends on provider headers and external IP lookup behavior at runtime.
+- auth and session handling: Live RLS coverage for public tables was inspected against the development database. -- Unverified because VALIDATE_PROOF_DB=1 was not set. SQL artifacts found: prisma/migrations/20260307030536_baseline/migration.sql, prisma/migrations/20260311153205_shared_rate_limit/migration.sql, prisma/migrations/20260321121000_affiliate_discounts_and_crypto_payouts/migration.sql, sql/20260318_supabase_graphql_search_path_hardening.sql, sql/20260318_supabase_public_rls_hardening.sql.
+- database-backed validation: DB-backed payout and admin mutation proofs were executed against a disposable Postgres database. -- Unverified because VALIDATE_PROOF_DB=1 was not set.

@@ -2,18 +2,18 @@
 // ADMIN MANUAL SETTLEMENT
 // POST /api/admin/picks/settle
 // Admin provides pickId + result → settles the pick
-// Used for API-Football events and any manual override.
+// Used for manual overrides, disputed grading, and edge cases.
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
-import { buildPostSettlementUpdate } from "@/lib/settlement/settle";
 import type { SettleStatus } from "@/lib/settlement/settle";
+import { settlePendingPick } from "@/lib/settlement/settle-service";
 import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
-  const limit = enforceRateLimit(req, "api:admin:picks:settle", {
+  const limit = await enforceRateLimit(req, "api:admin:picks:settle", {
     windowMs: 60_000,
     max: 60,
   });
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Auth: must be logged-in admin
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
     data: { user: authUser },
     error: authError,
@@ -60,85 +60,50 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Load pick with challenge + tier
-  const pick = await prisma.pick.findUnique({
-    where: { id: pickId },
-    include: {
-      challenge: {
-        include: { tier: true },
-      },
-    },
-  });
+  try {
+    const result = await settlePendingPick(prisma, {
+      pickId,
+      status,
+      settledAt: new Date(),
+    });
 
-  if (!pick) {
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: result.error, code: result.code },
+        { status: result.status },
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      pick: result.pick,
+      challenge: result.challenge,
+    });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "SETTLEMENT_FAILED";
+    if (code === "PICK_NOT_FOUND") {
+      return NextResponse.json(
+        { error: "Pick not found", code },
+        { status: 404 },
+      );
+    }
+    if (code === "ALREADY_SETTLED") {
+      return NextResponse.json(
+        { error: "Pick is already settled", code },
+        { status: 400 },
+      );
+    }
+    if (code === "CHALLENGE_CONFLICT" || code === "PICK_CONFLICT") {
+      return NextResponse.json(
+        { error: "Pick changed during settlement. Retry the action.", code },
+        { status: 409 },
+      );
+    }
+
+    console.error("[api/admin/picks/settle] Failed to settle pick:", error);
     return NextResponse.json(
-      { error: "Pick not found", code: "PICK_NOT_FOUND" },
-      { status: 404 },
+      { error: "Failed to settle pick", code: "SETTLEMENT_FAILED" },
+      { status: 500 },
     );
   }
-
-  if (pick.status !== "pending") {
-    return NextResponse.json(
-      { error: "Pick is already settled", code: "ALREADY_SETTLED" },
-      { status: 400 },
-    );
-  }
-
-  const now = new Date();
-  const { challenge } = pick;
-
-  // Calculate actualPayout based on result
-  const actualPayout = status === "won" ? pick.potentialPayout : 0;
-
-  // Count settled picks for phase check
-  const settledCount = await prisma.pick.count({
-    where: {
-      challengeId: challenge.id,
-      status: { in: ["won", "lost", "push"] },
-    },
-  });
-
-  const settledPickCount =
-    status === "void" ? settledCount : settledCount + 1;
-
-  // Build settled pick object for post-settlement calculations
-  const settledPick = {
-    ...pick,
-    status,
-    actualPayout,
-  };
-
-  const { challengeUpdate } = buildPostSettlementUpdate(
-    settledPick,
-    challenge,
-    challenge.tier,
-    settledPickCount,
-  );
-
-  // Atomic transaction
-  const [updatedPick, updatedChallenge] = await prisma.$transaction([
-    prisma.pick.update({
-      where: { id: pickId },
-      data: {
-        status,
-        actualPayout,
-        settledAt: now,
-      },
-    }),
-    prisma.challenge.update({
-      where: { id: challenge.id },
-      data: challengeUpdate,
-    }),
-  ]);
-
-  return NextResponse.json({
-    ok: true,
-    pick: updatedPick,
-    challenge: {
-      id: updatedChallenge.id,
-      balance: updatedChallenge.balance,
-      status: updatedChallenge.status,
-      phase: updatedChallenge.phase,
-    },
-  });
 }

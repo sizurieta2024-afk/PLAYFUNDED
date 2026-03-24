@@ -8,13 +8,21 @@ interface Message {
   content: string;
 }
 
+interface UserContext {
+  phase?: string;
+  tierName?: string;
+  balance?: number;
+  startBalance?: number;
+  activePicks?: number;
+}
+
 const INITIAL_MESSAGE: Message = {
   role: "assistant",
   content:
     "¡Hola! Soy el asistente de PlayFunded. ¿En qué puedo ayudarte hoy? / Hi! I'm PlayFunded's assistant. How can I help you today?",
 };
 
-export function ChatWidget() {
+export function ChatWidget({ userContext }: { userContext?: UserContext }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [input, setInput] = useState("");
@@ -43,7 +51,7 @@ export function ChatWidget() {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: next }),
+          body: JSON.stringify({ messages: next, userContext }),
         });
         if (!res.ok) throw new Error("Chat unavailable");
         const data = await res.json();
@@ -69,7 +77,7 @@ export function ChatWidget() {
       {/* Floating button */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-5 right-5 z-50 w-13 h-13 rounded-full bg-pf-brand text-white shadow-lg hover:bg-pf-brand/90 transition-all flex items-center justify-center"
+        className="fixed bottom-5 right-5 z-50 w-13 h-13 rounded-full bg-pf-pink text-white shadow-lg hover:bg-pf-pink-dark transition-all flex items-center justify-center"
         aria-label="Open chat"
       >
         {open ? (
@@ -83,10 +91,14 @@ export function ChatWidget() {
       {open && (
         <div className="fixed bottom-20 right-5 z-50 w-80 sm:w-96 rounded-2xl border border-border bg-background shadow-2xl flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="px-4 py-3 bg-pf-brand flex items-center justify-between">
+          <div className="px-4 py-3 bg-pf-pink flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-white">PlayFunded Support</p>
-              <p className="text-xs text-white/70">Powered by AI · Usually instant</p>
+              <p className="text-sm font-semibold text-white">
+                PlayFunded Support
+              </p>
+              <p className="text-xs text-white/70">
+                Powered by AI · Usually instant
+              </p>
             </div>
             <button
               onClick={() => setOpen(false)}
@@ -106,7 +118,7 @@ export function ChatWidget() {
                 <div
                   className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
                     m.role === "user"
-                      ? "bg-pf-brand text-white rounded-br-sm"
+                      ? "bg-pf-pink text-white rounded-br-sm"
                       : "bg-muted text-foreground rounded-bl-sm"
                   }`}
                 >
@@ -141,7 +153,7 @@ export function ChatWidget() {
             <button
               onClick={send}
               disabled={pending || !input.trim()}
-              className="p-2 rounded-xl bg-pf-brand text-white hover:bg-pf-brand/90 transition-colors disabled:opacity-40"
+              className="p-2 rounded-xl bg-pf-pink text-white hover:bg-pf-pink-dark transition-colors disabled:opacity-40"
             >
               <Send className="w-4 h-4" />
             </button>

@@ -1,57 +1,67 @@
+import { isGeoBlockedCountry, normalizeCountry } from "@/lib/country-policy";
+
 /**
- * Geo-blocking: blocks users from the United States.
- * Uses ipapi.co free tier (no key required, 1000 req/day).
- * Fails open — if the API is unreachable, the user is NOT blocked.
+ * Geo lookups fail open. The actual country blocking rules live in
+ * `country-policy` so public access, checkout, and payouts use one source
+ * of truth.
  */
 
-const BLOCKED_COUNTRIES = new Set(['US'])
-
 interface IpapiResponse {
-  country_code?: string
-  error?: boolean
-  reason?: string
+  country_code?: string;
+  error?: boolean;
+  reason?: string;
 }
 
-export async function isGeoBlocked(ip: string): Promise<boolean> {
-  // Never block private/loopback IPs (local dev)
+export function isLocalIp(ip: string): boolean {
   if (
     !ip ||
-    ip === '127.0.0.1' ||
-    ip === '::1' ||
-    ip === '::ffff:127.0.0.1' ||
-    ip.startsWith('192.168.') ||
-    ip.startsWith('10.') ||
-    ip.startsWith('172.16.') ||
-    ip.startsWith('172.17.') ||
-    ip.startsWith('172.18.') ||
-    ip.startsWith('172.19.') ||
-    ip.startsWith('172.2') ||
-    ip.startsWith('172.30.') ||
-    ip.startsWith('172.31.')
+    ip === "127.0.0.1" ||
+    ip === "::1" ||
+    ip === "::ffff:127.0.0.1" ||
+    ip.startsWith("192.168.") ||
+    ip.startsWith("10.") ||
+    ip.startsWith("172.16.") ||
+    ip.startsWith("172.17.") ||
+    ip.startsWith("172.18.") ||
+    ip.startsWith("172.19.") ||
+    ip.startsWith("172.2") ||
+    ip.startsWith("172.30.") ||
+    ip.startsWith("172.31.")
   ) {
-    return false
+    return true;
+  }
+  return false;
+}
+
+export async function lookupCountryByIp(ip: string): Promise<string | null> {
+  if (isLocalIp(ip)) {
+    return null;
   }
 
   try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 2000) // 2s timeout
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2000);
 
     const res = await fetch(`https://ipapi.co/${ip}/json/`, {
-      headers: { Accept: 'application/json' },
+      headers: { Accept: "application/json" },
       signal: controller.signal,
-    })
+    });
 
-    clearTimeout(timeout)
+    clearTimeout(timeout);
 
-    if (!res.ok) return false
+    if (!res.ok) return null;
 
-    const data = (await res.json()) as IpapiResponse
+    const data = (await res.json()) as IpapiResponse;
 
-    if (data.error) return false
+    if (data.error) return null;
 
-    return BLOCKED_COUNTRIES.has(data.country_code ?? '')
+    return normalizeCountry(data.country_code ?? null);
   } catch {
-    // Fail open — never block on API failure
-    return false
+    return null;
   }
+}
+
+export async function isGeoBlocked(ip: string): Promise<boolean> {
+  const country = await lookupCountryByIp(ip);
+  return isGeoBlockedCountry(country);
 }

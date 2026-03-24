@@ -1,0 +1,10 @@
+title = "PlayFunded Gitleaks Config"
+
+[allowlist]
+description = "Allowlist for known false positives"
+
+# Expired OpenAI JWT captured in a Playwright HTML recording during security testing.
+# The token is from 2026-03-19, already public on GitHub, and rotated.
+commits = [
+  "7ff6ab80709cc6e56958710218d856d98a8543fc"
+]

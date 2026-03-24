@@ -1,20 +1,20 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
 
 export async function redeemGift(
   token: string,
 ): Promise<{ error?: string; challengeId?: string }> {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) return { error: "auth_required" };
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !authUser) return { error: "auth_required" };
 
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
     select: { id: true },
   });
   if (!user) return { error: "auth_required" };

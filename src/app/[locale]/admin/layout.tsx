@@ -1,4 +1,9 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
@@ -8,14 +13,15 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) redirect("/auth/login");
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !authUser) redirect("/auth/login");
 
   const user = await prisma.user.findFirst({
-    where: { supabaseId: session.user.id },
+    where: { supabaseId: authUser.id },
   });
   if (!user || user.role !== "admin") redirect("/dashboard");
 

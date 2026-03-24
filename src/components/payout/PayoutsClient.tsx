@@ -6,6 +6,8 @@ import { requestPayout, rolloverProfits } from "@/app/actions/payouts";
 import { KycForm } from "@/components/kyc/KycForm";
 import type { PayoutMethod } from "@prisma/client";
 import { Link } from "@/i18n/navigation";
+import type { KycPayoutEligibilityCode } from "@/lib/kyc/eligibility";
+import { requiresCryptoDestination } from "@/lib/payouts/crypto-address";
 
 type KycStatus = "not_required" | "pending" | "approved" | "rejected" | null;
 
@@ -32,12 +34,16 @@ interface PayoutsClientProps {
   fundedChallenges: FundedChallenge[];
   pastPayouts: PayoutRecord[];
   kycStatus: KycStatus;
+  kycEligibilityCode: KycPayoutEligibilityCode;
+  payoutCountry: string | null;
+  availableMethods: PayoutMethod[];
+  complianceNotice?: string | null;
   t: Record<string, string>;
   tKyc: Record<string, string>;
 }
 
-const METHOD_LABELS: Record<PayoutMethod, string> = {
-  bank_wire: "Bank wire",
+const FALLBACK_METHOD_LABELS: Record<PayoutMethod, string> = {
+  bank_wire: "Bank transfer (dLocal)",
   usdt: "USDT (TRC-20)",
   usdc: "USDC (ERC-20)",
   btc: "Bitcoin",
@@ -57,14 +63,21 @@ export function PayoutsClient({
   fundedChallenges,
   pastPayouts,
   kycStatus,
+  kycEligibilityCode,
+  payoutCountry,
+  availableMethods,
+  complianceNotice,
   t,
   tKyc,
 }: PayoutsClientProps) {
   const [selectedChallenge, setSelectedChallenge] =
     useState<FundedChallenge | null>(fundedChallenges[0] ?? null);
-  const [method, setMethod] = useState<PayoutMethod>("usdt");
+  const [method, setMethod] = useState<PayoutMethod>(
+    availableMethods[0] ?? "usdt",
+  );
   const [loading, setLoading] = useState(false);
   const [rolloverLoading, setRolloverLoading] = useState(false);
+  const [destinationAddress, setDestinationAddress] = useState("");
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -83,8 +96,7 @@ export function PayoutsClient({
     parseFloat(requestedAmountInput || "0") * 100,
   );
   const isValidAmount =
-    requestedAmountCents >= 1000 &&
-    requestedAmountCents <= grossProfit;
+    requestedAmountCents >= 1000 && requestedAmountCents <= grossProfit;
 
   const payoutAmount =
     isValidAmount && selectedChallenge
@@ -92,6 +104,32 @@ export function PayoutsClient({
           (requestedAmountCents * selectedChallenge.tier.profitSplitPct) / 100,
         )
       : 0;
+
+  function getMethodLabel(m: PayoutMethod): string {
+    if (m === "bank_wire") {
+      if (payoutCountry === "BR") {
+        return t.bankPixDlocal ?? "Pix / bank transfer (dLocal)";
+      }
+      return t.bankDlocal ?? "Bank transfer (dLocal)";
+    }
+    return t[m] ?? FALLBACK_METHOD_LABELS[m];
+  }
+
+  function getKycBlockedMessage(code: KycPayoutEligibilityCode): string {
+    switch (code) {
+      case "already_approved":
+        return tKyc.alreadyApproved;
+      case "pending_review":
+        return tKyc.pendingReview;
+      case "payouts_disabled_country":
+        return tKyc.payoutsDisabledCountry;
+      case "no_profit_available":
+        return tKyc.noProfitAvailable;
+      case "no_funded_challenge":
+      default:
+        return tKyc.noFundedChallenge;
+    }
+  }
 
   // Update requestedAmountInput when selected challenge changes
   function handleChallengeSelect(c: FundedChallenge) {
@@ -103,12 +141,32 @@ export function PayoutsClient({
 
   async function handlePayout() {
     if (!selectedChallenge || !isValidAmount) return;
+    const requiresDestination = requiresCryptoDestination(method);
+    if (requiresDestination && !destinationAddress.trim()) {
+      setMessage({
+        type: "error",
+        text:
+          t.destinationRequired ??
+          "Enter your crypto wallet address before requesting payout.",
+      });
+      return;
+    }
+    if (!availableMethods.includes(method)) {
+      setMessage({
+        type: "error",
+        text:
+          t.methodUnavailable ??
+          "This payout method is not available in your country right now.",
+      });
+      return;
+    }
     setLoading(true);
     setMessage(null);
     const result = await requestPayout(
       selectedChallenge.id,
       method,
       requestedAmountCents,
+      destinationAddress.trim(),
     );
     setLoading(false);
     if (result.error) {
@@ -116,9 +174,23 @@ export function PayoutsClient({
         kyc_required: t.kycRequired,
         profit_zero: t.profitZero,
         pending_exists: t.pendingExists,
-        window_closed: t.windowClosed ?? "Payouts are only available on the 1st–3rd of each month.",
+        window_closed:
+          t.windowClosed ??
+          "Payouts are only available on the 1st–5th of each month.",
         below_minimum: t.belowMinimum ?? "Minimum payout is $10.",
         exceeds_profit: t.exceedsProfit ?? "Amount exceeds available profit.",
+        method_unavailable:
+          t.methodUnavailable ??
+          "This payout method is not available in your country right now.",
+        destination_required:
+          t.destinationRequired ??
+          "Enter your crypto wallet address before requesting payout.",
+        invalid_btc_address:
+          t.invalidBtcAddress ?? "Enter a valid Bitcoin wallet address.",
+        invalid_usdt_address:
+          t.invalidUsdtAddress ?? "Enter a valid TRC-20 USDT wallet address.",
+        invalid_usdc_address:
+          t.invalidUsdcAddress ?? "Enter a valid ERC-20 USDC wallet address.",
       };
       setMessage({
         type: "error",
@@ -142,6 +214,38 @@ export function PayoutsClient({
     }
   }
 
+  const canShowKycForm =
+    kycEligibilityCode === "eligible" &&
+    (kycStatus === null ||
+      kycStatus === "not_required" ||
+      kycStatus === "rejected");
+
+  if (!canShowKycForm && (kycStatus === null || kycStatus === "not_required")) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-5">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-foreground">{t.kycRequired}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {getKycBlockedMessage(kycEligibilityCode)}
+              </p>
+            </div>
+          </div>
+        </div>
+        {fundedChallenges.length === 0 && (
+          <Link
+            href="/challenges"
+            className="inline-block px-6 py-2.5 rounded-lg bg-pf-pink text-white text-sm font-semibold hover:bg-pf-pink-dark transition-colors"
+          >
+            {t.buyChallenge}
+          </Link>
+        )}
+      </div>
+    );
+  }
+
   // KYC gate
   if (kycStatus === null || kycStatus === "not_required") {
     return (
@@ -150,9 +254,7 @@ export function PayoutsClient({
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-foreground">
-                {t.kycRequired}
-              </p>
+              <p className="font-semibold text-foreground">{t.kycRequired}</p>
               <p className="text-sm text-muted-foreground mt-1">
                 {t.kycRequiredDesc}
               </p>
@@ -179,6 +281,23 @@ export function PayoutsClient({
   }
 
   if (kycStatus === "rejected") {
+    if (!canShowKycForm) {
+      return (
+        <div className="space-y-6">
+          <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-5">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-foreground">{t.kycRejected}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {getKycBlockedMessage(kycEligibilityCode)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="space-y-6">
         <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-5">
@@ -204,7 +323,7 @@ export function PayoutsClient({
         <p className="text-muted-foreground">{t.noPayout}</p>
         <Link
           href="/challenges"
-          className="inline-block px-6 py-2.5 rounded-lg bg-pf-brand text-white text-sm font-semibold hover:bg-pf-brand/90 transition-colors"
+          className="inline-block px-6 py-2.5 rounded-lg bg-pf-pink text-white text-sm font-semibold hover:bg-pf-pink-dark transition-colors"
         >
           {t.buyChallenge}
         </Link>
@@ -214,11 +333,18 @@ export function PayoutsClient({
 
   return (
     <div className="space-y-8">
+      {complianceNotice && (
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+          <p className="text-sm text-amber-500">{complianceNotice}</p>
+        </div>
+      )}
+
       {/* Payout window notice */}
       <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 flex items-start gap-3">
         <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
         <p className="text-sm text-muted-foreground">
-          {t.windowNotice ?? "Payouts are available on the 1st–3rd of each month."}
+          {t.windowNotice ??
+            "Payouts are available on the 1st–5th of each month."}
         </p>
       </div>
 
@@ -287,7 +413,7 @@ export function PayoutsClient({
                     step="0.01"
                     value={requestedAmountInput}
                     onChange={(e) => setRequestedAmountInput(e.target.value)}
-                    className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-pf-brand/40"
+                    className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-pf-pink/40"
                   />
                   <button
                     type="button"
@@ -315,7 +441,8 @@ export function PayoutsClient({
                     <span className="text-pf-brand font-semibold">
                       {formatUSD(payoutAmount)}
                     </span>{" "}
-                    ({selectedChallenge.tier.profitSplitPct}% of your requested amount)
+                    ({selectedChallenge.tier.profitSplitPct}% of your requested
+                    amount)
                   </p>
                 )}
               </div>
@@ -325,29 +452,78 @@ export function PayoutsClient({
                 <p className="text-sm font-medium text-foreground mb-3">
                   {t.payoutMethod}
                 </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {(Object.keys(METHOD_LABELS) as PayoutMethod[]).map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => setMethod(m)}
-                      className={`p-3 rounded-xl border text-xs font-medium text-center transition-all ${
-                        method === m
-                          ? "border-pf-brand bg-pf-brand/10 text-pf-brand"
-                          : "border-border text-muted-foreground hover:border-pf-brand/40"
-                      }`}
-                    >
-                      {METHOD_LABELS[m]}
-                    </button>
-                  ))}
-                </div>
+                {availableMethods.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {availableMethods.map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setMethod(m)}
+                        className={`p-3 rounded-xl border text-xs font-medium text-center transition-all ${
+                          method === m
+                            ? "border-pf-brand bg-pf-brand/10 text-pf-brand"
+                            : "border-border text-muted-foreground hover:border-pf-brand/40"
+                        }`}
+                      >
+                        {getMethodLabel(m)}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {t.methodUnavailable ??
+                      "This payout method is not available in your country right now."}
+                  </p>
+                )}
+                {availableMethods.includes("bank_wire") && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {t.usdSettlementNote ??
+                      "Local-currency delivery where supported. All payouts are settled in USD."}
+                  </p>
+                )}
               </div>
+
+              {requiresCryptoDestination(method) && (
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    {t.destinationLabel ?? "Wallet address"}
+                  </label>
+                  <input
+                    type="text"
+                    value={destinationAddress}
+                    onChange={(e) => setDestinationAddress(e.target.value)}
+                    placeholder={
+                      method === "btc"
+                        ? (t.destinationPlaceholderBtc ??
+                          "bc1... or 1... Bitcoin address")
+                        : method === "usdt"
+                          ? (t.destinationPlaceholderUsdt ??
+                            "TRC-20 USDT address starting with T")
+                          : (t.destinationPlaceholderUsdc ??
+                            "ERC-20 USDC address starting with 0x")
+                    }
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-pf-pink/40"
+                  />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {method === "btc"
+                      ? (t.destinationHelpBtc ??
+                        "Use a Bitcoin address you control.")
+                      : method === "usdt"
+                        ? (t.destinationHelpUsdt ??
+                          "Use a TRC-20 wallet address. Sending to the wrong network can permanently lose funds.")
+                        : (t.destinationHelpUsdc ??
+                          "Use an ERC-20 wallet address. Sending to the wrong network can permanently lose funds.")}
+                  </p>
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex gap-3 flex-wrap">
                 <button
                   onClick={handlePayout}
-                  disabled={loading || !isValidAmount}
-                  className="flex-1 rounded-xl bg-pf-brand hover:bg-pf-brand/90 disabled:opacity-60 text-white font-semibold py-3 text-sm transition-colors"
+                  disabled={
+                    loading || !isValidAmount || availableMethods.length === 0
+                  }
+                  className="flex-1 rounded-xl bg-pf-pink hover:bg-pf-pink-dark disabled:opacity-60 text-white font-semibold py-3 text-sm transition-colors"
                 >
                   {loading ? t.submitting : t.requestPayout}
                 </button>
@@ -392,7 +568,9 @@ export function PayoutsClient({
 
       {/* Payout history */}
       <div>
-        <h2 className="text-base font-semibold mb-4">{t.history}</h2>
+        <h2 className="text-base font-display font-bold text-foreground mb-4">
+          {t.history}
+        </h2>
         {pastPayouts.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t.noPastPayouts}</p>
         ) : (
@@ -416,7 +594,10 @@ export function PayoutsClient({
               </thead>
               <tbody>
                 {pastPayouts.map((p) => (
-                  <tr key={p.id} className="border-b border-border last:border-0">
+                  <tr
+                    key={p.id}
+                    className="border-b border-border last:border-0"
+                  >
                     <td className="px-4 py-3 text-muted-foreground">
                       {new Date(p.requestedAt).toLocaleDateString()}
                     </td>
@@ -426,7 +607,9 @@ export function PayoutsClient({
                     <td className="px-4 py-3 text-muted-foreground">
                       {p.isRollover
                         ? t.isRollover
-                        : (METHOD_LABELS[p.method as PayoutMethod] ?? p.method)}
+                        : getMethodLabel(
+                            (p.method as PayoutMethod) ?? "bank_wire",
+                          )}
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={p.status} t={t} />

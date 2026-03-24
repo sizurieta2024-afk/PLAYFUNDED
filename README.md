@@ -105,7 +105,7 @@ Google OAuth (primary), Apple Sign-In (iOS), Email+password (fallback). Supabase
 - One 48-hour pause per attempt
 - No upgrades after start. Full price to retry.
 
-**Funded extras:** 30-min pre-event lock. 70–80% profit split. Rollover option. Copy eligibility: 30 picks + 8% ROI.
+**Funded extras:** 70–80% profit split. Rollover option. Copy eligibility: 30 picks + 8% ROI.
 
 **Streak bonus:** 3 consecutive profitable funded months → +2% split. Cap: 90%.
 
@@ -114,7 +114,9 @@ Google OAuth (primary), Apple Sign-In (iOS), Email+password (fallback). Supabase
 ## 7. SPORTS & MARKETS
 **Day 1:** ⚽ Football (10 leagues), 🏀 NBA, 🏈 NFL, 🥊 UFC, 🎾 Tennis ATP/WTA
 
-**Bet types:** Moneyline, Spread, Totals, Player props, Parlays (6 legs max), Live betting
+**Bet types:** Moneyline, Spread, Totals, Player props, Parlays (6 legs max)
+
+**Bet timing:** No live betting. Picks close 5 minutes before event start for all account phases.
 
 **Odds:** Decimal default, American toggle. USD always, local currency in parentheses.
 

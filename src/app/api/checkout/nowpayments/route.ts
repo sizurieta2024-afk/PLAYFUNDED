@@ -3,11 +3,16 @@ import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { createCryptoInvoice, type CryptoCurrency } from "@/lib/nowpayments";
 import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
+import { resolveCountry } from "@/lib/country-policy";
+import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
+import { recordOpsEvent } from "@/lib/ops-events";
+import { PLATFORM_POLICY } from "@/lib/platform-policy";
+import { resolveAffiliateDiscountCode } from "@/lib/affiliate/codes";
 
 const VALID_CURRENCIES: CryptoCurrency[] = ["usdttrc20", "usdcerc20", "btc"];
 
 export async function POST(request: NextRequest) {
-  const limit = enforceRateLimit(request, "api:checkout:nowpayments", {
+  const limit = await enforceRateLimit(request, "api:checkout:nowpayments", {
     windowMs: 60_000,
     max: 12,
   });
@@ -18,7 +23,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
     data: { user: authUser },
     error: authError,
@@ -35,8 +40,16 @@ export async function POST(request: NextRequest) {
     tierId?: string;
     currency?: string;
     locale?: string;
+    country?: string;
+    discountCode?: string;
   };
-  const { tierId, currency = "usdttrc20", locale = "es-419" } = body;
+  const {
+    tierId,
+    currency = "usdttrc20",
+    locale = "es-419",
+    country,
+    discountCode,
+  } = body;
 
   if (!tierId) {
     return NextResponse.json(
@@ -59,9 +72,8 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         email: true,
+        country: true,
         isBanned: true,
-        isPermExcluded: true,
-        weeklyDepositLimit: true,
       },
     }),
   ]);
@@ -80,38 +92,70 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (user.isBanned || user.isPermExcluded) {
+  if (user.isBanned) {
     return NextResponse.json(
       { error: "Account restricted", code: "ACCOUNT_RESTRICTED" },
       { status: 403 },
     );
   }
 
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const weeklySpend = await prisma.payment.aggregate({
-    where: {
-      userId: user.id,
-      status: "completed",
-      createdAt: { gte: weekAgo },
-    },
-    _sum: { amount: true },
-  });
-
-  if (
-    (weeklySpend._sum.amount ?? 0) + tier.fee >
-    (user.weeklyDepositLimit ?? Infinity)
-  ) {
-    return NextResponse.json(
-      { error: "Weekly deposit limit reached", code: "DEPOSIT_LIMIT_EXCEEDED" },
-      { status: 403 },
-    );
-  }
-
   try {
+    const checkoutCountry = resolveCountry(
+      country,
+      request.headers.get("x-vercel-ip-country"),
+      request.headers.get("cf-ipcountry"),
+      user.country,
+    );
+    const policy = await getResolvedCountryPolicy(checkoutCountry);
+    if (!policy.challengePurchasesEnabled) {
+      return NextResponse.json(
+        {
+          error:
+            "Challenge purchases are not available in your country right now.",
+          code: "COUNTRY_NOT_AVAILABLE",
+        },
+        { status: 403 },
+      );
+    }
+
+    if (!policy.checkoutMethods.includes("crypto")) {
+      return NextResponse.json(
+        {
+          error: "Crypto checkout is not available in your country right now.",
+          code: "PAYMENT_METHOD_UNAVAILABLE",
+        },
+        { status: 403 },
+      );
+    }
+
+    const discount = await resolveAffiliateDiscountCode(
+      prisma,
+      tier.fee,
+      discountCode,
+    );
+    if (discountCode && !discount) {
+      return NextResponse.json(
+        {
+          error: "Discount code is invalid or inactive.",
+          code: "INVALID_DISCOUNT_CODE",
+        },
+        { status: 400 },
+      );
+    }
+    if (discount && discount.affiliate.userId === user.id) {
+      return NextResponse.json(
+        {
+          error: "You cannot use your own partner code.",
+          code: "OWN_DISCOUNT_CODE",
+        },
+        { status: 400 },
+      );
+    }
+
     const invoice = await createCryptoInvoice({
       tierId: tier.id,
       tierName: tier.name,
-      feeInCents: tier.fee,
+      feeInCents: discount?.discountedAmount ?? tier.fee,
       userId: user.id,
       userEmail: user.email,
       currency: currency as CryptoCurrency,
@@ -123,7 +167,11 @@ export async function POST(request: NextRequest) {
       data: {
         userId: user.id,
         tierId: tier.id,
-        amount: tier.fee,
+        amount: discount?.discountedAmount ?? tier.fee,
+        listPriceAmount: tier.fee,
+        discountAmount: discount?.discountAmount ?? 0,
+        discountPct: discount?.affiliate.discountPct ?? 0,
+        discountCode: discount?.affiliate.code ?? null,
         currency: "USD",
         method:
           currency === "btc"
@@ -137,7 +185,34 @@ export async function POST(request: NextRequest) {
         cryptoAmount: invoice.amount,
         cryptoNetwork: invoice.network,
         cryptoExpiry: invoice.expiresAt,
-        metadata: { currency, network: invoice.network },
+        metadata: {
+          currency,
+          network: invoice.network,
+          checkoutCountry,
+          policyVersion: PLATFORM_POLICY.policyVersion,
+          affiliateCode: discount?.affiliate.code ?? null,
+          listPriceAmount: tier.fee,
+          discountAmount: discount?.discountAmount ?? 0,
+          discountPct: discount?.affiliate.discountPct ?? 0,
+        },
+      },
+    });
+
+    await recordOpsEvent({
+      type: "checkout_created",
+      source: "api:checkout:nowpayments",
+      actorUserId: user.id,
+      subjectType: "tier",
+      subjectId: tier.id,
+      country: checkoutCountry,
+      details: {
+        provider: "nowpayments",
+        userId: user.id,
+        tierId: tier.id,
+        paymentMethod: currency,
+        checkoutCountry,
+        discountCode: discount?.affiliate.code ?? null,
+        discountAmount: discount?.discountAmount ?? 0,
       },
     });
 
@@ -151,6 +226,20 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("[NOWPayments checkout]", err);
+    await recordOpsEvent({
+      type: "checkout_create_failed",
+      level: "error",
+      source: "api:checkout:nowpayments",
+      actorUserId: user.id,
+      subjectType: "tier",
+      subjectId: tierId,
+      details: {
+        provider: "nowpayments",
+        tierId,
+        currency,
+        error: err instanceof Error ? err.message : String(err),
+      },
+    });
     return NextResponse.json(
       {
         error: "Failed to create crypto invoice",

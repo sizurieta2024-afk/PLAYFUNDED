@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { AdminUserActions } from "@/components/admin/AdminUserActions";
+import { AdminSendMessageForm } from "@/components/admin/AdminSendMessageForm";
 
 function fmt(cents: number) {
   return new Intl.NumberFormat("en-US", {
@@ -181,14 +182,6 @@ export default async function AdminUserDetailPage({
             }),
           },
           { label: "Referral code used", value: user.referredByCode ?? "—" },
-          {
-            label: "Self-excluded",
-            value: user.isPermExcluded
-              ? "Permanent"
-              : user.selfExcludedUntil
-                ? `Until ${new Date(user.selfExcludedUntil).toLocaleDateString()}`
-                : "No",
-          },
         ].map((f) => (
           <div key={f.label}>
             <p className="text-xs text-muted-foreground">{f.label}</p>
@@ -391,6 +384,9 @@ export default async function AdminUserDetailPage({
           </div>
         )}
       </section>
+
+      {/* Send message */}
+      <AdminSendMessageForm userId={user.id} />
 
       {/* Payouts */}
       <section>

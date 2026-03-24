@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyNowPaymentsSignature } from "@/lib/nowpayments";
 import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
+import { recordOpsEvent } from "@/lib/ops-events";
+import { fulfillNowPaymentsPayment } from "@/lib/payments/nowpayments-fulfillment";
+import { attributeAffiliatePurchase } from "@/lib/affiliate/attribution";
+import { sendEmail, challengePurchasedEmail } from "@/lib/email";
 
 // NOWPayments IPN: fires on every status change.
 // We only act on "finished" (fully confirmed) payments.
 
 export async function POST(request: NextRequest) {
-  const limit = enforceRateLimit(request, "api:webhooks:nowpayments", {
+  const limit = await enforceRateLimit(request, "api:webhooks:nowpayments", {
     windowMs: 60_000,
     max: 240,
   });
@@ -18,13 +22,19 @@ export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = request.headers.get("x-nowpayments-sig") ?? "";
 
-  const isValid = await verifyNowPaymentsSignature(body, signature);
+  let isValid = false;
+  try {
+    isValid = await verifyNowPaymentsSignature(body, signature);
+  } catch (error) {
+    console.error("[NOWPayments webhook] Signature verification failed", error);
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
   if (!isValid) {
     console.error("[NOWPayments webhook] Invalid signature");
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
-  const data = JSON.parse(body) as {
+  let data: {
     payment_id: string;
     payment_status: string;
     order_id: string; // format: tierId:userId:timestamp
@@ -35,6 +45,11 @@ export async function POST(request: NextRequest) {
     outcome_amount: number;
     outcome_currency: string;
   };
+  try {
+    data = JSON.parse(body) as typeof data;
+  } catch {
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
 
   // Only process fully confirmed payments
   if (data.payment_status !== "finished") {
@@ -42,10 +57,6 @@ export async function POST(request: NextRequest) {
   }
 
   const providerRef = data.payment_id;
-
-  // Idempotency check
-  const existing = await prisma.payment.findFirst({ where: { providerRef } });
-  if (existing?.status === "completed") return NextResponse.json({ ok: true });
 
   // Parse order_id: tierId:userId:timestamp
   const [tierId, userId] = data.order_id.split(":");
@@ -59,66 +70,96 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Tier not found" }, { status: 404 });
   }
 
-  const payMethod =
-    data.pay_currency === "btc"
-      ? "btc"
-      : data.pay_currency.startsWith("usdc")
-        ? "usdc"
-        : "usdt";
+  const pendingPayment = await prisma.payment.findFirst({
+    where: { providerRef, status: "pending" },
+    select: {
+      discountCode: true,
+      discountAmount: true,
+      discountPct: true,
+      listPriceAmount: true,
+    },
+  });
 
-  await prisma.$transaction(async (tx) => {
-    // Update pending record if it exists, otherwise create new
-    const pendingPayment = await tx.payment.findFirst({
-      where: { providerRef, status: "pending" },
-    });
+  const outcome = await fulfillNowPaymentsPayment({
+    db: prisma,
+    providerRef,
+    userId,
+    tierId,
+    tierFundedBankroll: tier.fundedBankroll,
+    priceAmount: data.price_amount,
+    priceCurrency: data.price_currency,
+    payCurrency: data.pay_currency,
+    payAmount: data.pay_amount,
+    discountCode: pendingPayment?.discountCode ?? null,
+    discountAmount: pendingPayment?.discountAmount ?? 0,
+    discountPct: pendingPayment?.discountPct ?? 0,
+    listPriceAmount:
+      pendingPayment?.listPriceAmount ?? Math.round(data.price_amount * 100),
+  });
 
-    if (pendingPayment) {
-      await tx.payment.update({
-        where: { id: pendingPayment.id },
-        data: {
-          status: "completed",
-          metadata: {
-            paymentId: data.payment_id,
-            payCurrency: data.pay_currency,
-            payAmount: data.pay_amount,
-          },
-        },
-      });
-    } else {
-      await tx.payment.create({
-        data: {
-          userId,
-          tierId,
-          amount: Math.round(data.price_amount * 100),
-          currency: data.price_currency.toUpperCase(),
-          method: payMethod,
-          status: "completed",
-          providerRef,
-          metadata: {
-            paymentId: data.payment_id,
-            payCurrency: data.pay_currency,
-            payAmount: data.pay_amount,
-          },
-        },
-      });
-    }
-
-    // Create the challenge
-    await tx.challenge.create({
-      data: {
-        userId,
-        tierId,
-        status: "active",
-        phase: "phase1",
-        balance: tier.fundedBankroll,
-        startBalance: tier.fundedBankroll,
-        dailyStartBalance: tier.fundedBankroll,
-        highestBalance: tier.fundedBankroll,
-        peakBalance: tier.fundedBankroll,
-        phase1StartBalance: tier.fundedBankroll,
+  if (outcome.status === "duplicate") {
+    await recordOpsEvent({
+      type: "webhook_duplicate",
+      source: "api:webhooks:nowpayments",
+      subjectType: "payment",
+      subjectId: providerRef,
+      details: {
+        provider: "nowpayments",
+        providerRef,
       },
     });
+    return NextResponse.json({ ok: true });
+  }
+
+  await recordOpsEvent({
+    type: "webhook_payment_completed",
+    source: "api:webhooks:nowpayments",
+    actorUserId: userId,
+    subjectType: "payment",
+    subjectId: providerRef,
+    details: {
+      provider: "nowpayments",
+      providerRef,
+      userId,
+      tierId,
+      payCurrency: data.pay_currency,
+    },
   });
+
+  if (outcome.status === "created") {
+    void attributeAffiliatePurchase({
+      userId,
+      paymentId: outcome.paymentId,
+      paidAmount: Math.round(data.price_amount * 100),
+      listPriceAmount:
+        pendingPayment?.listPriceAmount ?? Math.round(data.price_amount * 100),
+      discountAmount: pendingPayment?.discountAmount ?? 0,
+      discountPct: pendingPayment?.discountPct ?? 0,
+      code: pendingPayment?.discountCode ?? null,
+    }).catch((error) =>
+      console.error("[NOWPayments webhook] affiliate attribution error", error),
+    );
+
+    // Send challenge purchased confirmation email
+    void prisma.user
+      .findUnique({
+        where: { id: userId },
+        select: { email: true, name: true },
+      })
+      .then((buyer) => {
+        if (!buyer) return;
+        const { subject, html } = challengePurchasedEmail(
+          buyer.name,
+          tier.name,
+          tier.fundedBankroll,
+          tier.minPicks,
+        );
+        return sendEmail(buyer.email, subject, html);
+      })
+      .catch((err) =>
+        console.error("[NOWPayments webhook] purchase email error", err),
+      );
+  }
 
   return NextResponse.json({ ok: true });
 }

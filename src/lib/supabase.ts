@@ -23,8 +23,8 @@ export function createClient() {
 // Use in Server Components, Route Handlers, Server Actions
 // Respects Row Level Security — acts as the logged-in user
 // ------------------------------------------------------------
-export function createServerClient() {
-  const cookieStore = cookies() as unknown as {
+export async function createServerClient() {
+  const cookieStore = (await cookies()) as unknown as {
     get(name: string): { value: string } | undefined
     set(
       cookie: {

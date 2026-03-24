@@ -3,6 +3,11 @@ import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { createCheckoutSession } from "@/lib/stripe";
 import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
+import { resolveCountry, type CheckoutMethod } from "@/lib/country-policy";
+import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
+import { recordOpsEvent } from "@/lib/ops-events";
+import { PLATFORM_POLICY } from "@/lib/platform-policy";
+import { resolveAffiliateDiscountCode } from "@/lib/affiliate/codes";
 import { z } from "zod";
 
 const bodySchema = z.object({
@@ -11,10 +16,12 @@ const bodySchema = z.object({
   isGift: z.boolean().optional(),
   giftRecipientEmail: z.string().email().optional(),
   country: z.string().length(2).optional(), // ISO 3166-1 alpha-2 country code
+  paymentMethod: z.enum(["card", "pix"]).optional(),
+  discountCode: z.string().min(2).max(32).optional(),
 });
 
 export async function POST(req: NextRequest) {
-  const limit = enforceRateLimit(req, "api:checkout:stripe", {
+  const limit = await enforceRateLimit(req, "api:checkout:stripe", {
     windowMs: 60_000,
     max: 12,
   });
@@ -26,7 +33,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Auth required — must be logged in to purchase
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const {
     data: { user: authUser },
     error: authError,
@@ -49,11 +56,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { tierId, locale, isGift, giftRecipientEmail, country } = body;
-  const headerCountry =
-    req.headers.get("x-vercel-ip-country") ??
-    req.headers.get("cf-ipcountry") ??
-    undefined;
+  const { tierId, locale, isGift, giftRecipientEmail, country, discountCode } =
+    body;
+  const paymentMethod: CheckoutMethod = body.paymentMethod ?? "card";
+  const headerCountry = resolveCountry(
+    req.headers.get("x-vercel-ip-country"),
+    req.headers.get("cf-ipcountry"),
+  );
 
   const tier = await prisma.tier.findUnique({ where: { id: tierId } });
   if (!tier || !tier.isActive) {
@@ -69,9 +78,6 @@ export async function POST(req: NextRequest) {
       id: true,
       email: true,
       country: true,
-      selfExcludedUntil: true,
-      isPermExcluded: true,
-      weeklyDepositLimit: true,
     },
   });
 
@@ -82,60 +88,132 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (user.isPermExcluded) {
+  if (isGift && paymentMethod !== "card") {
     return NextResponse.json(
-      { error: "Account permanently excluded", code: "PERM_EXCLUDED" },
-      { status: 403 },
-    );
-  }
-
-  if (user.selfExcludedUntil && user.selfExcludedUntil > new Date()) {
-    return NextResponse.json(
-      { error: "Account is self-excluded", code: "SELF_EXCLUDED" },
-      { status: 403 },
-    );
-  }
-
-  if (user.weeklyDepositLimit !== null) {
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const weeklySpend = await prisma.payment.aggregate({
-      where: {
-        userId: user.id,
-        status: "completed",
-        createdAt: { gte: weekAgo },
+      {
+        error: "Gift purchases are only available with card checkout.",
+        code: "GIFT_METHOD_UNAVAILABLE",
       },
-      _sum: { amount: true },
-    });
-    if ((weeklySpend._sum.amount ?? 0) + tier.fee > user.weeklyDepositLimit) {
-      return NextResponse.json(
-        { error: "Weekly deposit limit exceeded", code: "DEPOSIT_LIMIT" },
-        { status: 403 },
-      );
-    }
+      { status: 400 },
+    );
   }
 
   try {
-    const checkoutCountry = (
-      country ??
-      headerCountry ??
-      user.country ??
-      ""
-    ).toUpperCase();
+    const checkoutCountry = resolveCountry(
+      country,
+      headerCountry,
+      user.country,
+    );
+    const policy = await getResolvedCountryPolicy(checkoutCountry);
+    if (!policy.challengePurchasesEnabled) {
+      return NextResponse.json(
+        {
+          error:
+            "Challenge purchases are not available in your country right now.",
+          code: "COUNTRY_NOT_AVAILABLE",
+        },
+        { status: 403 },
+      );
+    }
+
+    if (!policy.checkoutMethods.includes(paymentMethod)) {
+      return NextResponse.json(
+        {
+          error:
+            "This payment method is not available in your country right now.",
+          code: "PAYMENT_METHOD_UNAVAILABLE",
+        },
+        { status: 403 },
+      );
+    }
+
+    if (isGift && !policy.marketing.giftsEnabled) {
+      return NextResponse.json(
+        {
+          error: "Gift purchases are not available in your country right now.",
+          code: "GIFT_NOT_AVAILABLE",
+        },
+        { status: 403 },
+      );
+    }
+
+    const discount = await resolveAffiliateDiscountCode(
+      prisma,
+      tier.fee,
+      discountCode,
+    );
+    if (discountCode && !discount) {
+      return NextResponse.json(
+        {
+          error: "Discount code is invalid or inactive.",
+          code: "INVALID_DISCOUNT_CODE",
+        },
+        { status: 400 },
+      );
+    }
+    if (discount && discount.affiliate.userId === user.id) {
+      return NextResponse.json(
+        {
+          error: "You cannot use your own partner code.",
+          code: "OWN_DISCOUNT_CODE",
+        },
+        { status: 400 },
+      );
+    }
+
     const checkoutUrl = await createCheckoutSession({
       tierId: tier.id,
       tierName: tier.name,
-      feeInCents: tier.fee,
+      feeInCents: discount?.discountedAmount ?? tier.fee,
       userId: user.id,
       userEmail: user.email,
       locale,
       isGift,
       giftRecipientEmail,
-      enablePix: checkoutCountry === "BR",
+      enablePix: paymentMethod === "pix",
+      country: checkoutCountry ?? undefined,
+      policyVersion: PLATFORM_POLICY.policyVersion,
+      paymentMethodKind: paymentMethod,
+      affiliateCode: discount?.affiliate.code ?? null,
+      listPriceAmount: tier.fee,
+      discountAmount: discount?.discountAmount ?? 0,
+      discountPct: discount?.affiliate.discountPct ?? 0,
+    });
+    await recordOpsEvent({
+      type: "checkout_created",
+      source: "api:checkout:stripe",
+      actorUserId: user.id,
+      subjectType: "tier",
+      subjectId: tier.id,
+      country: checkoutCountry,
+      details: {
+        provider: "stripe",
+        userId: user.id,
+        tierId: tier.id,
+        paymentMethod,
+        checkoutCountry,
+        isGift: Boolean(isGift),
+        discountCode: discount?.affiliate.code ?? null,
+        discountAmount: discount?.discountAmount ?? 0,
+      },
     });
     return NextResponse.json({ url: checkoutUrl });
   } catch (err) {
     console.error("[checkout/stripe] error:", err);
+    await recordOpsEvent({
+      type: "checkout_create_failed",
+      level: "error",
+      source: "api:checkout:stripe",
+      actorUserId: user.id,
+      subjectType: "tier",
+      subjectId: tierId,
+      details: {
+        provider: "stripe",
+        tierId,
+        paymentMethod,
+        error: err instanceof Error ? err.message : String(err),
+      },
+    });
     return NextResponse.json(
       { error: "Failed to create checkout session", code: "STRIPE_ERROR" },
       { status: 500 },

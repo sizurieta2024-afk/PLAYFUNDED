@@ -46,7 +46,14 @@ function formatDate(iso: string): string {
   });
 }
 
-const FILTER_KEYS: StatusFilter[] = ["all", "won", "lost", "pending", "void", "push"];
+const FILTER_KEYS: StatusFilter[] = [
+  "all",
+  "won",
+  "lost",
+  "pending",
+  "void",
+  "push",
+];
 
 export function PicksTable({ picks, t }: PicksTableProps) {
   const [filter, setFilter] = useState<StatusFilter>("all");
@@ -64,7 +71,7 @@ export function PicksTable({ picks, t }: PicksTableProps) {
             onClick={() => setFilter(f)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
               filter === f
-                ? "bg-pf-brand text-white"
+                ? "bg-pf-pink text-white"
                 : "bg-card border border-border text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -105,7 +112,8 @@ export function PicksTable({ picks, t }: PicksTableProps) {
                 </p>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground tabular-nums">
-                    {pick.odds.toFixed(2)} odds · {formatCents(pick.stake)} stake
+                    {pick.odds.toFixed(2)} odds · {formatCents(pick.stake)}{" "}
+                    stake
                   </span>
                   <span className="text-muted-foreground tabular-nums">
                     {formatDate(pick.placedAt)}
@@ -149,7 +157,10 @@ export function PicksTable({ picks, t }: PicksTableProps) {
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((pick) => (
-                <tr key={pick.id} className="hover:bg-muted/30 transition-colors">
+                <tr
+                  key={pick.id}
+                  className="hover:bg-muted/30 transition-colors"
+                >
                   <td className="px-4 py-3 max-w-[160px]">
                     <p className="truncate font-medium">
                       {pick.eventName ?? pick.league}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { adminUpdatePayout } from "@/app/actions/admin";
 
 interface PayoutRow {
@@ -20,13 +21,39 @@ function formatUSD(cents: number) {
 }
 
 export function AdminPayoutsQueue({ payouts }: { payouts: PayoutRow[] }) {
+  const router = useRouter();
   const [txRefs, setTxRefs] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [messages, setMessages] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
 
   function handle(id: string, action: "approve" | "reject") {
     startTransition(async () => {
-      await adminUpdatePayout(id, action, txRefs[id], notes[id]);
+      setMessages((prev) => ({ ...prev, [id]: "" }));
+      const result = await adminUpdatePayout(id, action, txRefs[id], notes[id]);
+      if (result.code === "RETRYABLE_CONFLICT") {
+        setMessages((prev) => ({
+          ...prev,
+          [id]: "Already reviewed by another admin. The queue is refreshing.",
+        }));
+        router.refresh();
+        return;
+      }
+      if (result.error) {
+        const message =
+          result.code === "CRYPTO_DESTINATION_REQUIRED"
+            ? "Crypto payout is missing the destination wallet address."
+            : result.code === "PROVIDER_ERROR"
+              ? (result.error ?? "Crypto payout provider request failed.")
+              : "Review failed. Refresh the queue and try again.";
+        setMessages((prev) => ({
+          ...prev,
+          [id]: message,
+        }));
+        return;
+      }
+
+      router.refresh();
     });
   }
 
@@ -73,7 +100,7 @@ export function AdminPayoutsQueue({ payouts }: { payouts: PayoutRow[] }) {
               onChange={(e) =>
                 setTxRefs((prev) => ({ ...prev, [p.id]: e.target.value }))
               }
-              className="flex-1 min-w-40 text-xs px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-pf-brand/40"
+              className="flex-1 min-w-40 text-xs px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-pf-pink/40"
             />
             <input
               type="text"
@@ -87,7 +114,7 @@ export function AdminPayoutsQueue({ payouts }: { payouts: PayoutRow[] }) {
             <button
               onClick={() => handle(p.id, "approve")}
               disabled={pending}
-              className="text-xs px-4 py-2 rounded-lg bg-pf-brand text-white font-semibold hover:bg-pf-brand/90 transition-colors disabled:opacity-50"
+              className="text-xs px-4 py-2 rounded-lg bg-pf-pink text-white font-semibold hover:bg-pf-pink-dark transition-colors disabled:opacity-50"
             >
               Approve & Pay
             </button>
@@ -99,6 +126,11 @@ export function AdminPayoutsQueue({ payouts }: { payouts: PayoutRow[] }) {
               Reject
             </button>
           </div>
+          {messages[p.id] ? (
+            <p className="mt-3 text-xs font-medium text-amber-400">
+              {messages[p.id]}
+            </p>
+          ) : null}
         </div>
       ))}
     </div>

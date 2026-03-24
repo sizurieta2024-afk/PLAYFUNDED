@@ -2,22 +2,61 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient as createSsrClient } from "@supabase/ssr";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, welcomeEmail } from "@/lib/email";
+import { ALLOWED_FORWARDED_HOSTS } from "@/lib/allowed-hosts";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/en/dashboard";
+  // Validate redirect target — must be a same-origin relative path to prevent open redirect
+  const rawNext = searchParams.get("next") ?? "";
+  const next =
+    rawNext.startsWith("/") &&
+    !rawNext.startsWith("//") &&
+    !rawNext.includes("://")
+      ? rawNext
+      : "/en/dashboard";
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/auth/login?error=missing_code`);
+    const fallbackTarget = `${origin}/auth/login?redirectTo=${encodeURIComponent(next)}`;
+    const html = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Redirecting…</title>
+  </head>
+  <body>
+    <script>
+      (function () {
+        var hash = window.location.hash || "";
+        var target = ${JSON.stringify(fallbackTarget)};
+        window.location.replace(target + hash);
+      })();
+    </script>
+    <noscript>
+      <meta http-equiv="refresh" content="0;url=${fallbackTarget}" />
+    </noscript>
+  </body>
+</html>`;
+
+    return new NextResponse(html, {
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+      },
+    });
   }
 
   // Build the redirect response first so we can write session cookies onto it
+  // Only trust x-forwarded-host if it matches our known production hostnames
   const forwardedHost = request.headers.get("x-forwarded-host");
-  const redirectBase =
-    forwardedHost && process.env.NODE_ENV !== "development"
-      ? `https://${forwardedHost}`
-      : origin;
+  const trustedForwardedHost =
+    forwardedHost && ALLOWED_FORWARDED_HOSTS.includes(forwardedHost)
+      ? forwardedHost
+      : null;
+  const redirectBase = trustedForwardedHost
+    ? `https://${trustedForwardedHost}`
+    : origin;
 
   const response = NextResponse.redirect(`${redirectBase}${next}`);
 

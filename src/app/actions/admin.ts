@@ -17,6 +17,8 @@ import {
   reviewPayoutByAdmin,
 } from "@/lib/admin/review-service";
 import { setUserBanState } from "@/lib/admin/user-moderation-service";
+import { settlePendingPick } from "@/lib/settlement/settle-service";
+import type { SettleStatus } from "@/lib/settlement/settle";
 
 async function requireAdmin() {
   const supabase = await createServerClient();
@@ -54,9 +56,10 @@ type AffiliateCommissionRate = "five" | "ten";
 
 function generateAffiliateCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(6));
   let code = "PF-";
   for (let i = 0; i < 6; i += 1) {
-    code += chars[Math.floor(Math.random() * chars.length)];
+    code += chars[bytes[i] % chars.length];
   }
   return code;
 }
@@ -116,6 +119,43 @@ export async function overrideChallenge(
   );
 }
 
+export async function adjustChallengeBalance(
+  challengeId: string,
+  deltaUsd: number, // positive = credit, negative = debit
+  note: string,
+): Promise<{ error?: string }> {
+  const admin = await requireAdmin();
+
+  if (!note?.trim()) return { error: "Note is required" };
+  if (deltaUsd === 0) return { error: "Delta cannot be zero" };
+
+  const deltaCents = Math.round(deltaUsd * 100);
+
+  const challenge = await prisma.challenge.findUnique({
+    where: { id: challengeId },
+    select: { balance: true },
+  });
+  if (!challenge) return { error: "Challenge not found" };
+
+  const newBalance = challenge.balance + deltaCents;
+  if (newBalance < 0)
+    return { error: "Adjustment would result in negative balance" };
+
+  await prisma.challenge.update({
+    where: { id: challengeId },
+    data: { balance: newBalance },
+  });
+  await audit(
+    admin.id,
+    "adjust_balance",
+    "challenge",
+    challengeId,
+    `balance ${deltaCents > 0 ? "+" : ""}${deltaCents} cents: ${note}`,
+  );
+  revalidatePath("/admin/challenges");
+  return {};
+}
+
 // ── Payouts ───────────────────────────────────────────────────────────
 
 export async function adminUpdatePayout(
@@ -141,7 +181,7 @@ export async function adminUpdatePayout(
           : result.code === "CRYPTO_DESTINATION_REQUIRED"
             ? "crypto_destination_required"
             : result.code === "PROVIDER_ERROR"
-              ? result.error ?? "payout_provider_error"
+              ? (result.error ?? "payout_provider_error")
               : "payout_not_found_or_not_pending",
       code: result.code,
     };
@@ -349,6 +389,180 @@ export async function adminMarkAffiliatePaid(
   revalidatePath("/[locale]/admin/affiliates", "page");
 }
 
+export async function adminReviewAffiliateApplication(
+  applicationId: string,
+  action: "approve" | "reject",
+  opts: {
+    rate?: AffiliateCommissionRate;
+    discountPct?: number;
+    reviewNote?: string;
+  } = {},
+): Promise<{ error?: string; code?: string }> {
+  const admin = await requireAdmin();
+
+  const app = await prisma.affiliateApplication.findUnique({
+    where: { id: applicationId },
+    select: { id: true, userId: true, status: true },
+  });
+  if (!app || app.status !== "pending")
+    return { error: "not_found_or_not_pending" };
+
+  if (action === "reject") {
+    await prisma.affiliateApplication.update({
+      where: { id: applicationId },
+      data: {
+        status: "rejected",
+        reviewNote: opts.reviewNote ?? null,
+        reviewedAt: new Date(),
+        reviewedByAdminId: admin.id,
+      },
+    });
+    await audit(
+      admin.id,
+      "reject_affiliate_application",
+      "affiliate",
+      applicationId,
+      opts.reviewNote,
+    );
+    revalidatePath("/[locale]/admin/affiliates", "page");
+    return {};
+  }
+
+  // Approve: create the Affiliate record
+  const existing = await prisma.affiliate.findUnique({
+    where: { userId: app.userId },
+    select: { code: true },
+  });
+  if (existing) {
+    // Already an affiliate — just mark approved
+    await prisma.affiliateApplication.update({
+      where: { id: applicationId },
+      data: {
+        status: "approved",
+        reviewedAt: new Date(),
+        reviewedByAdminId: admin.id,
+      },
+    });
+    return { code: existing.code };
+  }
+
+  let code = generateAffiliateCode();
+  for (let i = 0; i < 5; i++) {
+    if (!(await prisma.affiliate.findUnique({ where: { code } }))) break;
+    code = generateAffiliateCode();
+  }
+
+  const affiliate = await prisma.affiliate.create({
+    data: {
+      userId: app.userId,
+      code,
+      commissionRate: opts.rate ?? "five",
+      discountPct: Math.max(
+        0,
+        Math.min(100, Math.floor(opts.discountPct ?? 0)),
+      ),
+      isActive: true,
+    },
+  });
+
+  await prisma.affiliateApplication.update({
+    where: { id: applicationId },
+    data: {
+      status: "approved",
+      reviewedAt: new Date(),
+      reviewedByAdminId: admin.id,
+    },
+  });
+  await audit(
+    admin.id,
+    "approve_affiliate_application",
+    "affiliate",
+    affiliate.id,
+    `code: ${code}`,
+  );
+  revalidatePath("/[locale]/admin/affiliates", "page");
+  return { code };
+}
+
+export async function adminReviewCodeChangeRequest(
+  requestId: string,
+  action: "approve" | "reject",
+  reviewNote?: string,
+): Promise<{ error?: string }> {
+  const admin = await requireAdmin();
+
+  const req = await prisma.affiliateCodeChangeRequest.findUnique({
+    where: { id: requestId },
+    select: { id: true, affiliateId: true, requestedCode: true, status: true },
+  });
+  if (!req || req.status !== "pending")
+    return { error: "not_found_or_not_pending" };
+
+  if (action === "reject") {
+    await prisma.affiliateCodeChangeRequest.update({
+      where: { id: requestId },
+      data: {
+        status: "rejected",
+        reviewNote: reviewNote ?? null,
+        reviewedAt: new Date(),
+        reviewedByAdminId: admin.id,
+      },
+    });
+    await audit(
+      admin.id,
+      "reject_code_change",
+      "affiliate",
+      req.affiliateId,
+      reviewNote,
+    );
+    revalidatePath("/[locale]/admin/affiliates", "page");
+    return {};
+  }
+
+  // Check code not taken by someone else
+  const taken = await prisma.affiliate.findFirst({
+    where: { code: req.requestedCode, id: { not: req.affiliateId } },
+    select: { id: true },
+  });
+  if (taken) {
+    await prisma.affiliateCodeChangeRequest.update({
+      where: { id: requestId },
+      data: {
+        status: "rejected",
+        reviewNote: "Code already taken",
+        reviewedAt: new Date(),
+        reviewedByAdminId: admin.id,
+      },
+    });
+    return { error: "code_taken" };
+  }
+
+  await prisma.$transaction([
+    prisma.affiliate.update({
+      where: { id: req.affiliateId },
+      data: { code: req.requestedCode },
+    }),
+    prisma.affiliateCodeChangeRequest.update({
+      where: { id: requestId },
+      data: {
+        status: "approved",
+        reviewedAt: new Date(),
+        reviewedByAdminId: admin.id,
+      },
+    }),
+  ]);
+
+  await audit(
+    admin.id,
+    "approve_code_change",
+    "affiliate",
+    req.affiliateId,
+    `new code: ${req.requestedCode}`,
+  );
+  revalidatePath("/[locale]/admin/affiliates", "page");
+  return {};
+}
+
 // ── Market Requests ───────────────────────────────────────────────────
 
 export async function adminUpdateMarketRequest(
@@ -483,6 +697,135 @@ export async function adminSaveCountryPolicyOverride(formData: FormData) {
     },
   });
   revalidatePath("/[locale]/admin/launch", "page");
+}
+
+// ── Messaging ─────────────────────────────────────────────────────────
+
+export async function adminSendUserEmail(
+  userId: string,
+  subject: string,
+  body: string,
+): Promise<{ error?: string }> {
+  const admin = await requireAdmin();
+
+  if (!subject.trim()) return { error: "Subject is required" };
+  if (subject.length > 200)
+    return { error: "Subject must be 200 characters or fewer" };
+  if (!body.trim()) return { error: "Body is required" };
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, name: true },
+  });
+  if (!user) return { error: "User not found" };
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/></head><body style="font-family:sans-serif;background:#0a0a0a;color:#e5e5e5;padding:32px">
+    <div style="max-width:560px;margin:0 auto;background:#141414;border:1px solid #262626;border-radius:12px;padding:28px 32px">
+      <p style="white-space:pre-wrap;font-size:14px;line-height:1.6;color:#a3a3a3">${body.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+      <hr style="border:none;border-top:1px solid #262626;margin:20px 0"/>
+      <p style="font-size:11px;color:#525252">PlayFunded · La plataforma de trading deportivo para América Latina</p>
+    </div>
+  </body></html>`;
+
+  await sendEmail(user.email, subject, html);
+  await audit(
+    admin.id,
+    "admin_send_user_email",
+    "user",
+    userId,
+    `subject: ${subject}`,
+  );
+  return {};
+}
+
+export async function adminSendBlast(
+  segment: "all" | "active_challenge" | "funded",
+  subject: string,
+  body: string,
+): Promise<{ count: number; error?: string }> {
+  const admin = await requireAdmin();
+
+  if (!subject.trim()) return { count: 0, error: "Subject is required" };
+  if (subject.length > 200)
+    return { count: 0, error: "Subject must be 200 characters or fewer" };
+  if (!body.trim()) return { count: 0, error: "Body is required" };
+
+  let userEmails: Array<{ id: string; email: string }> = [];
+
+  if (segment === "all") {
+    userEmails = await prisma.user.findMany({
+      where: { isBanned: false },
+      select: { id: true, email: true },
+    });
+  } else if (segment === "active_challenge") {
+    const challenges = await prisma.challenge.findMany({
+      where: { status: "active" },
+      select: { user: { select: { id: true, email: true } } },
+      distinct: ["userId"],
+    });
+    userEmails = challenges.map((c) => c.user);
+  } else if (segment === "funded") {
+    const challenges = await prisma.challenge.findMany({
+      where: { status: "funded" },
+      select: { user: { select: { id: true, email: true } } },
+      distinct: ["userId"],
+    });
+    userEmails = challenges.map((c) => c.user);
+  }
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/></head><body style="font-family:sans-serif;background:#0a0a0a;color:#e5e5e5;padding:32px">
+    <div style="max-width:560px;margin:0 auto;background:#141414;border:1px solid #262626;border-radius:12px;padding:28px 32px">
+      <p style="white-space:pre-wrap;font-size:14px;line-height:1.6;color:#a3a3a3">${body.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+      <hr style="border:none;border-top:1px solid #262626;margin:20px 0"/>
+      <p style="font-size:11px;color:#525252">PlayFunded · La plataforma de trading deportivo para América Latina</p>
+    </div>
+  </body></html>`;
+
+  let sent = 0;
+  for (const user of userEmails) {
+    await sendEmail(user.email, subject, html);
+    sent += 1;
+  }
+
+  await audit(
+    admin.id,
+    "admin_send_blast",
+    "blast",
+    segment,
+    `subject: ${subject}; sent: ${sent}`,
+  );
+  return { count: sent };
+}
+
+// ── Picks ─────────────────────────────────────────────────────────────
+
+export async function adminSettlePick(
+  pickId: string,
+  status: SettleStatus,
+  note: string,
+): Promise<{ error?: string }> {
+  const admin = await requireAdmin();
+  if (!note?.trim()) return { error: "Note is required" };
+
+  const result = await settlePendingPick(prisma, {
+    pickId,
+    status,
+    settledAt: new Date(),
+  });
+
+  if (!result.ok) {
+    return { error: result.error };
+  }
+
+  await audit(
+    admin.id,
+    "admin_settle_pick",
+    "pick",
+    pickId,
+    `status → ${status}: ${note}`,
+  );
+  revalidatePath("/admin/picks");
+  return {};
 }
 
 export async function adminDeleteCountryPolicyOverride(country: string) {

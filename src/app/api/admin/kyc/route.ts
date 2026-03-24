@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient, createServiceClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
-import {
-  sendEmail,
-  kycApprovedEmail,
-  kycRejectedEmail,
-} from "@/lib/email";
+import { sendEmail, kycApprovedEmail, kycRejectedEmail } from "@/lib/email";
 import { reviewKycByAdmin } from "@/lib/admin/review-service";
+import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
+
+const VALID_KYC_STATUSES = ["pending", "approved", "rejected"];
 
 async function requireAdmin() {
   const supabase = await createServerClient();
@@ -25,6 +24,13 @@ async function requireAdmin() {
 
 // GET /api/admin/kyc — list pending KYC submissions with signed document URLs
 export async function GET(req: NextRequest) {
+  const limit = await enforceRateLimit(req, "admin:kyc:get", {
+    windowMs: 60_000,
+    max: 60,
+  });
+  if (!limit.allowed)
+    return rateLimitExceededResponse("Too many requests", limit);
+
   const admin = await requireAdmin();
   if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -32,6 +38,12 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status") ?? "pending";
+  if (!VALID_KYC_STATUSES.includes(status)) {
+    return NextResponse.json(
+      { error: "Invalid status filter" },
+      { status: 400 },
+    );
+  }
 
   const submissions = await prisma.kycSubmission.findMany({
     where: { status: status as never },
@@ -86,6 +98,13 @@ export async function GET(req: NextRequest) {
 
 // PATCH /api/admin/kyc — approve or reject KYC submission
 export async function PATCH(req: NextRequest) {
+  const patchLimit = await enforceRateLimit(req, "admin:kyc:patch", {
+    windowMs: 60_000,
+    max: 30,
+  });
+  if (!patchLimit.allowed)
+    return rateLimitExceededResponse("Too many requests", patchLimit);
+
   const admin = await requireAdmin();
   if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -100,6 +119,9 @@ export async function PATCH(req: NextRequest) {
   const { submissionId, action, reviewNote } = body;
   if (!submissionId || !action) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  }
+  if (!["approve", "reject"].includes(action)) {
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
 
   const updated = await reviewKycByAdmin({

@@ -83,9 +83,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!Number.isInteger(stake) || stake < 100) {
+    if (!Number.isInteger(stake) || stake < 100 || stake > 10_000_000) {
       return NextResponse.json(
-        { error: "Minimum stake is $1 (100 cents)", code: "INVALID_STAKE" },
+        { error: "Invalid stake amount", code: "INVALID_STAKE" },
         { status: 400 },
       );
     }
@@ -98,6 +98,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "User not found", code: "USER_NOT_FOUND" },
         { status: 404 },
+      );
+    }
+    if (parlayUser.isBanned) {
+      return NextResponse.json(
+        { error: "Account is suspended", code: "ACCOUNT_BANNED" },
+        { status: 403 },
       );
     }
 
@@ -277,10 +283,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Stake must be integer cents ≥ 100 ($1 minimum)
-  if (!Number.isInteger(stake) || stake < 100) {
+  // Stake must be integer cents ≥ 100 ($1 minimum) and ≤ $100,000 hard cap
+  if (!Number.isInteger(stake) || stake < 100 || stake > 10_000_000) {
     return NextResponse.json(
-      { error: "Minimum stake is $1 (100 cents)", code: "INVALID_STAKE" },
+      { error: "Invalid stake amount", code: "INVALID_STAKE" },
       { status: 400 },
     );
   }
@@ -342,6 +348,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: "User not found", code: "USER_NOT_FOUND" },
       { status: 404 },
+    );
+  }
+  if (user.isBanned) {
+    return NextResponse.json(
+      { error: "Account is suspended", code: "ACCOUNT_BANNED" },
+      { status: 403 },
     );
   }
 

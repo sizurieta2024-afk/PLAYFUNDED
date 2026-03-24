@@ -37,6 +37,10 @@ export async function requestPayout(
 ): Promise<{ error?: string; code?: string }> {
   const user = await getAuthenticatedUser();
 
+  if (user.isBanned) {
+    return { error: "Account is suspended", code: "ACCOUNT_BANNED" };
+  }
+
   const payoutCountry = resolvePayoutCountry(
     user.kycSubmission?.country,
     user.country,
@@ -58,7 +62,8 @@ export async function requestPayout(
     destinationAddress,
     payoutsEnabled: policy.payoutsEnabled,
     methodAllowed: true,
-    kycApproved: !!user.kycSubmission && user.kycSubmission.status === "approved",
+    kycApproved:
+      !!user.kycSubmission && user.kycSubmission.status === "approved",
     windowOpen: isPayoutWindowOpen(),
     minimumPayoutCents: PLATFORM_POLICY.payouts.minimumCents,
   });
@@ -83,10 +88,10 @@ export async function requestPayout(
     details: {
       userId: user.id,
       challengeId,
-        method,
-        destinationAddress: destinationAddress ?? null,
-        payoutCountry,
-        requestedProfitAmount,
+      method,
+      destinationAddress: destinationAddress ?? null,
+      payoutCountry,
+      requestedProfitAmount,
       payoutAmount: decision.payoutAmount,
     },
   });
@@ -114,26 +119,20 @@ export async function rolloverProfits(
   );
 
   // Record rollover as a paid payout (no real money moves, just bookkeeping)
-  await prisma.$transaction([
-    prisma.payout.create({
-      data: {
-        userId: user.id,
-        challengeId,
-        amount: payoutAmount,
-        splitPct: challenge.tier.profitSplitPct,
-        method: "bank_wire", // placeholder — unused for rollovers
-        status: "paid",
-        isRollover: true,
-        approvedAt: new Date(),
-        paidAt: new Date(),
-      },
-    }),
-    // Reset profit baseline so future profits are calculated from current balance
-    prisma.challenge.update({
-      where: { id: challengeId },
-      data: { startBalance: challenge.balance },
-    }),
-  ]);
+  // Balance and startBalance are NOT touched — funded accounts have no profit baseline reset
+  await prisma.payout.create({
+    data: {
+      userId: user.id,
+      challengeId,
+      amount: payoutAmount,
+      splitPct: challenge.tier.profitSplitPct,
+      method: "bank_wire", // placeholder — unused for rollovers
+      status: "paid",
+      isRollover: true,
+      approvedAt: new Date(),
+      paidAt: new Date(),
+    },
+  });
 
   await recordOpsEvent({
     type: "payout_rollover",

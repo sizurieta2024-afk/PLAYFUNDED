@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
-import {
-  sendEmail,
-  payoutPaidEmail,
-  payoutRejectedEmail,
-} from "@/lib/email";
+import { sendEmail, payoutPaidEmail, payoutRejectedEmail } from "@/lib/email";
 import { reviewPayoutByAdmin } from "@/lib/admin/review-service";
+import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
+
+const VALID_PAYOUT_STATUSES = ["pending", "paid", "rejected"];
 
 async function requireAdmin() {
   const supabase = await createServerClient();
@@ -25,6 +24,13 @@ async function requireAdmin() {
 
 // GET /api/admin/payouts — list pending payouts
 export async function GET(req: NextRequest) {
+  const limit = await enforceRateLimit(req, "admin:payouts:get", {
+    windowMs: 60_000,
+    max: 60,
+  });
+  if (!limit.allowed)
+    return rateLimitExceededResponse("Too many requests", limit);
+
   const admin = await requireAdmin();
   if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -32,6 +38,12 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status") ?? "pending";
+  if (!VALID_PAYOUT_STATUSES.includes(status)) {
+    return NextResponse.json(
+      { error: "Invalid status filter" },
+      { status: 400 },
+    );
+  }
 
   const payouts = await prisma.payout.findMany({
     where: { status: status as never, isRollover: false },
@@ -48,6 +60,13 @@ export async function GET(req: NextRequest) {
 
 // PATCH /api/admin/payouts — approve or reject a payout
 export async function PATCH(req: NextRequest) {
+  const patchLimit = await enforceRateLimit(req, "admin:payouts:patch", {
+    windowMs: 60_000,
+    max: 30,
+  });
+  if (!patchLimit.allowed)
+    return rateLimitExceededResponse("Too many requests", patchLimit);
+
   const admin = await requireAdmin();
   if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -64,6 +83,9 @@ export async function PATCH(req: NextRequest) {
   if (!payoutId || !action) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
+  if (!["approve", "reject"].includes(action)) {
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  }
 
   const updated = await reviewPayoutByAdmin({
     db: prisma,
@@ -76,26 +98,37 @@ export async function PATCH(req: NextRequest) {
   if (!updated.ok) {
     if (updated.code === "RETRYABLE_CONFLICT") {
       return NextResponse.json(
-        { error: "Payout changed during review. Retry the action.", code: updated.code },
+        {
+          error: "Payout changed during review. Retry the action.",
+          code: updated.code,
+        },
         { status: 409 },
       );
     }
     if (updated.code === "CRYPTO_DESTINATION_REQUIRED") {
       return NextResponse.json(
-        { error: updated.error ?? "Crypto destination is required", code: updated.code },
+        {
+          error: updated.error ?? "Crypto destination is required",
+          code: updated.code,
+        },
         { status: 400 },
       );
     }
     if (updated.code === "PROVIDER_ERROR") {
       return NextResponse.json(
         {
-          error: updated.error ?? "Payout provider failed. The payout was left pending.",
+          error:
+            updated.error ??
+            "Payout provider failed. The payout was left pending.",
           code: updated.code,
         },
         { status: 502 },
       );
     }
-    return NextResponse.json({ error: "Payout not found or not pending" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Payout not found or not pending" },
+      { status: 404 },
+    );
   }
 
   if (action === "approve" && updated.payout.status === "paid") {

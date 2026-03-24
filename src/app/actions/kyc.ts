@@ -37,6 +37,24 @@ export async function submitKyc(formData: {
     return { error: eligibility.code };
   }
 
+  // Validate storage paths — must belong to this user and match expected format.
+  // Prevents a user from submitting another user's document path or an arbitrary path.
+  const KYC_PATH_RE =
+    /^[a-zA-Z0-9-]+\/[0-9]+-[a-zA-Z0-9-]+\.(jpg|jpeg|png|pdf)$/i;
+  const validateKycPath = (path: string, field: string): string | null => {
+    if (!path.startsWith(`${user.id}/`))
+      return `${field} does not belong to your account`;
+    if (!KYC_PATH_RE.test(path)) return `${field} has an invalid format`;
+    return null;
+  };
+
+  const frontErr = validateKycPath(formData.idFrontPath, "idFrontPath");
+  if (frontErr) return { error: frontErr };
+  if (formData.idBackPath) {
+    const backErr = validateKycPath(formData.idBackPath, "idBackPath");
+    if (backErr) return { error: backErr };
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const bucket = "kyc-documents";
   const toUrl = (path: string) =>

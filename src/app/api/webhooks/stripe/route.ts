@@ -35,8 +35,7 @@ async function handleCheckoutCompleted(
     listPriceAmount,
     discountAmount,
     discountPct,
-  } =
-    session.metadata ?? {};
+  } = session.metadata ?? {};
 
   if (!tierId || !userId) {
     console.error("[webhook/stripe] Missing metadata on session:", session.id);
@@ -51,77 +50,87 @@ async function handleCheckoutCompleted(
 
   const normalizedListPriceAmount = parseMetadataInt(listPriceAmount, tier.fee);
   const normalizedDiscountAmount = parseMetadataInt(discountAmount, 0);
-  const chargedAmount = Math.max(
-    0,
-    normalizedListPriceAmount - normalizedDiscountAmount,
-  );
+  // Use Stripe's authoritative amount_total as the charged amount — not metadata.
+  // Metadata is used only for tier/user routing and display; the actual charge
+  // must come from Stripe to prevent any metadata-tampering discrepancy.
+  const chargedAmount =
+    session.amount_total ??
+    Math.max(0, normalizedListPriceAmount - normalizedDiscountAmount);
 
-  const fulfillment = await withWebhookLock(prisma, "stripe", session.id, async (tx) => {
-    const existing = await tx.payment.findFirst({
-      where: { providerRef: session.id },
-    });
-    if (existing) {
-      return {
-        status: "duplicate" as const,
-        giftToken: null as string | null,
-        paymentId: existing.id,
-      };
-    }
+  const fulfillment = await withWebhookLock(
+    prisma,
+    "stripe",
+    session.id,
+    async (tx) => {
+      const existing = await tx.payment.findFirst({
+        where: { providerRef: session.id },
+      });
+      if (existing) {
+        return {
+          status: "duplicate" as const,
+          giftToken: null as string | null,
+          paymentId: existing.id,
+        };
+      }
 
-    const giftToken =
-      isGift === "true"
-        ? `GFT-${Math.random().toString(36).slice(2, 10).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
-        : null;
+      const giftToken =
+        isGift === "true"
+          ? `GFT-${Array.from(crypto.getRandomValues(new Uint8Array(8)))
+              .map((b) => b.toString(16).padStart(2, "0"))
+              .join("")
+              .toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
+          : null;
 
-    const payment = await tx.payment.create({
-      data: {
-        userId,
-        tierId,
-        amount: chargedAmount,
-        listPriceAmount: normalizedListPriceAmount,
-        discountAmount: normalizedDiscountAmount,
-        discountPct: parseMetadataInt(discountPct, 0),
-        discountCode: affiliateCode || null,
-        currency: "USD",
-        method: "card",
-        status: "completed",
-        providerRef: session.id,
-        isGift: isGift === "true",
-        giftRecipientEmail: giftRecipientEmail || null,
-        giftToken,
-        metadata: {
-          stripePaymentIntentId:
-            typeof session.payment_intent === "string"
-              ? session.payment_intent
-              : (session.payment_intent?.id ?? null),
-          customerEmail: session.customer_email,
-          paymentMethodKind: paymentMethodKind ?? "card",
-          checkoutCountry: country ?? null,
-          policyVersion: policyVersion ?? null,
-        },
-      },
-      select: { id: true },
-    });
-
-    if (isGift !== "true") {
-      await tx.challenge.create({
+      const payment = await tx.payment.create({
         data: {
           userId,
           tierId,
-          status: "active",
-          phase: "phase1",
-          balance: tier.fundedBankroll,
-          startBalance: tier.fundedBankroll,
-          dailyStartBalance: tier.fundedBankroll,
-          highestBalance: tier.fundedBankroll,
-          peakBalance: tier.fundedBankroll,
-          phase1StartBalance: tier.fundedBankroll,
+          amount: chargedAmount,
+          listPriceAmount: normalizedListPriceAmount,
+          discountAmount: normalizedDiscountAmount,
+          discountPct: parseMetadataInt(discountPct, 0),
+          discountCode: affiliateCode || null,
+          currency: "USD",
+          method: "card",
+          status: "completed",
+          providerRef: session.id,
+          isGift: isGift === "true",
+          giftRecipientEmail: giftRecipientEmail || null,
+          giftToken,
+          metadata: {
+            stripePaymentIntentId:
+              typeof session.payment_intent === "string"
+                ? session.payment_intent
+                : (session.payment_intent?.id ?? null),
+            customerEmail: session.customer_email,
+            paymentMethodKind: paymentMethodKind ?? "card",
+            checkoutCountry: country ?? null,
+            policyVersion: policyVersion ?? null,
+          },
         },
+        select: { id: true },
       });
-    }
 
-    return { status: "created" as const, giftToken, paymentId: payment.id };
-  });
+      if (isGift !== "true") {
+        await tx.challenge.create({
+          data: {
+            userId,
+            tierId,
+            status: "active",
+            phase: "phase1",
+            balance: tier.fundedBankroll,
+            startBalance: tier.fundedBankroll,
+            dailyStartBalance: tier.fundedBankroll,
+            highestBalance: tier.fundedBankroll,
+            peakBalance: tier.fundedBankroll,
+            phase1StartBalance: tier.fundedBankroll,
+          },
+        });
+      }
+
+      return { status: "created" as const, giftToken, paymentId: payment.id };
+    },
+  );
 
   if (fulfillment.status === "duplicate") {
     console.log("[webhook/stripe] Duplicate event, skipping:", session.id);
@@ -189,6 +198,7 @@ async function handleCheckoutCompleted(
         buyer.name,
         tier.name,
         tier.fundedBankroll,
+        tier.minPicks,
       );
       void sendEmail(buyer.email, subject, html);
     }

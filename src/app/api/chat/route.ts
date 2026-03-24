@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 import { PLATFORM_POLICY, getPayoutWindowLabel } from "@/lib/platform-policy";
+import { createServerClient } from "@/lib/supabase";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -55,6 +56,32 @@ interface Message {
   content: string;
 }
 
+interface UserContext {
+  phase?: string;
+  tierName?: string;
+  balance?: number;
+  startBalance?: number;
+  activePicks?: number;
+}
+
+function buildSystemPrompt(userContext?: UserContext): string {
+  if (!userContext || !userContext.phase) return SYSTEM_PROMPT;
+  const profit = (userContext.balance ?? 0) - (userContext.startBalance ?? 0);
+  const profitUsd = (profit / 100).toFixed(2);
+  const balanceUsd = ((userContext.balance ?? 0) / 100).toFixed(2);
+  const context = `
+
+USER'S ACTIVE CHALLENGE:
+- Tier: ${userContext.tierName ?? "unknown"}
+- Phase: ${userContext.phase}
+- Current balance: $${balanceUsd}
+- Profit/loss: ${profit >= 0 ? "+" : ""}$${profitUsd}
+- Active picks pending settlement: ${userContext.activePicks ?? 0}
+
+When answering, use this context to give personalized advice (e.g. how much more profit they need to pass the phase, whether they're close to drawdown limits, etc.).`;
+  return SYSTEM_PROMPT + context;
+}
+
 export async function POST(req: NextRequest) {
   const limit = await enforceRateLimit(req, "api:chat", {
     windowMs: 60_000,
@@ -67,14 +94,29 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Require authentication — only logged-in users can use the chatbot
+  const supabase = await createServerClient();
+  const {
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !authUser) {
+    return NextResponse.json(
+      { error: "Unauthorized", code: "UNAUTHORIZED" },
+      { status: 401 },
+    );
+  }
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: "Chat not configured" }, { status: 500 });
   }
 
   let messages: Message[];
+  let userContext: UserContext | undefined;
   try {
     const body = await req.json();
     messages = body.messages;
+    userContext = body.userContext;
     if (!Array.isArray(messages) || messages.length === 0) throw new Error();
   } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
@@ -87,7 +129,7 @@ export async function POST(req: NextRequest) {
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 512,
-      system: SYSTEM_PROMPT,
+      system: buildSystemPrompt(userContext),
       messages: trimmed,
     });
 

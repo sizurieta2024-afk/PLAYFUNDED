@@ -9,6 +9,9 @@ const cspDirectives = [
   "base-uri 'self'",
   "frame-ancestors 'none'",
   "object-src 'none'",
+  // NOTE: 'unsafe-inline' is required while JSON-LD script tags and third-party
+  // SDKs (Stripe, MP) inject inline scripts. Migrate to nonce-based CSP once
+  // those integrations support it.
   `script-src 'self' 'unsafe-inline'${isProduction ? '' : " 'unsafe-eval'"} https://js.stripe.com https://sdk.mercadopago.com`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
@@ -46,6 +49,10 @@ const nextConfig = {
             key: 'Permissions-Policy',
             value:
               'camera=(), microphone=(), geolocation=(), payment=(self), interest-cohort=()',
+          },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload',
           },
         ],
       },

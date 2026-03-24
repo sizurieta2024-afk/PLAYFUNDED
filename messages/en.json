@@ -167,6 +167,9 @@
     "parlayPlaced": "Parlay placed!",
     "parlayMinLegs": "Select at least 2 picks to build a parlay",
     "parlayMaxLegs": "Maximum 4 picks per parlay",
+    "parlayMaxLegsWarning": "You've reached the 4-leg limit. This rule is designed to help you manage risk and build consistent trading habits. Questions? support@playfunded.lat",
+    "stakeOverMax": "Max stake is {max} (5% of your starting balance). This limit protects your challenge account and helps you trade consistently. Questions? support@playfunded.lat",
+    "stakeBelowMin": "Min stake is {min} (1% of your starting balance).",
     "sameGameParlay": "Coming soon: same-game parlays",
     "parlayEmpty": "Add 2–4 picks from different games",
     "parlayLeg": "Leg {n}"

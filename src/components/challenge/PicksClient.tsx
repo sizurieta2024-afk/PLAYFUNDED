@@ -273,10 +273,17 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
 
   const stakeError =
     stakeCents > 0 && stakeCents > maxStakeCents
-      ? `Max ${formatCents(maxStakeCents)}`
+      ? (t.stakeOverMax ?? "Max {max}").replace(
+          "{max}",
+          formatCents(maxStakeCents),
+        )
       : stakeCents > 0 && stakeCents < minStakeCents
-        ? `Min ${formatCents(minStakeCents)}`
+        ? (t.stakeBelowMin ?? "Min {min}").replace(
+            "{min}",
+            formatCents(minStakeCents),
+          )
         : null;
+  const stakeOverMax = stakeCents > 0 && stakeCents > maxStakeCents;
 
   // ── Slip toggle — click to add, click again to remove ────────────────────
 
@@ -668,6 +675,17 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
                     ))}
                   </div>
 
+                  {/* Max legs inline warning */}
+                  {legs.length === 4 && (
+                    <div className="flex gap-1.5 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                      <span className="shrink-0 mt-0.5">⚠</span>
+                      <p className="leading-relaxed">
+                        {t.parlayMaxLegsWarning ??
+                          "You've reached the 4-leg limit. This rule is designed to help you manage risk and build consistent trading habits."}
+                      </p>
+                    </div>
+                  )}
+
                   {/* Divider + combined odds for parlay */}
                   {isParlay && (
                     <div className="flex items-center justify-between pt-2 border-t border-border">
@@ -707,7 +725,12 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
                       />
                     </div>
                     {stakeError ? (
-                      <p className="text-xs text-destructive">{stakeError}</p>
+                      <div
+                        className={`flex gap-1.5 rounded-lg px-3 py-2 text-xs ${stakeOverMax ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" : "bg-destructive/10 text-destructive"}`}
+                      >
+                        <span className="shrink-0 mt-0.5">⚠</span>
+                        <p className="leading-relaxed">{stakeError}</p>
+                      </div>
                     ) : (
                       <p className="text-xs text-muted-foreground">
                         {t.stakeHint.replace(

@@ -167,6 +167,9 @@
     "parlayPlaced": "¡Parlay realizado!",
     "parlayMinLegs": "Selecciona al menos 2 selecciones para armar un parlay",
     "parlayMaxLegs": "Máximo 4 selecciones por parlay",
+    "parlayMaxLegsWarning": "Alcanzaste el límite de 4 selecciones. Esta regla está diseñada para ayudarte a gestionar el riesgo y desarrollar hábitos de trading consistentes. ¿Preguntas? support@playfunded.lat",
+    "stakeOverMax": "La apuesta máxima es {max} (5% de tu saldo inicial). Este límite protege tu cuenta de desafío y te ayuda a operar con consistencia. ¿Preguntas? support@playfunded.lat",
+    "stakeBelowMin": "La apuesta mínima es {min} (1% de tu saldo inicial).",
     "sameGameParlay": "Próximamente: los mismos partidos en el mismo parlay",
     "parlayEmpty": "Agrega 2–4 selecciones de distintos partidos",
     "parlayLeg": "Pierna {n}"

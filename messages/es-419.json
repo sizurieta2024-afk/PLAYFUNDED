@@ -503,7 +503,7 @@
   },
   "home": {
     "meta_title": "PlayFunded — Nuestro riesgo, tus ganancias",
-    "meta_description": "La plataforma de trading deportivo para América Latina. Demuestra tu talento, pasa las fases y obtén una cuenta financiada con pagos reales.",
+    "meta_description": "PlayFunded: la primera prop firm de trading deportivo en LATAM. Supera 2 fases de evaluación y obtén una cuenta financiada de hasta $25,000 con hasta 80% de ganancias. Desde $19.99.",
     "badge": "Hecha para América Latina",
     "hero_title_1": "Nuestro",
     "hero_title_highlight": "riesgo",
@@ -578,7 +578,19 @@
     "cta_subtitle_review": "Revisa la estructura del desafío, la disponibilidad por país y las condiciones de pago antes de comprar.",
     "cta_button": "Comenzar",
     "cta_disclaimer": "Las tarifas de entrada no son reembolsables. Los pagos se basan en rendimiento simulado.",
-    "cta_disclaimer_review": "Las tarifas de entrada no son reembolsables. El tiempo, los métodos y la elegibilidad de pagos siguen sujetos a KYC y revisión por país."
+    "cta_disclaimer_review": "Las tarifas de entrada no son reembolsables. El tiempo, los métodos y la elegibilidad de pagos siguen sujetos a KYC y revisión por país.",
+    "faq_heading": "Preguntas frecuentes",
+    "faq_subheading": "Todo lo que necesitas saber sobre PlayFunded",
+    "faq_q1": "¿Qué es PlayFunded?",
+    "faq_a1": "PlayFunded es la primera prop firm de trading deportivo de América Latina. Pagas una tarifa de entrada única (desde $19.99), superas dos fases de evaluación con fondos simulados y obtienes una cuenta financiada real con hasta 80% de reparto de ganancias. Sin riesgo de capital propio.",
+    "faq_q2": "¿Cómo funciona el desafío de dos fases?",
+    "faq_a2": "En la Fase 1 necesitas alcanzar +20% de ganancias con mínimo 15 picks. En la Fase 2 repites el proceso. Al superar ambas fases, recibes una cuenta financiada real. Las reglas de riesgo incluyen un límite de drawdown del 15% y pérdida diaria máxima del 10%.",
+    "faq_q3": "¿Cuánto dinero puedo ganar con PlayFunded?",
+    "faq_a3": "Los traders financiados reciben hasta el 80% de todas las ganancias. Ofrecemos cuentas desde $500 hasta $25,000 en bankroll simulado durante la evaluación. Una vez financiado, operas con capital real de PlayFunded y cobras mensualmente.",
+    "faq_q4": "¿Qué deportes y ligas están disponibles?",
+    "faq_a4": "PlayFunded cubre Fútbol (Liga MX, Premier League, LaLiga, Champions League), Baloncesto (NBA, WNBA), NFL, Tenis y MMA (UFC). Estamos expandiendo continuamente la oferta de ligas y deportes disponibles.",
+    "faq_q5": "¿Es PlayFunded legítimo y seguro?",
+    "faq_a5": "Sí. PlayFunded opera con fondos simulados durante la evaluación, por lo que nunca arriesgas más que tu tarifa de entrada. Somos la alternativa latinoamericana confiable al mercado anglosajón de prop firms deportivos, con reglas transparentes y pagos reales mensuales."
   },
   "howItWorks": {
     "pageTitle": "Cómo funciona PlayFunded",

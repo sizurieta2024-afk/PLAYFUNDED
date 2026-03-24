@@ -503,7 +503,7 @@
   },
   "home": {
     "meta_title": "PlayFunded — We put the risk, you get the wins",
-    "meta_description": "Latin America's sports prop trading platform. Prove your skill across two phases and earn a funded account with real payouts.",
+    "meta_description": "PlayFunded: Latin America's first sports prop trading firm. Pass 2 evaluation phases, earn a funded account up to $25,000 with up to 80% profit split. From $19.99.",
     "badge": "Made for Latin America",
     "hero_title_1": "We put the",
     "hero_title_highlight": "risk",
@@ -578,7 +578,19 @@
     "cta_subtitle_review": "Review the challenge structure, country availability, and payout conditions before you purchase.",
     "cta_button": "Get started",
     "cta_disclaimer": "Entry fees are non-refundable. Payouts are based on simulated performance.",
-    "cta_disclaimer_review": "Entry fees are non-refundable. Payout timing, methods, and eligibility remain subject to KYC and country review."
+    "cta_disclaimer_review": "Entry fees are non-refundable. Payout timing, methods, and eligibility remain subject to KYC and country review.",
+    "faq_heading": "Frequently asked questions",
+    "faq_subheading": "Everything you need to know about PlayFunded",
+    "faq_q1": "What is PlayFunded?",
+    "faq_a1": "PlayFunded is the first sports prop trading firm built for Latin America. You pay a one-time entry fee (from $19.99), complete two evaluation phases using simulated funds, and earn a real funded account with up to 80% profit split. You never risk more than your entry fee.",
+    "faq_q2": "How does the two-phase challenge work?",
+    "faq_a2": "Phase 1 requires you to reach +20% profit with a minimum of 15 picks. Phase 2 repeats the same criteria. Pass both phases and you receive a fully funded trading account. Risk rules include a 15% max drawdown limit and 10% daily loss limit.",
+    "faq_q3": "How much can I earn with PlayFunded?",
+    "faq_a3": "Funded traders keep up to 80% of all profits. We offer accounts from $500 up to $25,000 in simulated bankroll during evaluation. Once funded, you trade with real PlayFunded capital and receive monthly payouts.",
+    "faq_q4": "Which sports and leagues are available?",
+    "faq_a4": "PlayFunded covers Soccer (Liga MX, Premier League, LaLiga, Champions League), Basketball (NBA, WNBA), NFL, Tennis, and MMA (UFC). More leagues and sports are being added continuously.",
+    "faq_q5": "Is PlayFunded legitimate and safe?",
+    "faq_a5": "Yes. PlayFunded uses simulated funds during evaluation, meaning you never risk more than your entry fee. We are the trusted Latin American alternative to English-language prop trading firms, with transparent rules and real monthly payouts."
   },
   "howItWorks": {
     "pageTitle": "How PlayFunded works",

@@ -7,8 +7,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { EVENT_LOCK_MINUTES } from "@/lib/challenge";
+import { getNonFixtureOddsWhere } from "@/lib/fixture-data";
+import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 
 export async function GET(req: NextRequest) {
+  const limit = await enforceRateLimit(req, "odds:events", {
+    windowMs: 60_000,
+    max: 60,
+  });
+  if (!limit.allowed)
+    return rateLimitExceededResponse("Too many requests", limit);
+
   const { searchParams } = new URL(req.url);
   const sport = searchParams.get("sport");
   const league = searchParams.get("league");
@@ -23,12 +32,12 @@ export async function GET(req: NextRequest) {
   endOfTomorrow.setHours(23, 59, 59, 999);
 
   const events = await prisma.oddsCache.findMany({
-    where: {
+    where: getNonFixtureOddsWhere({
       ...(sport ? { sport } : {}),
       ...(league ? { league } : {}),
       isLive: false,
       startTime: { gt: openWindowStart, lte: endOfTomorrow },
-    },
+    }),
     orderBy: { startTime: "asc" },
     take: 100,
     select: {

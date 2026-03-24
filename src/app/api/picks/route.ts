@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
+import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 import { checkStakeCap, checkMinStake, isEventLocked } from "@/lib/challenge";
 import { findMarketOutcome, parseMarkets } from "@/lib/odds/markets";
 import { placePickRequest } from "@/lib/picks/place-service";
@@ -18,6 +19,13 @@ import {
 // ── POST — place a pick ──────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  const limit = await enforceRateLimit(req, "picks:post", {
+    windowMs: 60_000,
+    max: 20,
+  });
+  if (!limit.allowed)
+    return rateLimitExceededResponse("Too many pick requests", limit);
+
   const supabase = await createServerClient();
   const {
     data: { user: authUser },

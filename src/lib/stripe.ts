@@ -48,14 +48,8 @@ function buildStripeCheckoutForm(input: {
   form.set("mode", "payment");
   form.set("customer_email", input.userEmail);
   form.set("line_items[0][price_data][currency]", input.currency);
-  form.set(
-    "line_items[0][price_data][unit_amount]",
-    String(input.unitAmount),
-  );
-  form.set(
-    "line_items[0][price_data][product_data][name]",
-    input.productName,
-  );
+  form.set("line_items[0][price_data][unit_amount]", String(input.unitAmount));
+  form.set("line_items[0][price_data][product_data][name]", input.productName);
   form.set(
     "line_items[0][price_data][product_data][description]",
     input.productDescription,
@@ -191,6 +185,16 @@ export async function createCheckoutSession({
     } catch {
       // Fall back to USD if rate fetch fails
     }
+  }
+
+  // Pass Stripe fee to the user so we always net the full tier price.
+  // Card (LATAM/international): 3.9% + $0.30 fixed → gross up so after fee we net feeInCents.
+  // Pix (BRL): 1.99% flat, no fixed fee.
+  // Formula: grossAmount = ceil((amount + fixedFee) / (1 - pctFee))
+  if (enablePix) {
+    unitAmount = Math.ceil(unitAmount / (1 - 0.0199));
+  } else {
+    unitAmount = Math.ceil((unitAmount + 30) / (1 - 0.039));
   }
 
   const productDescription = (() => {

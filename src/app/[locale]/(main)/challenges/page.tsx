@@ -15,7 +15,16 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "challenges" });
-  return { title: t("pageTitle") };
+  return {
+    title: `${t("pageTitle")} | PlayFunded`,
+    description: t("pageSubtitle"),
+    openGraph: {
+      title: `${t("pageTitle")} | PlayFunded`,
+      description: t("pageSubtitle"),
+      type: "website",
+      url: "https://playfunded.lat/challenges",
+    },
+  };
 }
 
 export default async function ChallengesPage({

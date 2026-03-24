@@ -178,7 +178,9 @@ export default async function AnalyticsPage({
         {tDash("backToDashboard")}
       </Link>
 
-      <h1 className="text-2xl font-bold">{t("pageTitle")}</h1>
+      <h1 className="text-2xl font-display font-bold text-foreground">
+        {t("pageTitle")}
+      </h1>
 
       {/* Summary stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

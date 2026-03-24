@@ -85,14 +85,16 @@ export function ChallengeCard({
         )
       : 100;
 
-  // ── Drawdown bar — uses effectiveBalance so pending bets don't move the bar ──
-  const peak = challenge.peakBalance || challenge.startBalance;
-  const drawdownCents = Math.max(0, peak - effectiveBalance);
-  const drawdownPct = (drawdownCents / peak) * 100;
+  // ── Drawdown bar ──────────────────────────────────────────────────────────
+  // Always measured from startBalance (15% floor from original bankroll).
+  const isFunded = challenge.phase === "funded";
+  const drawdownRef = challenge.startBalance;
+  const drawdownCents = Math.max(0, drawdownRef - effectiveBalance);
+  const drawdownPct = (drawdownCents / drawdownRef) * 100;
   const drawdownBarPct = Math.min(100, Math.round((drawdownPct / 15) * 100));
   const drawdownDisplay = drawdownPct.toFixed(1) + "%";
 
-  // ── Daily loss bar — uses effectiveBalance so pending bets don't move the bar ──
+  // ── Daily loss bar — phases only (funded has no daily loss limit) ──────────
   const daily = challenge.dailyStartBalance || challenge.startBalance;
   const dailyLossCents = Math.max(0, daily - effectiveBalance);
   const dailyLossPct = daily > 0 ? (dailyLossCents / daily) * 100 : 0;
@@ -194,13 +196,15 @@ export function ChallengeCard({
             limitLabel="15%"
             variant="drawdown"
           />
-          <MetricBar
-            label={t.dailyLossLabel}
-            currentPct={dailyBarPct}
-            displayValue={dailyDisplay}
-            limitLabel="10%"
-            variant="daily"
-          />
+          {!isFunded && (
+            <MetricBar
+              label={t.dailyLossLabel}
+              currentPct={dailyBarPct}
+              displayValue={dailyDisplay}
+              limitLabel="10%"
+              variant="daily"
+            />
+          )}
         </div>
 
         {/* Picks progress */}

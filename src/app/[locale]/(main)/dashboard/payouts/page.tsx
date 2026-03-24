@@ -188,7 +188,9 @@ export default async function PayoutsPage({
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">{t("pageTitle")}</h1>
+        <h1 className="text-2xl font-display font-bold text-foreground">
+          {t("pageTitle")}
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">
           {t("pageSubtitle")}
         </p>

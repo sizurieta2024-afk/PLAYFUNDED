@@ -18,14 +18,12 @@ import {
   type SettleStatus,
   type SettlementResult,
 } from "../proof/settlement-rules";
-import { checkPostSettlement as baseCheckPostSettlement } from "../proof/risk-rules";
+import {
+  checkPostSettlement as baseCheckPostSettlement,
+  checkDrawdown as baseCheckDrawdown,
+} from "../proof/risk-rules";
 
-export {
-  gradePick,
-  gradeMoneyline,
-  gradeSpread,
-  gradeTotal,
-};
+export { gradePick, gradeMoneyline, gradeSpread, gradeTotal };
 export type { GameScores, SettleStatus, SettlementResult };
 
 // ── Post-settlement challenge update ─────────────────────────────────────────
@@ -57,8 +55,11 @@ export function buildPostSettlementUpdate(
     peakBalance: balanceUpdate.peakBalance,
   };
 
-  // 3. Risk checks (drawdown + daily loss) on updated balance
-  const violation = baseCheckPostSettlement(updatedChallenge, PLATFORM_POLICY.risk);
+  // 3. Risk checks: funded = drawdown only; phases = drawdown + daily loss
+  const violation =
+    challenge.phase === "funded"
+      ? baseCheckDrawdown(updatedChallenge, PLATFORM_POLICY.risk)
+      : baseCheckPostSettlement(updatedChallenge, PLATFORM_POLICY.risk);
   if (violation) {
     return {
       balanceUpdate,

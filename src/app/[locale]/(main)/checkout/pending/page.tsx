@@ -31,7 +31,7 @@ export default async function CheckoutPendingPage({
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">
+          <h1 className="text-3xl font-display font-bold text-foreground">
             {t("pendingTitle")}
           </h1>
           <p className="text-lg text-yellow-500 font-medium">

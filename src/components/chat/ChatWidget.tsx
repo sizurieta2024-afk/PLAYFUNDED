@@ -8,13 +8,21 @@ interface Message {
   content: string;
 }
 
+interface UserContext {
+  phase?: string;
+  tierName?: string;
+  balance?: number;
+  startBalance?: number;
+  activePicks?: number;
+}
+
 const INITIAL_MESSAGE: Message = {
   role: "assistant",
   content:
     "¡Hola! Soy el asistente de PlayFunded. ¿En qué puedo ayudarte hoy? / Hi! I'm PlayFunded's assistant. How can I help you today?",
 };
 
-export function ChatWidget() {
+export function ChatWidget({ userContext }: { userContext?: UserContext }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [input, setInput] = useState("");
@@ -43,7 +51,7 @@ export function ChatWidget() {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: next }),
+          body: JSON.stringify({ messages: next, userContext }),
         });
         if (!res.ok) throw new Error("Chat unavailable");
         const data = await res.json();

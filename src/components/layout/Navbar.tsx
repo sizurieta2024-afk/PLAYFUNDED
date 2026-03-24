@@ -35,7 +35,7 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
   ] as const;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-black/92 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/92 backdrop-blur-xl">
       <div className="mx-auto max-w-[1200px] px-6 lg:px-16">
         <div className="flex h-14 items-center justify-between gap-4">
           {/* ── Brand ─────────────────────────────────────────────── */}
@@ -67,20 +67,20 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
               <>
                 <Link
                   href="/dashboard"
-                  className="px-4 py-2 rounded text-[13px] font-medium text-muted-foreground border border-white/10 hover:border-pf-brand/30 hover:text-foreground transition-all duration-200"
+                  className="px-4 py-2 rounded text-[13px] font-medium text-muted-foreground border border-border hover:border-pf-brand/30 hover:text-foreground transition-all duration-200"
                 >
                   {t("dashboard")}
                 </Link>
                 <Link
                   href="/challenges"
-                  className="px-5 py-2 rounded bg-pf-pink hover:bg-pf-pink-dark text-white text-[13px] font-semibold transition-colors duration-200"
+                  className="press px-5 py-2 rounded bg-pf-pink hover:bg-pf-pink-dark text-white text-[13px] font-semibold transition-colors duration-200"
                 >
                   {t("buyChallengeNav") ?? "Buy a Challenge"}
                 </Link>
                 <button
                   onClick={handleSignOut}
                   className="flex items-center justify-center w-8 h-8 rounded border border-border text-muted-foreground hover:text-red-400 hover:border-red-500/50 transition-colors"
-                  aria-label="Sign out"
+                  aria-label={t("signout")}
                 >
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
@@ -89,13 +89,13 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
               <>
                 <Link
                   href="/auth/login"
-                  className="px-4 py-2 rounded text-[13px] font-medium text-muted-foreground border border-white/10 hover:border-pf-brand/30 hover:text-foreground transition-all duration-200"
+                  className="px-4 py-2 rounded text-[13px] font-medium text-muted-foreground border border-border hover:border-pf-brand/30 hover:text-foreground transition-all duration-200"
                 >
                   {t("login")}
                 </Link>
                 <Link
                   href="/challenges"
-                  className="px-5 py-2 rounded bg-pf-pink hover:bg-pf-pink-dark text-white text-[13px] font-semibold transition-colors duration-200"
+                  className="press px-5 py-2 rounded bg-pf-pink hover:bg-pf-pink-dark text-white text-[13px] font-semibold transition-colors duration-200"
                 >
                   {t("challenges")}
                 </Link>
@@ -190,7 +190,7 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
                       className="flex items-center gap-2 px-3 py-2.5 rounded text-sm font-medium text-muted-foreground hover:text-red-400 hover:bg-secondary transition-colors"
                     >
                       <LogOut className="w-4 h-4" />
-                      Sign out
+                      {t("signout")}
                     </button>
                   </>
                 ) : (

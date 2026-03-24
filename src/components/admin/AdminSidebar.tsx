@@ -17,6 +17,7 @@ import {
   ShieldAlert,
   ClipboardCheck,
   LogOut,
+  Mail,
 } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -34,6 +35,7 @@ const NAV = [
   { label: "Affiliates", href: "/admin/affiliates", icon: UsersRound },
   { label: "Markets", href: "/admin/markets", icon: ListTodo },
   { label: "Odds Feed", href: "/admin/odds", icon: Radio },
+  { label: "Email Blast", href: "/admin/blast", icon: Mail },
 ];
 
 export function AdminSidebar() {

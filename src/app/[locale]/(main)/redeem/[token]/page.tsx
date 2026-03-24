@@ -47,15 +47,21 @@ export default function RedeemPage({
         {done ? (
           <>
             <div className="text-5xl">🎉</div>
-            <h1 className="text-2xl font-bold text-foreground">{t("claimedTitle")}</h1>
+            <h1 className="text-2xl font-bold text-foreground">
+              {t("claimedTitle")}
+            </h1>
             <p className="text-muted-foreground text-sm">{t("claimedDesc")}</p>
           </>
         ) : (
           <>
             <div className="text-5xl">🎁</div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">{t("pageTitle")}</h1>
-              <p className="text-muted-foreground text-sm mt-1">{t("pageSubtitle")}</p>
+              <h1 className="text-2xl font-bold text-foreground">
+                {t("pageTitle")}
+              </h1>
+              <p className="text-muted-foreground text-sm mt-1">
+                {t("pageSubtitle")}
+              </p>
             </div>
 
             {error && (
@@ -69,7 +75,7 @@ export default function RedeemPage({
             <button
               onClick={handleClaim}
               disabled={pending}
-              className="w-full py-3 rounded-xl bg-pf-brand text-white font-semibold hover:bg-pf-brand/90 transition-colors disabled:opacity-50"
+              className="w-full py-3 rounded-xl bg-pf-pink hover:bg-pf-pink-dark text-white font-semibold transition-colors disabled:opacity-50"
             >
               {pending ? t("claiming") : t("claimButton")}
             </button>

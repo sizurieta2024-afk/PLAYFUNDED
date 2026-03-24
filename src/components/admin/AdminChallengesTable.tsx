@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { overrideChallenge } from "@/app/actions/admin";
+import { overrideChallenge, adjustChallengeBalance } from "@/app/actions/admin";
 
 type ChallengeStatus = "active" | "funded" | "failed" | "passed";
 
@@ -30,6 +30,9 @@ export function AdminChallengesTable({
   const [overrides, setOverrides] = useState<
     Record<string, { status: ChallengeStatus; note: string }>
   >({});
+  const [adjustments, setAdjustments] = useState<
+    Record<string, { delta: string; note: string; msg: string | null }>
+  >({});
   const [pending, startTransition] = useTransition();
 
   function handleOverride(id: string) {
@@ -37,6 +40,20 @@ export function AdminChallengesTable({
     if (!o?.note?.trim()) return;
     startTransition(async () => {
       await overrideChallenge(id, o.status, o.note);
+    });
+  }
+
+  function handleAdjust(id: string) {
+    const a = adjustments[id];
+    if (!a?.note?.trim() || !a.delta) return;
+    const delta = parseFloat(a.delta);
+    if (isNaN(delta) || delta === 0) return;
+    startTransition(async () => {
+      const res = await adjustChallengeBalance(id, delta, a.note);
+      setAdjustments((prev) => ({
+        ...prev,
+        [id]: { delta: "", note: "", msg: res.error ?? "Saved" },
+      }));
     });
   }
 
@@ -54,6 +71,7 @@ export function AdminChallengesTable({
               "P&L",
               "Started",
               "Override",
+              "Adjust Balance",
             ].map((h) => (
               <th
                 key={h}
@@ -74,10 +92,10 @@ export function AdminChallengesTable({
             return (
               <tr key={c.id} className="border-b border-border last:border-0">
                 <td className="px-4 py-3">
-                  <p className="font-medium text-foreground text-xs">
+                  <p className="font-medium text-foreground text-xs truncate max-w-[120px]">
                     {c.user.name ?? "—"}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground truncate max-w-[120px]">
                     {c.user.email}
                   </p>
                 </td>
@@ -145,6 +163,77 @@ export function AdminChallengesTable({
                       Save
                     </button>
                   </div>
+                </td>
+                <td className="px-4 py-3">
+                  {(() => {
+                    const a = adjustments[c.id] ?? {
+                      delta: "",
+                      note: "",
+                      msg: null,
+                    };
+                    return (
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <div className="relative">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                              $
+                            </span>
+                            <input
+                              type="number"
+                              placeholder="±amount"
+                              value={a.delta}
+                              onChange={(e) =>
+                                setAdjustments((prev) => ({
+                                  ...prev,
+                                  [c.id]: {
+                                    ...a,
+                                    delta: e.target.value,
+                                    msg: null,
+                                  },
+                                }))
+                              }
+                              className="text-xs pl-5 pr-2 py-1 rounded-lg border border-border bg-background text-foreground w-20 focus:outline-none"
+                            />
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Reason"
+                            value={a.note}
+                            onChange={(e) =>
+                              setAdjustments((prev) => ({
+                                ...prev,
+                                [c.id]: {
+                                  ...a,
+                                  note: e.target.value,
+                                  msg: null,
+                                },
+                              }))
+                            }
+                            className="text-xs px-2 py-1 rounded-lg border border-border bg-background text-foreground w-20 focus:outline-none"
+                          />
+                          <button
+                            onClick={() => handleAdjust(c.id)}
+                            disabled={
+                              pending ||
+                              !a.note?.trim() ||
+                              !a.delta ||
+                              parseFloat(a.delta) === 0
+                            }
+                            className="text-xs px-2 py-1 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-colors disabled:opacity-40"
+                          >
+                            Apply
+                          </button>
+                        </div>
+                        {a.msg && (
+                          <p
+                            className={`text-xs ${a.msg === "Saved" ? "text-pf-brand" : "text-red-400"}`}
+                          >
+                            {a.msg}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </td>
               </tr>
             );

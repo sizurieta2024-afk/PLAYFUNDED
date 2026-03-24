@@ -56,6 +56,12 @@ export async function generateMetadata({
   return {
     title: `${copy.title} | PlayFunded`,
     description: copy.subtitle,
+    openGraph: {
+      title: `${copy.title} | PlayFunded`,
+      description: copy.subtitle,
+      type: "website",
+      url: "https://playfunded.lat/affiliate",
+    },
   };
 }
 

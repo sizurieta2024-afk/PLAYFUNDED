@@ -28,13 +28,13 @@ export function checkDrawdown(
   policy: Pick<RiskPolicy, "drawdownLimitPct">,
 ): RiskViolation | null {
   const floor = Math.floor(
-    (challenge.highestBalance * (100 - policy.drawdownLimitPct)) / 100,
+    (challenge.startBalance * (100 - policy.drawdownLimitPct)) / 100,
   );
   if (challenge.balance < floor) {
     return {
       rule: "drawdown",
       code: "DRAWDOWN_BREACH",
-      error: `Balance dropped more than ${policy.drawdownLimitPct}% from peak ($${(challenge.highestBalance / 100).toFixed(2)})`,
+      error: `Balance dropped more than ${policy.drawdownLimitPct}% from starting balance ($${(challenge.startBalance / 100).toFixed(2)})`,
     };
   }
   return null;
@@ -44,15 +44,14 @@ export function checkDailyLoss(
   challenge: RiskChallengeSnapshot,
   policy: Pick<RiskPolicy, "dailyLossLimitPct">,
 ): RiskViolation | null {
-  const dailyLimit = Math.floor(
-    (challenge.startBalance * policy.dailyLossLimitPct) / 100,
+  const floor = Math.floor(
+    (challenge.dailyStartBalance * (100 - policy.dailyLossLimitPct)) / 100,
   );
-  const floor = challenge.dailyStartBalance - dailyLimit;
   if (challenge.balance < floor) {
     return {
       rule: "daily_loss",
       code: "DAILY_LOSS_BREACH",
-      error: `Daily loss limit reached (max $${(dailyLimit / 100).toFixed(2)}/day)`,
+      error: `Daily loss limit reached — balance cannot fall below ${100 - policy.dailyLossLimitPct}% of today's starting balance ($${(floor / 100).toFixed(2)})`,
     };
   }
   return null;
@@ -63,7 +62,9 @@ export function checkStakeCap(
   proposedStakeCents: number,
   policy: Pick<RiskPolicy, "maxStakePct">,
 ): RiskViolation | null {
-  const maxStake = Math.floor((challenge.startBalance * policy.maxStakePct) / 100);
+  const maxStake = Math.floor(
+    (challenge.startBalance * policy.maxStakePct) / 100,
+  );
   if (proposedStakeCents > maxStake) {
     return {
       rule: "stake_cap",

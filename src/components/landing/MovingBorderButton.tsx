@@ -32,7 +32,7 @@ export function MovingBorderButton({
       {/* Inner button */}
       <Link
         href={href}
-        className={`relative z-10 inline-flex items-center justify-center gap-2.5 px-10 py-4 rounded-xl bg-[#0a0a0a] hover:bg-[#111111] text-white font-bold text-base transition-colors duration-200 ${className}`}
+        className={`relative z-10 inline-flex items-center justify-center gap-2.5 px-10 py-4 rounded-xl bg-card hover:bg-secondary text-foreground font-bold text-base transition-colors duration-200 ${className}`}
       >
         {children}
       </Link>

@@ -403,4 +403,32 @@
     background: rgba(201, 168, 76, 0.05);
     border-color: rgba(201, 168, 76, 0.25);
   }
+
+  /* ── Link-as-button press feedback ─────────────────────────────────────── */
+  /* Opt-in class for <Link> / <a> elements styled as CTA buttons */
+  .press {
+    transition-property: transform, box-shadow, opacity;
+    transition-duration: 80ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .press:active {
+    transform: scale(0.96);
+    opacity: 0.92;
+  }
+
+  /* ── Button press feedback ───────────────────────────────────────────────── */
+  /* Applies to ALL <button> elements that are not disabled */
+  button:not(:disabled) {
+    transition-property: transform, box-shadow, opacity;
+    transition-duration: 80ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  button:not(:disabled):active {
+    transform: scale(0.96);
+    opacity: 0.92;
+  }
 }

@@ -57,6 +57,12 @@ export async function generateMetadata({
   return {
     title: `${copy.title} | PlayFunded`,
     description: copy.subtitle,
+    openGraph: {
+      title: `${copy.title} | PlayFunded`,
+      description: copy.subtitle,
+      type: "website",
+      url: "https://playfunded.lat/contact",
+    },
   };
 }
 
@@ -72,15 +78,17 @@ export default async function ContactPage({
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-12">
       <div className="rounded-2xl border border-border bg-card p-8 space-y-4">
-        <h1 className="text-3xl font-display font-bold">{copy.title}</h1>
+        <h1 className="text-3xl font-display font-bold font-serif italic">
+          {copy.title}
+        </h1>
         <p className="text-muted-foreground">{copy.subtitle}</p>
         <div className="pt-2">
           <p className="text-sm font-medium">{copy.emailLabel}</p>
           <a
-            href="mailto:support@playfunded.com"
+            href="mailto:support@playfunded.lat"
             className="text-pf-brand hover:underline"
           >
-            support@playfunded.com
+            support@playfunded.lat
           </a>
         </div>
         {discordInviteUrl ? (

@@ -13,37 +13,35 @@ const COPY: Record<
     subtitle: string;
     termsTitle: string;
     termsBody: string;
-      privacyTitle: string;
-      privacyBody: string;
-      rgTitle: string;
-      rgBody: string;
-      availabilityTitle: string;
-      availabilityBlocked: string;
-      availabilityReview: string;
-      methodsTitle: string;
-      payoutWindowLabel: string;
-      purchasesLabel: string;
-      payoutsLabel: string;
-      unavailableLabel: string;
-      cardLabel: string;
-      cryptoLabel: string;
-      bankTransferLabel: string;
-      bitcoinLabel: string;
-      support: string;
-    }
-  > = {
+    privacyTitle: string;
+    privacyBody: string;
+    rgTitle: string;
+    rgBody: string;
+    availabilityTitle: string;
+    availabilityBlocked: string;
+    availabilityReview: string;
+    methodsTitle: string;
+    payoutWindowLabel: string;
+    purchasesLabel: string;
+    payoutsLabel: string;
+    unavailableLabel: string;
+    cardLabel: string;
+    cryptoLabel: string;
+    bankTransferLabel: string;
+    bitcoinLabel: string;
+    support: string;
+  }
+> = {
   "es-419": {
     title: "Legal",
     subtitle: "Términos, privacidad y juego responsable",
     termsTitle: "Términos y condiciones",
-    termsBody:
-      `Al usar PlayFunded aceptas nuestras reglas de evaluación, pagos y uso de la plataforma. Las tarifas de entrada ${PLATFORM_POLICY.commercial.entryFeesRefundable ? "son reembolsables" : "no son reembolsables"}. Todos los pagos a usuarios se liquidan en ${PLATFORM_POLICY.payouts.settlementCurrency}.`,
+    termsBody: `Al usar PlayFunded aceptas nuestras reglas de evaluación, pagos y uso de la plataforma. Las tarifas de entrada ${PLATFORM_POLICY.commercial.entryFeesRefundable ? "son reembolsables" : "no son reembolsables"}. Todos los pagos a usuarios se liquidan en ${PLATFORM_POLICY.payouts.settlementCurrency}.`,
     privacyTitle: "Política de privacidad",
     privacyBody:
       "Tratamos datos de cuenta, actividad y pagos para operar la plataforma, prevenir fraude y cumplir obligaciones legales.",
     rgTitle: "Juego responsable",
-    rgBody:
-      `Ofrecemos autoexclusión temporal o permanente y límites de depósito semanal desde el panel de configuración. Las apuestas en vivo no están permitidas y los picks se bloquean ${PLATFORM_POLICY.trading.eventLockMinutes} minutos antes del inicio del evento.`,
+    rgBody: `Ofrecemos autoexclusión temporal o permanente y límites de depósito semanal desde el panel de configuración. Las apuestas en vivo no están permitidas y los picks se bloquean ${PLATFORM_POLICY.trading.eventLockMinutes} minutos antes del inicio del evento.`,
     availabilityTitle: "Disponibilidad por país",
     availabilityBlocked:
       "PlayFunded no está disponible en tu país en este momento.",
@@ -58,20 +56,18 @@ const COPY: Record<
     cryptoLabel: "Cripto",
     bankTransferLabel: "Transferencia bancaria",
     bitcoinLabel: "Bitcoin",
-    support: "Soporte: support@playfunded.com",
+    support: "Soporte: support@playfunded.lat",
   },
   en: {
     title: "Legal",
     subtitle: "Terms, privacy and responsible gambling",
     termsTitle: "Terms and conditions",
-    termsBody:
-      `By using PlayFunded, you agree to our evaluation, payout and platform usage rules. Entry fees are ${PLATFORM_POLICY.commercial.entryFeesRefundable ? "refundable" : "non-refundable"}. All user payouts are settled in ${PLATFORM_POLICY.payouts.settlementCurrency}.`,
+    termsBody: `By using PlayFunded, you agree to our evaluation, payout and platform usage rules. Entry fees are ${PLATFORM_POLICY.commercial.entryFeesRefundable ? "refundable" : "non-refundable"}. All user payouts are settled in ${PLATFORM_POLICY.payouts.settlementCurrency}.`,
     privacyTitle: "Privacy policy",
     privacyBody:
       "We process account, activity and payment data to operate the platform, prevent fraud and comply with legal obligations.",
     rgTitle: "Responsible gambling",
-    rgBody:
-      `We provide temporary or permanent self-exclusion and weekly deposit limits in account settings. Live betting is not permitted and picks lock ${PLATFORM_POLICY.trading.eventLockMinutes} minutes before event start.`,
+    rgBody: `We provide temporary or permanent self-exclusion and weekly deposit limits in account settings. Live betting is not permitted and picks lock ${PLATFORM_POLICY.trading.eventLockMinutes} minutes before event start.`,
     availabilityTitle: "Country availability",
     availabilityBlocked:
       "PlayFunded is not available in your country right now.",
@@ -86,20 +82,18 @@ const COPY: Record<
     cryptoLabel: "Crypto",
     bankTransferLabel: "Bank transfer",
     bitcoinLabel: "Bitcoin",
-    support: "Support: support@playfunded.com",
+    support: "Support: support@playfunded.lat",
   },
   "pt-BR": {
     title: "Legal",
     subtitle: "Termos, privacidade e jogo responsável",
     termsTitle: "Termos e condições",
-    termsBody:
-      `Ao usar a PlayFunded você aceita nossas regras de avaliação, pagamentos e uso da plataforma. As taxas de entrada ${PLATFORM_POLICY.commercial.entryFeesRefundable ? "são reembolsáveis" : "não são reembolsáveis"}. Todos os pagamentos aos usuários são liquidados em ${PLATFORM_POLICY.payouts.settlementCurrency}.`,
+    termsBody: `Ao usar a PlayFunded você aceita nossas regras de avaliação, pagamentos e uso da plataforma. As taxas de entrada ${PLATFORM_POLICY.commercial.entryFeesRefundable ? "são reembolsáveis" : "não são reembolsáveis"}. Todos os pagamentos aos usuários são liquidados em ${PLATFORM_POLICY.payouts.settlementCurrency}.`,
     privacyTitle: "Política de privacidade",
     privacyBody:
       "Tratamos dados de conta, atividade e pagamentos para operar a plataforma, prevenir fraude e cumprir obrigações legais.",
     rgTitle: "Jogo responsável",
-    rgBody:
-      `Oferecemos autoexclusão temporária ou permanente e limites semanais de depósito nas configurações da conta. Apostas ao vivo não são permitidas e os picks fecham ${PLATFORM_POLICY.trading.eventLockMinutes} minutos antes do início do evento.`,
+    rgBody: `Oferecemos autoexclusão temporária ou permanente e limites semanais de depósito nas configurações da conta. Apostas ao vivo não são permitidas e os picks fecham ${PLATFORM_POLICY.trading.eventLockMinutes} minutos antes do início do evento.`,
     availabilityTitle: "Disponibilidade por país",
     availabilityBlocked:
       "A PlayFunded não está disponível no seu país no momento.",
@@ -114,7 +108,7 @@ const COPY: Record<
     cryptoLabel: "Cripto",
     bankTransferLabel: "Transferência bancária",
     bitcoinLabel: "Bitcoin",
-    support: "Suporte: support@playfunded.com",
+    support: "Suporte: support@playfunded.lat",
   },
 };
 
@@ -135,6 +129,12 @@ export async function generateMetadata({
   return {
     title: `${copy.title} | PlayFunded`,
     description: copy.subtitle,
+    openGraph: {
+      title: `${copy.title} | PlayFunded`,
+      description: copy.subtitle,
+      type: "website",
+      url: "https://playfunded.lat/legal",
+    },
   };
 }
 
@@ -171,27 +171,37 @@ export default async function LegalPage({
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-12 space-y-8">
       <header className="space-y-2">
-        <h1 className="text-3xl font-bold">{copy.title}</h1>
+        <h1 className="text-3xl font-display font-bold font-serif italic">
+          {copy.title}
+        </h1>
         <p className="text-muted-foreground">{copy.subtitle}</p>
       </header>
 
       <section className="rounded-xl border border-border bg-card p-6 space-y-2">
-        <h2 className="text-lg font-semibold">{copy.termsTitle}</h2>
+        <h2 className="text-lg font-display font-bold font-semibold">
+          {copy.termsTitle}
+        </h2>
         <p className="text-sm text-muted-foreground">{copy.termsBody}</p>
       </section>
 
       <section className="rounded-xl border border-border bg-card p-6 space-y-2">
-        <h2 className="text-lg font-semibold">{copy.privacyTitle}</h2>
+        <h2 className="text-lg font-display font-bold font-semibold">
+          {copy.privacyTitle}
+        </h2>
         <p className="text-sm text-muted-foreground">{copy.privacyBody}</p>
       </section>
 
       <section className="rounded-xl border border-border bg-card p-6 space-y-2">
-        <h2 className="text-lg font-semibold">{copy.rgTitle}</h2>
+        <h2 className="text-lg font-display font-bold font-semibold">
+          {copy.rgTitle}
+        </h2>
         <p className="text-sm text-muted-foreground">{copy.rgBody}</p>
       </section>
 
       <section className="rounded-xl border border-border bg-card p-6 space-y-3">
-        <h2 className="text-lg font-semibold">{copy.availabilityTitle}</h2>
+        <h2 className="text-lg font-display font-bold font-semibold">
+          {copy.availabilityTitle}
+        </h2>
         <p className="text-sm text-muted-foreground">
           {policy.marketStatus === "blocked"
             ? copy.availabilityBlocked
@@ -202,7 +212,9 @@ export default async function LegalPage({
             {copy.payoutWindowLabel}: {getPayoutWindowLabel()}
           </p>
         )}
-        <p className="text-sm font-medium text-foreground">{copy.methodsTitle}</p>
+        <p className="text-sm font-medium text-foreground">
+          {copy.methodsTitle}
+        </p>
         <div className="grid gap-3 sm:grid-cols-2 text-sm text-muted-foreground">
           <div>
             <p className="font-medium text-foreground">{copy.purchasesLabel}</p>

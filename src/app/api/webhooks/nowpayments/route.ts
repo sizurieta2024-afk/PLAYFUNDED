@@ -5,6 +5,7 @@ import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 import { recordOpsEvent } from "@/lib/ops-events";
 import { fulfillNowPaymentsPayment } from "@/lib/payments/nowpayments-fulfillment";
 import { attributeAffiliatePurchase } from "@/lib/affiliate/attribution";
+import { sendEmail, challengePurchasedEmail } from "@/lib/email";
 
 // NOWPayments IPN: fires on every status change.
 // We only act on "finished" (fully confirmed) payments.
@@ -92,7 +93,8 @@ export async function POST(request: NextRequest) {
     discountCode: pendingPayment?.discountCode ?? null,
     discountAmount: pendingPayment?.discountAmount ?? 0,
     discountPct: pendingPayment?.discountPct ?? 0,
-    listPriceAmount: pendingPayment?.listPriceAmount ?? Math.round(data.price_amount * 100),
+    listPriceAmount:
+      pendingPayment?.listPriceAmount ?? Math.round(data.price_amount * 100),
   });
 
   if (outcome.status === "duplicate") {
@@ -137,6 +139,26 @@ export async function POST(request: NextRequest) {
     }).catch((error) =>
       console.error("[NOWPayments webhook] affiliate attribution error", error),
     );
+
+    // Send challenge purchased confirmation email
+    void prisma.user
+      .findUnique({
+        where: { id: userId },
+        select: { email: true, name: true },
+      })
+      .then((buyer) => {
+        if (!buyer) return;
+        const { subject, html } = challengePurchasedEmail(
+          buyer.name,
+          tier.name,
+          tier.fundedBankroll,
+          tier.minPicks,
+        );
+        return sendEmail(buyer.email, subject, html);
+      })
+      .catch((err) =>
+        console.error("[NOWPayments webhook] purchase email error", err),
+      );
   }
 
   return NextResponse.json({ ok: true });

@@ -18,7 +18,9 @@ export function checkDrawdown(challenge: Challenge) {
   return baseCheckDrawdown(challenge, PLATFORM_POLICY.risk);
 }
 
+// Funded accounts have no daily loss limit — only drawdown applies.
 export function checkDailyLoss(challenge: Challenge) {
+  if (challenge.phase === "funded") return null;
   return baseCheckDailyLoss(challenge, PLATFORM_POLICY.risk);
 }
 
@@ -36,6 +38,10 @@ export function checkMinStake(
   return baseCheckMinStake(challenge, proposedStakeCents, PLATFORM_POLICY.risk);
 }
 
+// For funded accounts, only check drawdown. For phases, check both.
 export function checkPostSettlement(challenge: Challenge) {
+  if (challenge.phase === "funded") {
+    return baseCheckDrawdown(challenge, PLATFORM_POLICY.risk);
+  }
   return baseCheckPostSettlement(challenge, PLATFORM_POLICY.risk);
 }

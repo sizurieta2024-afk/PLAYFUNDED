@@ -13,7 +13,16 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "howItWorks" });
-  return { title: t("pageTitle"), description: t("pageSubtitle") };
+  return {
+    title: `${t("pageTitle")} | PlayFunded`,
+    description: t("pageSubtitle"),
+    openGraph: {
+      title: `${t("pageTitle")} | PlayFunded`,
+      description: t("pageSubtitle"),
+      type: "website",
+      url: "https://playfunded.lat/how-it-works",
+    },
+  };
 }
 
 export default async function HowItWorksPage({
@@ -33,24 +42,27 @@ export default async function HowItWorksPage({
 
   const phases = [
     {
+      num: "01",
       phase: "Phase 1",
       target: "+20%",
-      color: "text-blue-400",
-      bg: "bg-blue-500/10 border-blue-500/20",
+      targetLabel: t("phase1_target_label"),
+      accent: "pf-brand" as const,
       key: "phase1",
     },
     {
+      num: "02",
       phase: "Phase 2",
       target: "+20%",
-      color: "text-purple-400",
-      bg: "bg-purple-500/10 border-purple-500/20",
+      targetLabel: t("phase2_target_label"),
+      accent: "pf-brand" as const,
       key: "phase2",
     },
     {
+      num: "03",
       phase: t("funded"),
       target: "70–80%",
-      color: "text-pf-brand",
-      bg: "bg-pf-brand/10 border-pf-brand/20",
+      targetLabel: t("funded_split_label"),
+      accent: "pf-pink" as const,
       key: "funded",
     },
   ] as const;
@@ -74,30 +86,82 @@ export default async function HowItWorksPage({
             ? t("pageSubtitle")
             : t("pageSubtitleReview")}
         </p>
-        {policy.requiresReviewNotice && (
-          <p className="text-sm text-amber-500 max-w-2xl mx-auto">
-            {t("countryPolicyReview")}
-          </p>
-        )}
       </div>
 
       {/* Phase journey */}
-      <section className="space-y-4">
-        <h2 className="font-display font-bold text-xl font-semibold">
+      <section className="space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-6 h-px bg-pf-brand flex-shrink-0" />
+          <span className="font-mono text-[10px] text-pf-brand uppercase tracking-[0.15em]">
+            {t("journey_eyebrow")}
+          </span>
+        </div>
+        <h2 className="font-display font-bold text-2xl sm:text-3xl text-foreground">
           {t("journey_title")}
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {phases.map(({ phase, target, color, bg, key }) => (
-            <div key={key} className={`rounded-xl border p-6 space-y-2 ${bg}`}>
-              <p className={`font-bold text-lg ${color}`}>{phase}</p>
-              <p className={`text-3xl font-extrabold ${color}`}>{target}</p>
-              <p className="text-sm text-muted-foreground">
-                {key === "funded" && !hasExactCommercialTerms
-                  ? t("funded_desc_review")
-                  : t(`${key}_desc` as Parameters<typeof t>[0])}
-              </p>
-            </div>
-          ))}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-border rounded-2xl overflow-hidden">
+          {phases.map(
+            ({ num, phase, target, targetLabel, accent, key }, idx) => {
+              const isLast = idx === phases.length - 1;
+              const accentText =
+                accent === "pf-pink" ? "text-pf-pink" : "text-pf-brand";
+              const accentBorder =
+                accent === "pf-pink"
+                  ? "border-pf-pink/20"
+                  : "border-pf-brand/20";
+              const accentBg =
+                accent === "pf-pink"
+                  ? "bg-pf-pink/[0.04]"
+                  : "bg-pf-brand/[0.04]";
+              const accentDot =
+                accent === "pf-pink" ? "bg-pf-pink" : "bg-pf-brand";
+              return (
+                <div
+                  key={key}
+                  className={`relative bg-card p-7 flex flex-col gap-4 ${isLast ? "border-t md:border-t-0 md:border-l border-border" : ""}`}
+                >
+                  {/* Step number */}
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`font-mono text-[11px] font-bold uppercase tracking-[0.15em] ${accentText}`}
+                    >
+                      {num}
+                    </span>
+                    <div className={`w-1.5 h-1.5 rounded-full ${accentDot}`} />
+                  </div>
+
+                  {/* Phase name */}
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-mono">
+                      {phase}
+                    </p>
+                    {/* Big metric */}
+                    <p
+                      className={`font-serif italic text-[2.8rem] leading-none font-normal ${accentText}`}
+                    >
+                      {target}
+                    </p>
+                    <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.1em] mt-1">
+                      {targetLabel}
+                    </p>
+                  </div>
+
+                  {/* Divider */}
+                  <div
+                    className={`h-px ${accentBg} border-t ${accentBorder}`}
+                  />
+
+                  {/* Description */}
+                  <p className="text-sm text-muted-foreground leading-relaxed flex-1">
+                    {key === "funded" && !hasExactCommercialTerms
+                      ? t("funded_desc_review")
+                      : t(`${key}_desc` as Parameters<typeof t>[0])}
+                  </p>
+                </div>
+              );
+            },
+          )}
         </div>
       </section>
 
@@ -137,12 +201,10 @@ export default async function HowItWorksPage({
             : t("payout_desc_review")}
         </p>
         <ul className="space-y-2">
-          {[
-            "payout_kyc",
-            "payout_methods",
-            "payout_timing",
-            "payout_split",
-          ].map((k) => (
+          {(hasExactCommercialTerms
+            ? ["payout_kyc", "payout_methods", "payout_timing", "payout_split"]
+            : ["payout_kyc", "payout_methods"]
+          ).map((k) => (
             <li
               key={k}
               className="flex items-start gap-2 text-sm text-muted-foreground"
@@ -150,22 +212,11 @@ export default async function HowItWorksPage({
               <span className="text-pf-brand mt-0.5">✓</span>
               {k === "payout_methods" && !policy.marketing.showProcessorNames
                 ? t("payout_methods_review")
-                : k === "payout_timing"
-                  ? t(
-                      hasExactCommercialTerms
-                        ? "payout_timing"
-                        : "payout_timing_review",
-                      {
-                        payoutWindow: getPayoutWindowLabel(),
-                      },
-                    )
-                  : k === "payout_split" && !hasExactCommercialTerms
-                    ? t("payout_split_review")
-                    : t(k as Parameters<typeof t>[0], {
-                        payoutWindow: getPayoutWindowLabel(),
-                        drawdownPct: PLATFORM_POLICY.risk.drawdownLimitPct,
-                        dailyLossPct: PLATFORM_POLICY.risk.dailyLossLimitPct,
-                      })}
+                : t(k as Parameters<typeof t>[0], {
+                    payoutWindow: getPayoutWindowLabel(),
+                    drawdownPct: PLATFORM_POLICY.risk.drawdownLimitPct,
+                    dailyLossPct: PLATFORM_POLICY.risk.dailyLossLimitPct,
+                  })}
             </li>
           ))}
         </ul>

@@ -176,7 +176,7 @@ export function PayoutsClient({
         pending_exists: t.pendingExists,
         window_closed:
           t.windowClosed ??
-          "Payouts are only available on the 1st–3rd of each month.",
+          "Payouts are only available on the 1st–5th of each month.",
         below_minimum: t.belowMinimum ?? "Minimum payout is $10.",
         exceeds_profit: t.exceedsProfit ?? "Amount exceeds available profit.",
         method_unavailable:
@@ -323,7 +323,7 @@ export function PayoutsClient({
         <p className="text-muted-foreground">{t.noPayout}</p>
         <Link
           href="/challenges"
-          className="inline-block px-6 py-2.5 rounded-lg bg-pf-brand text-white text-sm font-semibold hover:bg-pf-brand/90 transition-colors"
+          className="inline-block px-6 py-2.5 rounded-lg bg-pf-pink text-white text-sm font-semibold hover:bg-pf-pink-dark transition-colors"
         >
           {t.buyChallenge}
         </Link>
@@ -344,7 +344,7 @@ export function PayoutsClient({
         <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
         <p className="text-sm text-muted-foreground">
           {t.windowNotice ??
-            "Payouts are available on the 1st–3rd of each month."}
+            "Payouts are available on the 1st–5th of each month."}
         </p>
       </div>
 
@@ -568,7 +568,9 @@ export function PayoutsClient({
 
       {/* Payout history */}
       <div>
-        <h2 className="text-base font-semibold mb-4">{t.history}</h2>
+        <h2 className="text-base font-display font-bold text-foreground mb-4">
+          {t.history}
+        </h2>
         {pastPayouts.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t.noPastPayouts}</p>
         ) : (

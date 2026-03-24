@@ -3,7 +3,6 @@
 // A beam of light that continuously travels around the border of its parent.
 // Parent must have: position:relative, overflow:hidden, border-radius set.
 interface BorderBeamProps {
-  size?: number; // px length of the beam trail
   duration?: number; // seconds per full orbit
   colorFrom?: string;
   colorTo?: string;
@@ -11,7 +10,6 @@ interface BorderBeamProps {
 }
 
 export function BorderBeam({
-  size = 120,
   duration = 4,
   colorFrom = "rgba(255,45,120,0)",
   colorTo = "#ff2d78",

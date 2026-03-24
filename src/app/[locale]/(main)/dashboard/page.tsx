@@ -169,7 +169,7 @@ export default async function DashboardPage({
               accent: "text-foreground",
             },
             {
-              label: "P&L Total",
+              label: t("pnl"),
               value: formatCents(Math.abs(totalPnlCents)),
               sub: `${totalPnlCents >= 0 ? "+" : "-"}${Math.abs(Number(totalPnlPct))}%`,
               accent: totalPnlCents >= 0 ? "text-pf-brand" : "text-red-400",
@@ -177,15 +177,15 @@ export default async function DashboardPage({
             {
               label: t("picks"),
               value: `${recentPicks.length}`,
-              sub: "recientes",
+              sub: t("recent"),
               accent: "text-foreground",
             },
             {
-              label: "Win Rate",
+              label: t("winRate"),
               value: winRate === "—" ? "—" : `${winRate}%`,
               sub:
                 settledRecent.length > 0
-                  ? `${settledRecent.length} picks`
+                  ? `${settledRecent.length} ${t("picks")}`
                   : null,
               accent:
                 winRate !== "—" && Number(winRate) >= 50
@@ -294,23 +294,23 @@ export default async function DashboardPage({
               href="/dashboard/picks"
               className="text-[11px] text-pf-brand hover:text-pf-brand-dark font-semibold transition-colors"
             >
-              Ver todos →
+              {t("viewAll")} →
             </Link>
           </div>
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             {/* Table header */}
             <div className="hidden sm:grid grid-cols-[1fr_80px_70px_70px] gap-2 px-4 py-2 border-b border-border bg-muted/30">
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Selección
+                {t("selection")}
               </span>
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">
-                Cuota
+                {t("odds")}
               </span>
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">
-                Stake
+                {t("stake")}
               </span>
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">
-                Estado
+                {t("status")}
               </span>
             </div>
             {recentPicks.map((pick, i) => (

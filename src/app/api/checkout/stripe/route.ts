@@ -3,10 +3,7 @@ import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { createCheckoutSession } from "@/lib/stripe";
 import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
-import {
-  resolveCountry,
-  type CheckoutMethod,
-} from "@/lib/country-policy";
+import { resolveCountry, type CheckoutMethod } from "@/lib/country-policy";
 import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
 import { recordOpsEvent } from "@/lib/ops-events";
 import { PLATFORM_POLICY } from "@/lib/platform-policy";
@@ -59,7 +56,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { tierId, locale, isGift, giftRecipientEmail, country, discountCode } = body;
+  const { tierId, locale, isGift, giftRecipientEmail, country, discountCode } =
+    body;
   const paymentMethod: CheckoutMethod = body.paymentMethod ?? "card";
   const headerCountry = resolveCountry(
     req.headers.get("x-vercel-ip-country"),
@@ -80,9 +78,6 @@ export async function POST(req: NextRequest) {
       id: true,
       email: true,
       country: true,
-      selfExcludedUntil: true,
-      isPermExcluded: true,
-      weeklyDepositLimit: true,
     },
   });
 
@@ -91,39 +86,6 @@ export async function POST(req: NextRequest) {
       { error: "User not found", code: "USER_NOT_FOUND" },
       { status: 404 },
     );
-  }
-
-  if (user.isPermExcluded) {
-    return NextResponse.json(
-      { error: "Account permanently excluded", code: "PERM_EXCLUDED" },
-      { status: 403 },
-    );
-  }
-
-  if (user.selfExcludedUntil && user.selfExcludedUntil > new Date()) {
-    return NextResponse.json(
-      { error: "Account is self-excluded", code: "SELF_EXCLUDED" },
-      { status: 403 },
-    );
-  }
-
-  if (user.weeklyDepositLimit !== null) {
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const weeklySpend = await prisma.payment.aggregate({
-      where: {
-        userId: user.id,
-        status: "completed",
-        createdAt: { gte: weekAgo },
-      },
-      _sum: { amount: true },
-    });
-    if ((weeklySpend._sum.amount ?? 0) + tier.fee > user.weeklyDepositLimit) {
-      return NextResponse.json(
-        { error: "Weekly deposit limit exceeded", code: "DEPOSIT_LIMIT" },
-        { status: 403 },
-      );
-    }
   }
 
   if (isGift && paymentMethod !== "card") {
@@ -137,12 +99,17 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const checkoutCountry = resolveCountry(country, headerCountry, user.country);
+    const checkoutCountry = resolveCountry(
+      country,
+      headerCountry,
+      user.country,
+    );
     const policy = await getResolvedCountryPolicy(checkoutCountry);
     if (!policy.challengePurchasesEnabled) {
       return NextResponse.json(
         {
-          error: "Challenge purchases are not available in your country right now.",
+          error:
+            "Challenge purchases are not available in your country right now.",
           code: "COUNTRY_NOT_AVAILABLE",
         },
         { status: 403 },
@@ -152,7 +119,8 @@ export async function POST(req: NextRequest) {
     if (!policy.checkoutMethods.includes(paymentMethod)) {
       return NextResponse.json(
         {
-          error: "This payment method is not available in your country right now.",
+          error:
+            "This payment method is not available in your country right now.",
           code: "PAYMENT_METHOD_UNAVAILABLE",
         },
         { status: 403 },

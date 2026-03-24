@@ -365,19 +365,19 @@ export default async function HomePage({
                   {/* Card header */}
                   <div className="flex items-center justify-between mb-5">
                     <span className="font-mono text-[10px] text-pf-brand uppercase tracking-[0.1em]">
-                      Elite Account
+                      {t("mock_tier")}
                     </span>
                     <div className="flex items-center gap-1.5">
                       <span className="w-[5px] h-[5px] rounded-full bg-pf-brand" />
                       <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.08em]">
-                        Active
+                        {t("mock_status")}
                       </span>
                     </div>
                   </div>
 
                   {/* Balance */}
                   <p className="font-mono text-[9px] text-muted-foreground uppercase tracking-[0.08em] mb-1">
-                    Current Balance
+                    {t("mock_balance_label")}
                   </p>
                   <p className="font-serif italic text-[2.2rem] text-pf-pink leading-none mb-4">
                     $10,247.50
@@ -427,7 +427,7 @@ export default async function HomePage({
                   {/* Progress */}
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-mono text-[9px] text-muted-foreground uppercase tracking-[0.08em]">
-                      Challenge Progress
+                      {t("mock_progress_label")}
                     </span>
                     <span className="font-mono text-[9px] text-muted-foreground">
                       72%
@@ -441,12 +441,17 @@ export default async function HomePage({
 
                   {/* Picks */}
                   <p className="font-mono text-[9px] text-pf-brand uppercase tracking-[0.1em] mb-3">
-                    Recent Picks
+                    {t("mock_picks_label")}
                   </p>
                   <table className="w-full text-left mb-4">
                     <thead>
                       <tr>
-                        {["Pick", "Odds", "Stake", "P&L"].map((h) => (
+                        {[
+                          t("mock_col_pick"),
+                          t("mock_col_odds"),
+                          t("mock_col_stake"),
+                          t("mock_col_pnl"),
+                        ].map((h) => (
                           <th
                             key={h}
                             className="font-mono text-[9px] text-muted-foreground uppercase tracking-[0.06em] pb-2 pr-2 font-normal"
@@ -504,10 +509,10 @@ export default async function HomePage({
 
                   {/* Payout CTA */}
                   <button className="w-full border border-pf-pink/25 text-pf-pink font-semibold text-[12px] uppercase tracking-[0.08em] py-3 rounded hover:bg-pf-pink/[0.08] transition-colors mb-2.5">
-                    Request Payout →
+                    {t("mock_cta_payout")}
                   </button>
                   <p className="font-mono text-[9px] text-center text-muted-foreground">
-                    48h avg processing · No hidden fees
+                    {t("mock_disclaimer")}
                   </p>
                 </div>
               </div>
@@ -876,7 +881,7 @@ export default async function HomePage({
                       <div className="h-full w-[72%] bg-gradient-to-r from-pf-brand/60 to-pf-brand rounded-full" />
                     </div>
                     <span className="font-mono text-[10px] text-pf-brand">
-                      72% funded
+                      72% {t("feature_funded_pct")}
                     </span>
                   </div>
                 </div>
@@ -899,7 +904,7 @@ export default async function HomePage({
                       80%
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      max split
+                      {t("feature_max_split")}
                     </span>
                   </div>
                 </div>
@@ -946,10 +951,10 @@ export default async function HomePage({
                   </div>
                   <div className="flex justify-between mt-1">
                     <span className="font-mono text-[9px] text-pf-brand uppercase tracking-wider">
-                      Phase 1 ✓
+                      {t("feature_phase1_done")}
                     </span>
                     <span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider">
-                      Phase 2
+                      {t("feature_phase2")}
                     </span>
                   </div>
                 </div>

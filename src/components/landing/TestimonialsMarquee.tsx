@@ -86,7 +86,7 @@ const TESTIMONIALS: Testimonial[] = [
 
 function TestimonialCard({ t }: { t: Testimonial }) {
   return (
-    <div className="flex-shrink-0 w-[300px] mx-3 p-5 rounded-2xl border border-white/[0.06] bg-gradient-to-b from-white/[0.04] to-transparent backdrop-blur-sm hover:border-pf-brand/20 transition-colors duration-300">
+    <div className="flex-shrink-0 w-[300px] mx-3 p-5 rounded-2xl border border-border bg-card backdrop-blur-sm hover:border-pf-brand/20 transition-colors duration-300">
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2.5">

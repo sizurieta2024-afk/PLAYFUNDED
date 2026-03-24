@@ -209,12 +209,14 @@ export default async function ChallengeDetailPage({
       : 100;
 
   // ── Drawdown ──────────────────────────────────────────────────────────────
-  const peak = challenge.peakBalance || challenge.startBalance;
-  const drawdownCents = Math.max(0, peak - effectiveBalance);
-  const drawdownPct = (drawdownCents / peak) * 100;
+  // Always measured from startBalance.
+  const isFunded = challenge.phase === "funded";
+  const drawdownRef = challenge.startBalance;
+  const drawdownCents = Math.max(0, drawdownRef - effectiveBalance);
+  const drawdownPct = (drawdownCents / drawdownRef) * 100;
   const drawdownBarPct = Math.min(100, Math.round((drawdownPct / 15) * 100));
 
-  // ── Daily loss ────────────────────────────────────────────────────────────
+  // ── Daily loss — phases only (funded has no daily loss limit) ─────────────
   const daily = challenge.dailyStartBalance || challenge.startBalance;
   const dailyLossCents = Math.max(0, daily - effectiveBalance);
   const dailyLossPct = daily > 0 ? (dailyLossCents / daily) * 100 : 0;
@@ -424,13 +426,15 @@ export default async function ChallengeDetailPage({
           limitLabel="15%"
           variant="drawdown"
         />
-        <MetricBar
-          label={t("dailyLossLabel")}
-          currentPct={dailyBarPct}
-          displayValue={dailyLossPct.toFixed(1) + "%"}
-          limitLabel="10%"
-          variant="daily"
-        />
+        {!isFunded && (
+          <MetricBar
+            label={t("dailyLossLabel")}
+            currentPct={dailyBarPct}
+            displayValue={dailyLossPct.toFixed(1) + "%"}
+            limitLabel="10%"
+            variant="daily"
+          />
+        )}
       </div>
 
       {/* ── Balance history chart ────────────────────────────────────────── */}

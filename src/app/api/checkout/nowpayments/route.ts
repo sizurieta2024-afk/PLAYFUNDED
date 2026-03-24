@@ -74,9 +74,6 @@ export async function POST(request: NextRequest) {
         email: true,
         country: true,
         isBanned: true,
-        isPermExcluded: true,
-        selfExcludedUntil: true,
-        weeklyDepositLimit: true,
       },
     }),
   ]);
@@ -95,36 +92,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (user.isBanned || user.isPermExcluded) {
+  if (user.isBanned) {
     return NextResponse.json(
       { error: "Account restricted", code: "ACCOUNT_RESTRICTED" },
-      { status: 403 },
-    );
-  }
-
-  if (user.selfExcludedUntil && user.selfExcludedUntil > new Date()) {
-    return NextResponse.json(
-      { error: "Account is self-excluded", code: "SELF_EXCLUDED" },
-      { status: 403 },
-    );
-  }
-
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const weeklySpend = await prisma.payment.aggregate({
-    where: {
-      userId: user.id,
-      status: "completed",
-      createdAt: { gte: weekAgo },
-    },
-    _sum: { amount: true },
-  });
-
-  if (
-    (weeklySpend._sum.amount ?? 0) + tier.fee >
-    (user.weeklyDepositLimit ?? Infinity)
-  ) {
-    return NextResponse.json(
-      { error: "Weekly deposit limit reached", code: "DEPOSIT_LIMIT_EXCEEDED" },
       { status: 403 },
     );
   }
@@ -140,7 +110,8 @@ export async function POST(request: NextRequest) {
     if (!policy.challengePurchasesEnabled) {
       return NextResponse.json(
         {
-          error: "Challenge purchases are not available in your country right now.",
+          error:
+            "Challenge purchases are not available in your country right now.",
           code: "COUNTRY_NOT_AVAILABLE",
         },
         { status: 403 },

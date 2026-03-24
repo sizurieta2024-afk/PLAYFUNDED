@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
-import { createServerClient } from "@/lib/supabase";
-import { FollowButton } from "@/components/community/FollowButton";
+import { getNonFixtureChallengeWhere } from "@/lib/fixture-data";
 
 export default async function TraderProfilePage({
   params,
@@ -12,15 +11,14 @@ export default async function TraderProfilePage({
   const { id } = await params;
   const t = await getTranslations("leaderboard");
 
-  const challenge = await prisma.challenge.findUnique({
-    where: { id, status: "funded" },
+  const challenge = await prisma.challenge.findFirst({
+    where: getNonFixtureChallengeWhere({ id, status: "funded" }),
     include: {
       user: {
         select: {
           id: true,
           name: true,
           avatar: true,
-          followers: { select: { followerId: true } },
         },
       },
       tier: {
@@ -45,29 +43,6 @@ export default async function TraderProfilePage({
 
   if (!challenge) notFound();
 
-  const supabase = await createServerClient();
-  const {
-    data: { user: authUser },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  let currentUserId: string | null = null;
-  let isFollowing = false;
-  let isSelf = false;
-
-  if (!authError && authUser) {
-    const me = await prisma.user.findFirst({
-      where: { supabaseId: authUser.id },
-      select: { id: true },
-    });
-    currentUserId = me?.id ?? null;
-    isSelf = currentUserId === challenge.user.id;
-    isFollowing = challenge.user.followers.some(
-      (f) => f.followerId === currentUserId,
-    );
-  }
-
-  const followerCount = challenge.user.followers.length;
   const pnl = challenge.balance - challenge.tier.fundedBankroll;
   const pnlPct = (pnl / challenge.tier.fundedBankroll) * 100;
   const settled = challenge.picks.filter(
@@ -109,18 +84,6 @@ export default async function TraderProfilePage({
             </p>
           </div>
         </div>
-        {!isSelf && currentUserId && (
-          <FollowButton
-            traderId={challenge.user.id}
-            isFollowing={isFollowing}
-            followerCount={followerCount}
-          />
-        )}
-        {!currentUserId && (
-          <span className="text-xs text-muted-foreground">
-            {followerCount} followers
-          </span>
-        )}
       </div>
 
       {/* Stats */}

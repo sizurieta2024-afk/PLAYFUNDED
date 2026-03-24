@@ -11,12 +11,13 @@ export const PLATFORM_POLICY = {
   trading: {
     liveBettingAllowed: false,
     eventLockMinutes: 5,
+    maxParlayLegs: 4,
   },
   payouts: {
     minimumCents: 1000,
     settlementCurrency: "USD",
     requestWindowStartDayUtc: 1,
-    requestWindowEndDayUtc: 3,
+    requestWindowEndDayUtc: 5,
   },
   commercial: {
     entryFeesRefundable: false,
@@ -38,4 +39,3 @@ export function isPayoutWindowOpen(now = new Date()): boolean {
 export function getPayoutWindowLabel(): string {
   return `${PLATFORM_POLICY.payouts.requestWindowStartDayUtc}-${PLATFORM_POLICY.payouts.requestWindowEndDayUtc} UTC`;
 }
-

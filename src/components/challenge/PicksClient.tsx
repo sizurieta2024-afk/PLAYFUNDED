@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, X, Zap } from "lucide-react";
 import { EVENT_LOCK_MINUTES } from "@/lib/challenge/event-lock";
+import { PLATFORM_POLICY } from "@/lib/platform-policy";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -315,8 +316,8 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
       return;
     }
 
-    // Max 4 legs
-    if (legs.length >= 4) {
+    // Max legs per parlay
+    if (legs.length >= PLATFORM_POLICY.trading.maxParlayLegs) {
       setSubmitError(t.parlayMaxLegs);
       return;
     }
@@ -676,7 +677,7 @@ export function PicksClient({ challenge, initialPicks, t }: Props) {
                   </div>
 
                   {/* Max legs inline warning */}
-                  {legs.length === 4 && (
+                  {legs.length === PLATFORM_POLICY.trading.maxParlayLegs && (
                     <div className="flex gap-1.5 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
                       <span className="shrink-0 mt-0.5">⚠</span>
                       <p className="leading-relaxed">

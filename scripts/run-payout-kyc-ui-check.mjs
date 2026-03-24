@@ -143,7 +143,7 @@ async function expectBlockedState(browser, email, password) {
   try {
     const page = await context.newPage();
     await page.goto(`${baseUrl}/en/dashboard/payouts`, { waitUntil: "domcontentloaded" });
-    await page.getByText("Identity verification required").waitFor({
+    await page.getByText("Identity verification required").first().waitFor({
       state: "visible",
       timeout: 15000,
     });
@@ -179,7 +179,7 @@ async function expectEligibleState(browser, email, password) {
   try {
     const page = await context.newPage();
     await page.goto(`${baseUrl}/en/dashboard/payouts`, { waitUntil: "domcontentloaded" });
-    await page.getByText("Identity verification required").waitFor({
+    await page.getByText("Identity verification required").first().waitFor({
       state: "visible",
       timeout: 15000,
     });

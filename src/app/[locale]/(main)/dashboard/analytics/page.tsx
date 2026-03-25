@@ -167,6 +167,14 @@ export default async function AnalyticsPage({
     market_moneyline: t("market_moneyline"),
     market_spread: t("market_spread"),
     market_total: t("market_total"),
+    profit: t("profit"),
+  };
+
+  const winRateLabels = {
+    won: t("won"),
+    lost: t("lost"),
+    push: t("push"),
+    winRate: t("winRate"),
   };
 
   return (
@@ -206,13 +214,21 @@ export default async function AnalyticsPage({
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
             {t("bySport")}
           </h2>
-          <WinRateChart data={winRateBySport} noDataLabel={t("noData")} />
+          <WinRateChart
+            data={winRateBySport}
+            noDataLabel={t("noData")}
+            labels={winRateLabels}
+          />
         </div>
         <div className="rounded-xl border border-border bg-card p-5">
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
             {t("byMarket")}
           </h2>
-          <WinRateChart data={winRateByMarket} noDataLabel={t("noData")} />
+          <WinRateChart
+            data={winRateByMarket}
+            noDataLabel={t("noData")}
+            labels={winRateLabels}
+          />
         </div>
       </div>
 

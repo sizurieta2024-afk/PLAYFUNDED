@@ -305,6 +305,14 @@ export default async function ChallengeDetailPage({
     market_moneyline: tAnalytics("market_moneyline"),
     market_spread: tAnalytics("market_spread"),
     market_total: tAnalytics("market_total"),
+    profit: tAnalytics("profit"),
+  };
+
+  const winRateLabels = {
+    won: tAnalytics("won"),
+    lost: tAnalytics("lost"),
+    push: tAnalytics("push"),
+    winRate: tAnalytics("winRate"),
   };
 
   const daysActive = Math.floor(
@@ -459,6 +467,7 @@ export default async function ChallengeDetailPage({
           <WinRateChart
             data={winRateBySport}
             noDataLabel={tAnalytics("noData")}
+            labels={winRateLabels}
           />
         </div>
         <div className="rounded-xl border border-border bg-card p-5">
@@ -468,6 +477,7 @@ export default async function ChallengeDetailPage({
           <WinRateChart
             data={winRateByMarket}
             noDataLabel={tAnalytics("noData")}
+            labels={winRateLabels}
           />
         </div>
       </div>

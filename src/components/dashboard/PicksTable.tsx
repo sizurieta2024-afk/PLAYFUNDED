@@ -112,8 +112,8 @@ export function PicksTable({ picks, t }: PicksTableProps) {
                 </p>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground tabular-nums">
-                    {pick.odds.toFixed(2)} odds · {formatCents(pick.stake)}{" "}
-                    stake
+                    {pick.odds.toFixed(2)} {t.odds ?? "odds"} ·{" "}
+                    {formatCents(pick.stake)} {t.stake ?? "stake"}
                   </span>
                   <span className="text-muted-foreground tabular-nums">
                     {formatDate(pick.placedAt)}
@@ -121,7 +121,8 @@ export function PicksTable({ picks, t }: PicksTableProps) {
                 </div>
                 {pick.status === "won" && (
                   <p className="text-xs text-pf-brand font-medium tabular-nums">
-                    +{formatCents(pick.actualPayout - pick.stake)} profit
+                    +{formatCents(pick.actualPayout - pick.stake)}{" "}
+                    {t.profit ?? "profit"}
                   </p>
                 )}
               </div>

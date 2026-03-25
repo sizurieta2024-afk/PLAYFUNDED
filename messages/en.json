@@ -288,7 +288,8 @@
     "sport_tennis": "Tennis",
     "market_moneyline": "Moneyline",
     "market_spread": "Spread",
-    "market_total": "Total"
+    "market_total": "Total",
+    "profit": "Profit"
   },
   "payouts": {
     "pageTitle": "Payouts",

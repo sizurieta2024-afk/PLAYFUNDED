@@ -19,9 +19,17 @@ export interface WinRateEntry {
   push: number;
 }
 
+interface WinRateLabels {
+  won: string;
+  lost: string;
+  push: string;
+  winRate: string;
+}
+
 interface WinRateChartProps {
   data: WinRateEntry[];
   noDataLabel: string;
+  labels?: WinRateLabels;
 }
 
 interface TooltipPayload {
@@ -34,12 +42,20 @@ interface CustomTooltipProps {
   active?: boolean;
   payload?: TooltipPayload[];
   label?: string;
+  wonName?: string;
+  winRateLabel?: string;
 }
 
-function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
+function CustomTooltip({
+  active,
+  payload,
+  label,
+  wonName = "Won",
+  winRateLabel = "Win rate",
+}: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
   const total = payload.reduce((s, p) => s + p.value, 0);
-  const won = payload.find((p) => p.name === "Won")?.value ?? 0;
+  const won = payload.find((p) => p.name === wonName)?.value ?? 0;
   const winRate = total > 0 ? Math.round((won / total) * 100) : 0;
   return (
     <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-lg space-y-1">
@@ -49,12 +65,18 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
           {p.name}: {p.value}
         </p>
       ))}
-      <p className="text-muted-foreground">Win rate: {winRate}%</p>
+      <p className="text-muted-foreground">
+        {winRateLabel}: {winRate}%
+      </p>
     </div>
   );
 }
 
-export function WinRateChart({ data, noDataLabel }: WinRateChartProps) {
+export function WinRateChart({ data, noDataLabel, labels }: WinRateChartProps) {
+  const wonName = labels?.won ?? "Won";
+  const lostName = labels?.lost ?? "Lost";
+  const pushName = labels?.push ?? "Push";
+  const winRateLabel = labels?.winRate ?? "Win rate";
   const hasData = data.some((d) => d.won + d.lost > 0);
 
   if (!hasData) {
@@ -86,23 +108,27 @@ export function WinRateChart({ data, noDataLabel }: WinRateChartProps) {
           allowDecimals={false}
           width={24}
         />
-        <Tooltip content={<CustomTooltip />} />
+        <Tooltip
+          content={
+            <CustomTooltip wonName={wonName} winRateLabel={winRateLabel} />
+          }
+        />
         <Legend
           iconType="square"
           iconSize={8}
           wrapperStyle={{ fontSize: 10, color: "#64748b" }}
         />
-        <Bar dataKey="won" name="Won" stackId="a" radius={[0, 0, 0, 0]}>
+        <Bar dataKey="won" name={wonName} stackId="a" radius={[0, 0, 0, 0]}>
           {data.map((_, i) => (
-            <Cell key={`won-${i}`} fill="#2d6a4f" />
+            <Cell key={`won-${i}`} fill="#c9a84c" />
           ))}
         </Bar>
-        <Bar dataKey="lost" name="Lost" stackId="a" radius={[3, 3, 0, 0]}>
+        <Bar dataKey="lost" name={lostName} stackId="a" radius={[3, 3, 0, 0]}>
           {data.map((_, i) => (
             <Cell key={`lost-${i}`} fill="#ef4444" />
           ))}
         </Bar>
-        <Bar dataKey="push" name="Push" stackId="a" radius={[3, 3, 0, 0]}>
+        <Bar dataKey="push" name={pushName} stackId="a" radius={[3, 3, 0, 0]}>
           {data.map((_, i) => (
             <Cell key={`push-${i}`} fill="#64748b" />
           ))}

@@ -288,7 +288,8 @@
     "sport_tennis": "Tênis",
     "market_moneyline": "Vencedor",
     "market_spread": "Handicap",
-    "market_total": "Total"
+    "market_total": "Total",
+    "profit": "Lucro"
   },
   "payouts": {
     "pageTitle": "Pagamentos",

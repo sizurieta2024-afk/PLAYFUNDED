@@ -288,7 +288,8 @@
     "sport_tennis": "Tenis",
     "market_moneyline": "Ganador",
     "market_spread": "Hándicap",
-    "market_total": "Total"
+    "market_total": "Total",
+    "profit": "Ganancia"
   },
   "payouts": {
     "pageTitle": "Pagos",

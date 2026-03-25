@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient as createSsrClient } from "@supabase/ssr";
-import { prisma } from "@/lib/prisma";
-import { sendEmail, welcomeEmail } from "@/lib/email";
 import { ALLOWED_FORWARDED_HOSTS } from "@/lib/allowed-hosts";
+import { PENDING_VERIFICATION_COOKIE } from "@/lib/auth-verification";
+import { syncAppUserFromAuthUser } from "@/lib/auth-user-sync";
+
+function loginPathForNext(next: string) {
+  const [, maybeLocale] = next.split("/");
+  if (maybeLocale === "en" || maybeLocale === "pt-BR") {
+    return `/${maybeLocale}/auth/login`;
+  }
+  return "/auth/login";
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -17,7 +25,7 @@ export async function GET(request: NextRequest) {
       : "/en/dashboard";
 
   if (!code) {
-    const fallbackTarget = `${origin}/auth/login?redirectTo=${encodeURIComponent(next)}`;
+    const fallbackTarget = `${origin}${loginPathForNext(next)}?redirectTo=${encodeURIComponent(next)}`;
     const html = `<!doctype html>
 <html lang="en">
   <head>
@@ -59,6 +67,12 @@ export async function GET(request: NextRequest) {
     : origin;
 
   const response = NextResponse.redirect(`${redirectBase}${next}`);
+  response.cookies.set({
+    name: PENDING_VERIFICATION_COOKIE,
+    value: "",
+    path: "/",
+    maxAge: 0,
+  });
 
   // Create Supabase client that writes cookies directly to the response
   const supabase = createSsrClient(
@@ -81,7 +95,9 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data.session) {
-    return NextResponse.redirect(`${origin}/auth/login?error=auth_failed`);
+    return NextResponse.redirect(
+      `${origin}${loginPathForNext(next)}?error=auth_failed`,
+    );
   }
 
   const { user } = data.session;
@@ -89,46 +105,7 @@ export async function GET(request: NextRequest) {
   // Sync user to Postgres — fire-and-forget style so it never blocks the auth
   try {
     const refCode = request.cookies.get("pf_ref")?.value ?? null;
-
-    const existingUser = await prisma.user.findUnique({
-      where: { supabaseId: user.id },
-      select: { id: true },
-    });
-    const isNewUser = !existingUser;
-
-    const upsertedUser = await prisma.user.upsert({
-      where: { supabaseId: user.id },
-      create: {
-        supabaseId: user.id,
-        email: user.email!,
-        name:
-          (user.user_metadata?.full_name as string | undefined) ??
-          (user.user_metadata?.name as string | undefined) ??
-          null,
-        avatar:
-          (user.user_metadata?.avatar_url as string | undefined) ??
-          (user.user_metadata?.picture as string | undefined) ??
-          null,
-        referredByCode: refCode,
-      },
-      update: {
-        email: user.email!,
-        name:
-          (user.user_metadata?.full_name as string | undefined) ??
-          (user.user_metadata?.name as string | undefined) ??
-          undefined,
-        avatar:
-          (user.user_metadata?.avatar_url as string | undefined) ??
-          (user.user_metadata?.picture as string | undefined) ??
-          undefined,
-        ...(isNewUser && refCode ? { referredByCode: refCode } : {}),
-      },
-    });
-
-    if (isNewUser && user.email) {
-      const { subject, html } = welcomeEmail(upsertedUser.name);
-      void sendEmail(user.email, subject, html);
-    }
+    await syncAppUserFromAuthUser(user, refCode);
   } catch (err) {
     console.error("[auth/callback] DB sync error:", err);
   }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckCircle, Clock, XCircle } from "lucide-react";
+import { Clock, XCircle } from "lucide-react";
 import { submitAffiliateApplication } from "@/app/actions/affiliate";
 
 interface Application {
@@ -10,8 +10,6 @@ interface Application {
   reviewNote: string | null;
   createdAt: Date | string;
 }
-
-const AUDIENCE_SIZES = ["under_1k", "1k_5k", "5k_20k", "20k_plus"] as const;
 
 export function AffiliateApplyClient({
   application,
@@ -35,7 +33,12 @@ export function AffiliateApplyClient({
     instagram: "",
     twitter: "",
     youtube: "",
-    audienceSize: "" as (typeof AUDIENCE_SIZES)[number] | "",
+    audienceSize: "" as
+      | "under_1k"
+      | "1k_5k"
+      | "5k_20k"
+      | "20k_plus"
+      | "",
     website: "",
   });
 
@@ -62,8 +65,7 @@ export function AffiliateApplyClient({
         instagram: form.instagram || undefined,
         twitter: form.twitter || undefined,
         youtube: form.youtube || undefined,
-        audienceSize:
-          (form.audienceSize as (typeof AUDIENCE_SIZES)[number]) || undefined,
+        audienceSize: form.audienceSize || undefined,
         website: form.website || undefined,
       });
       if (res.error) {

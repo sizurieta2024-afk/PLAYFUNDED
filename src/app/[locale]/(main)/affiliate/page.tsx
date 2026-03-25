@@ -1,50 +1,8 @@
-import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-
-type LocaleKey = "es-419" | "en" | "pt-BR";
-
-const COPY: Record<
-  LocaleKey,
-  {
-    title: string;
-    subtitle: string;
-    p1: string;
-    p2: string;
-    review: string;
-  }
-> = {
-  "es-419": {
-    title: "Programa de Afiliados",
-    subtitle: "Gana comisiones por referir nuevos traders",
-    p1: "Comparte tu enlace y recibe comisión por conversiones válidas.",
-    p2: "Los afiliados activos pueden escalar su comisión según desempeño.",
-    review:
-      "La inscripción de afiliados permanece desactivada hasta completar aprobaciones legales, de procesador y de copy para tu mercado.",
-  },
-  en: {
-    title: "Affiliate Program",
-    subtitle: "Earn commissions by referring new traders",
-    p1: "Share your referral link and earn commission on valid conversions.",
-    p2: "Active affiliates can unlock higher commission rates based on performance.",
-    review:
-      "Affiliate enrollment stays disabled until legal, processor, and copy approvals are complete for your market.",
-  },
-  "pt-BR": {
-    title: "Programa de Afiliados",
-    subtitle: "Ganhe comissão ao indicar novos traders",
-    p1: "Compartilhe seu link e ganhe comissão por conversões válidas.",
-    p2: "Afiliados ativos podem aumentar a comissão de acordo com desempenho.",
-    review:
-      "O cadastro de afiliados permanece desativado ate concluir as aprovacoes juridicas, de processador e de copy para o seu mercado.",
-  },
-};
-
-function getCopy(locale: string) {
-  if (locale === "en" || locale === "pt-BR" || locale === "es-419") {
-    return COPY[locale];
-  }
-  return COPY["es-419"];
-}
+import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
+import { createServerClient } from "@/lib/supabase";
+import { prisma } from "@/lib/prisma";
 
 export async function generateMetadata({
   params,
@@ -52,13 +10,14 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const copy = getCopy(locale);
+  const t = await getTranslations({ locale, namespace: "affiliate" });
+
   return {
-    title: `${copy.title} | PlayFunded`,
-    description: copy.subtitle,
+    title: `${t("publicTitle")} | PlayFunded`,
+    description: t("publicSubtitle"),
     openGraph: {
-      title: `${copy.title} | PlayFunded`,
-      description: copy.subtitle,
+      title: `${t("publicTitle")} | PlayFunded`,
+      description: t("publicSubtitle"),
       type: "website",
       url: "https://playfunded.lat/affiliate",
     },
@@ -70,6 +29,118 @@ export default async function AffiliatePage({
 }: {
   params: Promise<{ locale: string }>;
 }) {
-  await params;
-  redirect("/");
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "affiliate" });
+
+  const supabase = await createServerClient();
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.getUser();
+
+  let affiliateStatus: "approved" | "pending" | "available" = "available";
+
+  if (authUser) {
+    const dbUser = await prisma.user.findUnique({
+      where: { supabaseId: authUser.id },
+      select: {
+        affiliate: { select: { id: true } },
+        affiliateApplications: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { status: true },
+        },
+      },
+    });
+
+    if (dbUser?.affiliate) {
+      affiliateStatus = "approved";
+    } else if (dbUser?.affiliateApplications[0]?.status === "pending") {
+      affiliateStatus = "pending";
+    }
+  }
+
+  const primaryHref =
+    authUser ? "/dashboard/affiliate" : "/auth/signup";
+  const primaryLabel = !authUser
+    ? t("publicSignedOutCta")
+    : affiliateStatus === "approved"
+      ? t("publicApprovedCta")
+      : affiliateStatus === "pending"
+        ? t("publicPendingCta")
+        : t("publicSignedInCta");
+
+  return (
+    <div className="mx-auto max-w-5xl px-4 sm:px-6 py-12 space-y-10">
+      <section className="rounded-3xl border border-border bg-card/60 p-8 sm:p-10">
+        <div className="max-w-3xl space-y-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-pf-brand">
+            PlayFunded
+          </p>
+          <h1 className="font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+            {t("publicTitle")}
+          </h1>
+          <p className="max-w-2xl text-base text-muted-foreground sm:text-lg">
+            {t("publicSubtitle")}
+          </p>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            {t("publicReviewNote")}
+          </p>
+        </div>
+
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <Link
+            href={primaryHref}
+            className="inline-flex items-center justify-center rounded-xl bg-pf-pink px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-pf-pink-dark"
+          >
+            {primaryLabel}
+          </Link>
+          {!authUser ? (
+            <Link
+              href="/auth/login"
+              className="inline-flex items-center justify-center rounded-xl border border-border px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
+            >
+              {t("publicSecondaryCta")}
+            </Link>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-3">
+        {[
+          {
+            title: t("publicBenefitOneTitle"),
+            description: t("publicBenefitOneDesc"),
+          },
+          {
+            title: t("publicBenefitTwoTitle"),
+            description: t("publicBenefitTwoDesc"),
+          },
+          {
+            title: t("publicBenefitThreeTitle"),
+            description: t("publicBenefitThreeDesc"),
+          },
+        ].map((item) => (
+          <div
+            key={item.title}
+            className="rounded-2xl border border-border bg-card p-6 space-y-2"
+          >
+            <h2 className="text-lg font-semibold text-foreground">{item.title}</h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {item.description}
+            </p>
+          </div>
+        ))}
+      </section>
+
+      <section className="rounded-2xl border border-border bg-card p-6 space-y-3">
+        <h2 className="text-lg font-semibold text-foreground">
+          {t("applyTitle")}
+        </h2>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          {t("applyDesc")}
+        </p>
+        <p className="text-sm text-muted-foreground">{t("publicStatusNote")}</p>
+      </section>
+    </div>
+  );
 }

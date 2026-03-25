@@ -1,28 +1,12 @@
 name: Codex Autofix
 
-# Triggered by our /api/webhooks/sentry endpoint via repository_dispatch
-# when Sentry detects a new production error.
-#
-# Flow:
-#   1. Sentry error → /api/webhooks/sentry → GitHub repository_dispatch
-#   2. This workflow runs Codex with full error context
-#   3. Codex modifies files to fix the error
-#   4. A PR is opened targeting `dev`
-#   5. CI runs on the PR (lint, build, proofs)
-#   6. If all checks pass, the PR auto-merges
-#   7. Vercel deploys the merged code automatically
-#
-# Required GitHub secrets:
-#   OPENAI_API_KEY  — for Codex CLI
-#
-# Required repo settings (one-time, manual):
-#   Settings → General → Pull Requests → Allow auto-merge ✓
-#   Settings → Branches → dev branch protection → require status checks:
-#     gitleaks, lint-build, proofs
-
 on:
   repository_dispatch:
     types: [sentry-error]
+
+concurrency:
+  group: codex-autofix-${{ github.event.client_payload.issue_id || github.run_id }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -32,16 +16,38 @@ jobs:
   autofix:
     name: Codex autofix
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+    env:
+      PRISMA_DISABLE_WARNINGS: "true"
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+      NOWPAYMENTS_API_KEY: ${{ secrets.NOWPAYMENTS_API_KEY }}
+      NOWPAYMENTS_IPN_SECRET: ${{ secrets.NOWPAYMENTS_IPN_SECRET }}
+      ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+      API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+      NEXT_PUBLIC_APP_URL: http://localhost:3004
+      SUPPORT_EMAIL: ${{ secrets.SUPPORT_EMAIL }}
+      PF_BASE_URL: http://localhost:3004
+      PF_CRON_SECRET: ${{ secrets.CRON_SECRET }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout dev
+        uses: actions/checkout@v5
         with:
+          ref: dev
           fetch-depth: 0
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
@@ -52,12 +58,12 @@ jobs:
       - name: Install dependencies
         run: |
           set -o pipefail
-          npm ci 2>&1 | awk '!/The configuration property `package.json#prisma`/ && !/The Prisma config file in prisma.config.ts overrides/'
+          npm ci 2>&1 | awk '!/The configuration property `package.json#prisma`/ && !/The Prisma config file in prisma.config.ts overrides the deprecated `package.json#prisma` property in package.json\./ && !/For more information, see: https:\/\/pris.ly\/prisma-config/'
 
       - name: Generate Prisma client
         run: |
           set -o pipefail
-          npx prisma generate 2>&1 | awk '!/The configuration property `package.json#prisma`/ && !/The Prisma config file in prisma.config.ts overrides/'
+          npx prisma generate 2>&1 | awk '!/The configuration property `package.json#prisma`/ && !/The Prisma config file in prisma.config.ts overrides the deprecated `package.json#prisma` property in package.json\./ && !/For more information, see: https:\/\/pris.ly\/prisma-config/'
 
       - name: Run Codex autofix
         env:
@@ -67,22 +73,172 @@ jobs:
 
           Error: ${{ github.event.client_payload.error_title }}
           Location: ${{ github.event.client_payload.culprit }}
+          Environment: ${{ github.event.client_payload.environment }}
           Sentry issue: ${{ github.event.client_payload.issue_url }}
 
           Stack trace:
           ${{ github.event.client_payload.stack_trace }}
 
           Rules:
-          - Only fix the root cause — do not refactor unrelated code
-          - Keep all TypeScript types strict (no any)
-          - Do not change API contracts, Prisma schema, or i18n keys
+          - Only fix the root cause
+          - Keep diffs minimal and launch-safe
+          - Do not refactor unrelated code
+          - Keep TypeScript strict
           - Do not add new dependencies
-          - Monetary values are always integer cents"
+          - Monetary values are integer cents
+          - If the error is operational noise or not safely auto-fixable, leave no code changes"
 
-          npx @openai/codex --model o4-mini --full-auto "$PROMPT"
+          npx @openai/codex exec --model o4-mini --full-auto "$PROMPT"
 
-      - name: Create Pull Request
+      - name: Detect changed files
+        id: diff
+        run: |
+          git diff --name-only --diff-filter=ACMRT > /tmp/codex-autofix-files.txt
+          if [ ! -s /tmp/codex-autofix-files.txt ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          printf 'changed_files<<EOF\n%s\nEOF\n' "$(cat /tmp/codex-autofix-files.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Classify diff risk
+        id: risk
+        if: steps.diff.outputs.has_changes == 'true'
+        run: |
+          node scripts/classify-codex-autofix-risk.mjs $(tr '\n' ' ' < /tmp/codex-autofix-files.txt) > /tmp/codex-risk.json
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('/tmp/codex-risk.json', 'utf8'));
+          process.stdout.write(`low_risk=${result.lowRisk}\n`);
+          process.stdout.write(`risk_level=${result.riskLevel}\n`);
+          process.stdout.write(`reason=${result.reason.replace(/\n/g, ' ')}\n`);
+          process.stdout.write(`sensitive_files=${result.sensitiveFiles.join(',')}\n`);
+          process.stdout.write(`review_files=${result.reviewFiles.join(',')}\n`);
+          NODE
+
+      - name: Prepare AI review schema
+        if: steps.diff.outputs.has_changes == 'true'
+        run: |
+          cat > /tmp/codex-review-schema.json <<'JSON'
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["approved", "summary", "findings"],
+            "properties": {
+              "approved": { "type": "boolean" },
+              "summary": { "type": "string" },
+              "findings": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+          JSON
+
+      - name: Run AI review
+        id: review
+        if: steps.diff.outputs.has_changes == 'true'
+        continue-on-error: true
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          npx @openai/codex exec \
+            --model o4-mini \
+            --sandbox read-only \
+            -a never \
+            --output-schema /tmp/codex-review-schema.json \
+            -o /tmp/codex-review-result.json \
+            "Review the current git diff against the checked-out dev branch. Do not modify files. Approve only if the diff looks safe to ship automatically with no material risk. Be conservative around auth, payments, admin, security, workflows, environment config, and server logic."
+
+      - name: Summarize AI review
+        id: review_summary
+        if: steps.diff.outputs.has_changes == 'true'
+        run: |
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs = require('fs');
+          const fallback = {
+            approved: false,
+            summary: 'AI review did not complete cleanly, so manual review is required.',
+            findings: ['AI review failed or returned no usable output.'],
+          };
+          let result = fallback;
+          try {
+            result = JSON.parse(fs.readFileSync('/tmp/codex-review-result.json', 'utf8'));
+          } catch {}
+          process.stdout.write(`approved=${result.approved}\n`);
+          process.stdout.write(`summary=${String(result.summary).replace(/\n/g, ' ')}\n`);
+          process.stdout.write(`findings=${result.findings.join(' | ').replace(/\n/g, ' ')}\n`);
+          NODE
+
+      - name: Run trusted validation
+        id: validate
+        if: steps.diff.outputs.has_changes == 'true'
+        run: |
+          status=pass
+          summary_file=/tmp/codex-validation-summary.txt
+          : > "$summary_file"
+
+          run_check() {
+            local name="$1"
+            shift
+            if "$@"; then
+              echo "- ${name}: passed" >> "$summary_file"
+            else
+              status=fail
+              echo "- ${name}: failed" >> "$summary_file"
+            fi
+          }
+
+          run_check "lint" npm run lint
+          run_check "build" npm run build
+          run_check "proof:hardening" npm run proof:hardening
+          run_check "validate:proof" npm run validate:proof
+
+          git restore docs/security/proof-based-validation-report.md 2>/dev/null || true
+
+          missing_secrets=0
+          for key in DATABASE_URL DIRECT_URL NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY CRON_SECRET; do
+            if [ -z "${!key}" ]; then
+              missing_secrets=1
+            fi
+          done
+
+          if [ "$status" = "pass" ] && [ "$missing_secrets" -eq 0 ]; then
+            if npx playwright install --with-deps chromium; then
+              echo "- playwright install: passed" >> "$summary_file"
+            else
+              status=fail
+              echo "- playwright install: failed" >> "$summary_file"
+            fi
+
+            if [ "$status" = "pass" ]; then
+              PORT=3004 npm start > /tmp/playfunded-autofix.log 2>&1 &
+
+              if ! timeout 120 bash -c 'until curl -fsS http://localhost:3004/en >/dev/null; do sleep 2; done'; then
+                status=fail
+                echo "- app startup: failed" >> "$summary_file"
+                cat /tmp/playfunded-autofix.log
+              else
+                echo "- app startup: passed" >> "$summary_file"
+                run_check "admin smoke" env BASE_URL=http://localhost:3004 node scripts/run-admin-smoke.mjs
+                run_check "payout/KYC smoke" env BASE_URL=http://localhost:3004 node scripts/run-payout-kyc-ui-check.mjs
+                run_check "admin support smoke" env BASE_URL=http://localhost:3004 node scripts/run-admin-support-smoke.mjs
+              fi
+            fi
+          elif [ "$missing_secrets" -eq 1 ]; then
+            status=fail
+            echo "- trusted smoke subset: blocked because required secrets are missing" >> "$summary_file"
+          else
+            echo "- trusted smoke subset: skipped because an earlier validation failed" >> "$summary_file"
+          fi
+
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          printf 'summary<<EOF\n%s\nEOF\n' "$(cat "$summary_file")" >> "$GITHUB_OUTPUT"
+
+      - name: Create pull request
         id: cpr
+        if: steps.diff.outputs.has_changes == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -91,36 +247,62 @@ jobs:
           commit-message: "fix: codex autofix for sentry issue ${{ github.event.client_payload.issue_id }}"
           title: "🤖 Codex: ${{ github.event.client_payload.error_title }}"
           body: |
-            ## Automated fix by Codex
+            ## Automated Sentry autofix
 
             | Field | Value |
             |-------|-------|
             | **Sentry issue** | ${{ github.event.client_payload.issue_url }} |
             | **Error** | `${{ github.event.client_payload.error_title }}` |
             | **Location** | `${{ github.event.client_payload.culprit }}` |
+            | **Environment** | `${{ github.event.client_payload.environment }}` |
+            | **Risk classification** | `${{ steps.risk.outputs.risk_level }}` |
 
-            **Stack trace:**
+            **Changed files**
             ```
-            ${{ github.event.client_payload.stack_trace }}
+            ${{ steps.diff.outputs.changed_files }}
             ```
 
-            ---
-            This PR was automatically generated by OpenAI Codex.
-            It will auto-merge once `gitleaks`, `lint-build`, and `proofs` pass.
-            Vercel will deploy a preview immediately and production after merge.
+            **AI review**
+            - Approved: `${{ steps.review_summary.outputs.approved }}`
+            - Summary: ${{ steps.review_summary.outputs.summary }}
+            - Findings: ${{ steps.review_summary.outputs.findings }}
+
+            **Trusted validation**
+            ${{ steps.validate.outputs.summary }}
+
+            **Why auto-merge may be blocked**
+            - Risk classifier: ${{ steps.risk.outputs.reason }}
+            - Auto-merge requires low-risk diff, AI approval, and a fully passing trusted validation run.
           labels: |
             codex-autofix
             automated
           delete-branch: true
 
       - name: No changes detected
-        if: steps.cpr.outputs.pull-request-number == ''
+        if: steps.diff.outputs.has_changes != 'true'
         run: |
-          echo "Codex made no file changes — the error may require manual investigation."
+          echo "Codex made no file changes — this issue likely needs manual investigation."
           echo "Sentry issue: ${{ github.event.client_payload.issue_url }}"
 
-      - name: Enable auto-merge
-        if: steps.cpr.outputs.pull-request-number != ''
-        run: gh pr merge --auto --squash "${{ steps.cpr.outputs.pull-request-number }}"
+      - name: Add manual review labels
+        if: steps.cpr.outputs.pull-request-number != '' && (steps.risk.outputs.low_risk != 'true' || steps.review_summary.outputs.approved != 'true' || steps.validate.outputs.status != 'pass')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit "${{ steps.cpr.outputs.pull-request-number }}" --add-label manual-review-required
+          if [ "${{ steps.risk.outputs.low_risk }}" != "true" ]; then
+            gh pr edit "${{ steps.cpr.outputs.pull-request-number }}" --add-label risk-sensitive
+          fi
+
+      - name: Comment blocked reason
+        if: steps.cpr.outputs.pull-request-number != '' && (steps.risk.outputs.low_risk != 'true' || steps.review_summary.outputs.approved != 'true' || steps.validate.outputs.status != 'pass')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment "${{ steps.cpr.outputs.pull-request-number }}" --body "Auto-merge was blocked.\n\n- Risk classification: ${{ steps.risk.outputs.reason }}\n- AI review approved: ${{ steps.review_summary.outputs.approved }}\n- Validation status: ${{ steps.validate.outputs.status }}\n\nTrusted validation summary:\n${{ steps.validate.outputs.summary }}"
+
+      - name: Enable auto-merge
+        if: steps.cpr.outputs.pull-request-number != '' && steps.risk.outputs.low_risk == 'true' && steps.review_summary.outputs.approved == 'true' && steps.validate.outputs.status == 'pass'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr merge --auto --squash "${{ steps.cpr.outputs.pull-request-number }}"

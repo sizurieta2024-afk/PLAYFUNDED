@@ -124,6 +124,14 @@ function LoginForm() {
           {state?.error && (
             <div className="bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
               <p className="text-destructive text-sm">{state.error}</p>
+              {state.code === "EMAIL_NOT_CONFIRMED" && state.email ? (
+                <Link
+                  href={`/auth/verify?email=${encodeURIComponent(state.email)}`}
+                  className="mt-2 inline-block text-sm font-medium text-pf-brand hover:text-pf-brand-dark transition-colors"
+                >
+                  {t("verifyLink")}
+                </Link>
+              ) : null}
             </div>
           )}
 

@@ -62,7 +62,7 @@ export default async function FaqPage({
     },
     {
       title: t("cat_other"),
-      items: ["q_affiliate", "q_gift", "q_sports"] as const,
+      items: ["q_gift", "q_sports"] as const,
     },
   ];
 
@@ -103,8 +103,6 @@ export default async function FaqPage({
         return t(hasExactCommercialTerms ? "q_time_a" : "q_time_a_review", {
           payoutWindow: getPayoutWindowLabel(),
         });
-      case "q_affiliate":
-        return t("q_affiliate_a_review");
       case "q_gift":
         return t(
           policy.marketing.giftsEnabled ? "q_gift_a" : "q_gift_a_review",

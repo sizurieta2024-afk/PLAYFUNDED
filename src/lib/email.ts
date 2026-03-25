@@ -87,13 +87,20 @@ function htmlToText(html: string): string {
 }
 
 // ── Send helper ──────────────────────────────────────────────────────────────
-export async function sendEmail(
+async function deliverEmail(
   to: string,
   subject: string,
   html: string,
+  required = false,
 ): Promise<void> {
   const transporter = createTransporter();
-  if (!transporter) return; // silent no-op when SMTP creds not configured
+  if (!transporter) {
+    if (required) {
+      throw new Error("SMTP transport is not configured");
+    }
+    return;
+  }
+
   try {
     await transporter.sendMail({
       from: FROM,
@@ -108,8 +115,98 @@ export async function sendEmail(
     });
   } catch (err) {
     console.error("[email] send failed:", to, subject, err);
-    // Never throw — email failure must not break the main flow
+    if (required) {
+      throw err;
+    }
+    // Never throw — best-effort email failure must not break the main flow
   }
+}
+
+export async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+): Promise<void> {
+  await deliverEmail(to, subject, html, false);
+}
+
+export async function sendRequiredEmail(
+  to: string,
+  subject: string,
+  html: string,
+): Promise<void> {
+  await deliverEmail(to, subject, html, true);
+}
+
+// ── 0. Email Verification ────────────────────────────────────────────────────
+export function verificationEmail(
+  name: string | null,
+  actionLink: string,
+  locale = "es-419",
+): { subject: string; html: string } {
+  const isEs = locale.startsWith("es");
+  const isPt = locale === "pt-BR";
+  const n = name ?? (isEs ? "trader" : isPt ? "trader" : "trader");
+
+  const subject = isEs
+    ? "Confirma tu email para activar tu cuenta"
+    : isPt
+      ? "Confirme seu e-mail para ativar sua conta"
+      : "Confirm your email to activate your account";
+
+  const headerTitle = isEs
+    ? "Activa tu cuenta"
+    : isPt
+      ? "Ative sua conta"
+      : "Activate your account";
+
+  const headerSub = isEs
+    ? "Verifica que este email es realmente tuyo."
+    : isPt
+      ? "Confirme que este e-mail realmente é seu."
+      : "Verify that this email address really belongs to you.";
+
+  const intro = isEs
+    ? `Hola ${n}, ya casi está listo. Confirma tu email para activar tu cuenta y entrar a PlayFunded.`
+    : isPt
+      ? `Olá ${n}, está quase pronto. Confirme seu e-mail para ativar sua conta e entrar na PlayFunded.`
+      : `Hey ${n}, you're almost there. Confirm your email to activate your account and access PlayFunded.`;
+
+  const button = isEs
+    ? "Confirmar email →"
+    : isPt
+      ? "Confirmar e-mail →"
+      : "Confirm email →";
+
+  const footer = isEs
+    ? "Si no creaste esta cuenta, puedes ignorar este correo."
+    : isPt
+      ? "Se você não criou esta conta, pode ignorar este e-mail."
+      : "If you did not create this account, you can ignore this email.";
+
+  return {
+    subject,
+    html: wrap(
+      `
+      ${header(headerTitle, headerSub)}
+      <div class="body">
+        <h2>${intro}</h2>
+        <p>
+          ${
+            isEs
+              ? "Por seguridad, no activamos el acceso hasta que confirmes el enlace enviado a este correo."
+              : isPt
+                ? "Por segurança, não ativamos o acesso até que você confirme o link enviado para este e-mail."
+                : "For security, we do not activate access until you confirm the link sent to this email address."
+          }
+        </p>
+        <a href="${actionLink}" class="btn">${button}</a>
+        <hr/>
+        <p>${footer}</p>
+      </div>`,
+      locale,
+    ),
+  };
 }
 
 // ── 1. Welcome ───────────────────────────────────────────────────────────────

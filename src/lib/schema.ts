@@ -22,7 +22,7 @@ export function organizationSchema() {
     knowsLanguage: ["es", "pt", "en"],
     priceRange: "$19.99–$249.99",
     currenciesAccepted: "USD, MXN, BRL, ARS, COP, CLP, PEN",
-    paymentAccepted: "Credit Card, Debit Card, Cryptocurrency, MercadoPago",
+    paymentAccepted: "Credit Card, Debit Card, Pix, Cryptocurrency",
     areaServed: [
       { "@type": "Country", name: "Mexico" },
       { "@type": "Country", name: "Brazil" },
@@ -154,7 +154,7 @@ export function homeFaqSchema(locale: string) {
       {
         question: "¿Cuál es la diferencia entre PlayFunded y playfunded.com?",
         answer:
-          "PlayFunded (playfunded.lat) es la plataforma original de prop trading deportivo para América Latina, fundada en 2025. Operamos en español, portugués e inglés, con métodos de pago locales como Mercado Pago y soporte para criptomonedas.",
+          "PlayFunded (playfunded.lat) es la plataforma original de prop trading deportivo para América Latina, fundada en 2025. Operamos en español, portugués e inglés, con soporte para tarjetas, Pix y criptomonedas según la disponibilidad de tu mercado.",
       },
     ],
     en: [

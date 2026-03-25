@@ -54,8 +54,8 @@ export default function SignupPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (state?.success) {
-      router.push("/auth/verify");
+    if (state?.success && state.email) {
+      router.push(`/auth/verify?email=${encodeURIComponent(state.email)}`);
     }
   }, [state, router]);
 

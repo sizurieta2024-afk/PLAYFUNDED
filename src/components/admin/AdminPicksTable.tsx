@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { adminSettlePick } from "@/app/actions/admin";
 
-type PickStatus = "pending" | "won" | "lost" | "void" | "push";
 type SettleStatus = "won" | "lost" | "void" | "push";
 
 type Pick = {

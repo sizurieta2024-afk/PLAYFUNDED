@@ -1,14 +1,14 @@
 # Playfunded Proof-Based Validation Report
 
-Generated: 2026-03-21T16:11:18.981Z
+Generated: 2026-03-25T21:25:06.031Z
 
 This report follows a Shannon-style rule: claims must be backed by executable or source-level proof. Anything not proven is listed as unverified.
 
 ## Summary
 
-- Verified checks: 34
+- Verified checks: 53
 - Failed checks: 0
-- Unverified claims: 5
+- Unverified claims: 3
 
 ## Verified And Failed Checks
 
@@ -17,39 +17,39 @@ Area: auth and session handling
 Claim: Protected routes require a live Supabase session and preserve a redirect target.
 Detail: All required proof points were found in source.
 Evidence:
-- Session is read from Supabase: L132: } = await supabase.auth.getUser();
+- Session is read from Supabase: L157: } = await supabase.auth.getUser();
 - Protected prefixes are declared: L10: const PROTECTED_PREFIXES = ["/dashboard", "/admin"];
-- Redirect target is preserved on login redirect: L144: loginUrl.searchParams.set("redirectTo", pathname);
+- Redirect target is preserved on login redirect: L169: loginUrl.searchParams.set("redirectTo", pathname);
 
 ### VERIFIED admin.server-role-check
 Area: admin authorization
 Claim: Admin access is enforced with a server-side role lookup.
 Detail: All required proof points were found in source.
 Evidence:
-- Admin role is queried from the User table: L151: .from("User")
-- Role field is selected: L152: .select("role")
-- Non-admin users are redirected away: L156: if (!user || user.role !== "admin") {
+- Admin role is queried from the User table: L176: .from("User")
+- Role field is selected: L177: .select("role")
+- Non-admin users are redirected away: L181: if (!user || user.role !== "admin") {
 
 ### VERIFIED payments.stripe-signature
 Area: payments and webhooks
 Claim: Stripe fulfillment only runs after signature verification and duplicate-safe locking.
 Detail: All required proof points were found in source.
 Evidence:
-- Stripe signature header is required: L219: const sig = req.headers.get("stripe-signature");
-- constructEvent verifies the webhook body: L231: event = stripe.webhooks.constructEvent(
-- Invalid signatures are rejected: L239: { error: "Invalid webhook signature" },
-- Fulfillment is wrapped in a webhook duplicate lock: L59: const fulfillment = await withWebhookLock(prisma, "stripe", session.id, async (tx) => {
+- Stripe signature header is required: L229: const sig = req.headers.get("stripe-signature");
+- constructEvent verifies the webhook body: L241: event = stripe.webhooks.constructEvent(
+- Invalid signatures are rejected: L249: { error: "Invalid webhook signature" },
+- Fulfillment is wrapped in a webhook duplicate lock: L60: const fulfillment = await withWebhookLock(
 
 ### VERIFIED payments.nowpayments-signature
 Area: payments and webhooks
 Claim: NOWPayments callbacks require a verified provider signature, reject malformed payloads, and deduplicate fulfillment.
 Detail: All required proof points were found in source.
 Evidence:
-- NOWPayments signature header is read: L22: const signature = request.headers.get("x-nowpayments-sig") ?? "";
-- Signature verifier is called: L26: isValid = await verifyNowPaymentsSignature(body, signature);
-- Invalid signatures are rejected: L32: console.error("[NOWPayments webhook] Invalid signature");
-- Malformed payloads are rejected: L48: data = JSON.parse(body) as typeof data;
-- Fulfillment is delegated to the shared NOWPayments payment service: L82: const outcome = await fulfillNowPaymentsPayment({
+- NOWPayments signature header is read: L23: const signature = request.headers.get("x-nowpayments-sig") ?? "";
+- Signature verifier is called: L27: isValid = await verifyNowPaymentsSignature(body, signature);
+- Invalid signatures are rejected: L33: console.error("[NOWPayments webhook] Invalid signature");
+- Malformed payloads are rejected: L49: data = JSON.parse(body) as typeof data;
+- Fulfillment is delegated to the shared NOWPayments payment service: L83: const outcome = await fulfillNowPaymentsPayment({
 
 ### VERIFIED payments.nowpayments-fulfillment-service
 Area: payments and webhooks
@@ -111,7 +111,7 @@ Area: payout flows
 Claim: Payout eligibility is scoped to the requesting user and funded challenges only.
 Detail: All required proof points were found in source.
 Evidence:
-- Payout flow is delegated to the shared payout service: L52: const decision = await createPayoutRequest({
+- Payout flow is delegated to the shared payout service: L56: const decision = await createPayoutRequest({
 - Authenticated user is still required before payout request: L38: const user = await getAuthenticatedUser();
 
 ### VERIFIED admin.payout-audit
@@ -119,10 +119,10 @@ Area: admin authorization
 Claim: Admin payout review uses the transactional review service and notifies the user.
 Detail: All required proof points were found in source.
 Evidence:
-- Transactional review service is called: L68: const updated = await reviewPayoutByAdmin({
-- Conflict responses return 409 from the admin payouts route: L80: { status: 409 },
-- Payout approval email is available: L102: const { subject, html } = payoutPaidEmail(
-- Payout rejection email is available: L110: const { subject, html } = payoutRejectedEmail(
+- Transactional review service is called: L90: const updated = await reviewPayoutByAdmin({
+- Conflict responses return 409 from the admin payouts route: L105: { status: 409 },
+- Payout approval email is available: L135: const { subject, html } = payoutPaidEmail(
+- Payout rejection email is available: L143: const { subject, html } = payoutRejectedEmail(
 
 ### VERIFIED admin.payout-ui-conflict-message
 Area: admin authorization
@@ -149,9 +149,9 @@ Area: admin authorization
 Claim: Admin KYC review uses the transactional review service and notifies the user.
 Detail: All required proof points were found in source.
 Evidence:
-- Transactional review service is called: L105: const updated = await reviewKycByAdmin({
-- KYC approval email is available: L120: const { subject, html } = kycApprovedEmail(updated.user.name);
-- KYC rejection email is available: L123: const { subject, html } = kycRejectedEmail(updated.user.name, reviewNote);
+- Transactional review service is called: L127: const updated = await reviewKycByAdmin({
+- KYC approval email is available: L142: const { subject, html } = kycApprovedEmail(updated.user.name);
+- KYC rejection email is available: L145: const { subject, html } = kycRejectedEmail(updated.user.name, reviewNote);
 
 ### VERIFIED admin.kyc-review-transaction
 Area: admin authorization
@@ -178,17 +178,17 @@ Claim: Automated settlement requires the CRON secret bearer token.
 Detail: All required proof points were found in source.
 Evidence:
 - CRON secret is loaded from environment: L3: // POST /api/settle  (Bearer CRON_SECRET required)
-- Authorization header is checked: L29: return req.headers.get("authorization") === `Bearer ${secret}`;
-- Unauthorized requests are rejected: L53: { error: "Unauthorized", code: "UNAUTHORIZED" },
+- Authorization header is checked: L32: return req.headers.get("authorization") === `Bearer ${secret}`;
+- Unauthorized requests are rejected: L57: { error: "Unauthorized", code: "UNAUTHORIZED" },
 
 ### VERIFIED settlement.multi-provider-auto
 Area: pick settlement logic
 Claim: Automated settlement fetches final scores for both The Odds API and API-Football leagues.
 Detail: All required proof points were found in source.
 Evidence:
-- The Odds API scoring path is used: L130: ? await fetchOddsApiScores(config.providerKey)
-- API-Football scoring path is used: L131: : await fetchApiFootballScores(eventIds);
-- Provider-specific branching chooses the scoring source: L129: config.provider === "odds_api"
+- The Odds API scoring path is used: L134: ? await fetchOddsApiScores(config.providerKey)
+- API-Football scoring path is used: L135: : await fetchApiFootballScores(eventIds);
+- Provider-specific branching chooses the scoring source: L133: config.provider === "odds_api"
 
 ### VERIFIED picks.optimistic-balance-update
 Area: challenge risk rules
@@ -204,7 +204,7 @@ Area: geo-blocking and rate limiting
 Claim: Public pages are gated by country policy and redirected to the geo-block screen.
 Detail: All required proof points were found in source.
 Evidence:
-- Country policy is resolved in middleware: L62: const policy = getCountryPolicy(derivedCountry);
+- Country policy is resolved in middleware: L87: const policy = getCountryPolicy(derivedCountry);
 - Blocked countries are redirected: L16: "/auth/geo-blocked",
 
 ### VERIFIED rate-limit.webhooks-and-admin-settlement
@@ -221,7 +221,7 @@ Claim: Drawdown fails once balance drops below 85% of the peak balance.
 Detail: Scenario matched the expected outcome.
 Evidence:
 - Violation code: DRAWDOWN_BREACH
-- Message: Balance dropped more than 15% from peak ($100.00)
+- Message: Balance dropped more than 15% from starting balance ($100.00)
 
 ### VERIFIED risk.daily-loss-breach
 Area: challenge risk rules
@@ -229,7 +229,7 @@ Claim: Daily loss fails once balance drops more than 10% below daily start balan
 Detail: Scenario matched the expected outcome.
 Evidence:
 - Violation code: DAILY_LOSS_BREACH
-- Message: Daily loss limit reached (max $10.00/day)
+- Message: Daily loss limit reached — balance cannot fall below 90% of today's starting balance ($90.00)
 
 ### VERIFIED risk.stake-cap-breach
 Area: challenge risk rules
@@ -310,10 +310,191 @@ Evidence:
 - Winning payout: 1950
 - Losing payout: 0
 
+### VERIFIED db.rls-user-self-scope
+Area: auth and session handling
+Claim: The live User table has RLS enabled with an own-row policy tied to auth.uid().
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- User table RLS: true
+- Own-row policy: users_own_row
+
+### VERIFIED db.rls-sensitive-public-tables
+Area: auth and session handling
+Claim: Sensitive public tables have RLS enabled before app-level access control is trusted.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Affiliate rls=true
+- AffiliateClick rls=true
+- AuditLog rls=true
+- Challenge rls=true
+- CountryPolicyOverride rls=true
+- Follow rls=true
+- KycSubmission rls=true
+- MarketRequest rls=true
+- OpsEventLog rls=true
+- ParlayLeg rls=true
+- Payment rls=true
+- Payout rls=true
+- PayoutProfile rls=true
+- Pick rls=true
+- User rls=true
+
+### VERIFIED db.rls-owner-policies
+Area: auth and session handling
+Claim: Owner-scoped read policies exist on the user-facing tables that should remain visible to the authenticated user.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Affiliate:users_select_own_affiliate
+- AffiliateClick:users_select_own_affiliate_clicks
+- Challenge:users_select_own_challenges
+- Follow:users_select_own_follows
+- KycSubmission:users_select_own_kyc_submission
+- MarketRequest:users_select_own_market_requests
+- ParlayLeg:users_select_own_parlay_legs
+- Payment:users_select_own_payments
+- Payout:users_select_own_payouts
+- PayoutProfile:users_select_own_payout_profile
+- Pick:users_select_own_picks
+
+### VERIFIED db.payout-persistence-and-pending-guard
+Area: payout flows
+Claim: Persisted payout requests debit balance once and block a second pending request on the same challenge.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Created payout amount: 800
+- Challenge balance after request: 11000
+- Second request rejection: PENDING_EXISTS
+
+### VERIFIED db.webhook-lock-duplicate-fulfillment
+Area: payments and webhooks
+Claim: Concurrent duplicate webhook fulfillment creates only one payment and one challenge.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Outcomes: created, duplicate
+- Payment count: 1
+- Challenge count: 1
+
+### VERIFIED db.nowpayments-checkout-provisioning-success
+Area: payments and webhooks
+Claim: A completed NOWPayments webhook upgrades the pending checkout payment in place and provisions one challenge.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Outcome: created
+- Pending payment upgraded: true
+- Challenge count: 1
+
+### VERIFIED db.nowpayments-checkout-provisioning-rollback
+Area: payments and webhooks
+Claim: If NOWPayments provisioning fails after payment upgrade, the transaction rolls back and the checkout payment stays pending.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Payment status after rollback: pending
+- Challenge count after rollback: 0
+
+### VERIFIED db.nowpayments-webhook-replay-race
+Area: payments and webhooks
+Claim: Concurrent replay of the same NOWPayments completion upgrades the checkout payment once and provisions only one challenge.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Statuses: created, duplicate
+- Payment count: 1
+- Challenge count: 1
+
+### VERIFIED db.affiliate-code-conversion-attribution
+Area: payments and webhooks
+Claim: A paid purchase with an affiliate code records one conversion row and updates affiliate totals exactly once.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Conversion code: PF-1C7AB5
+- Affiliate conversions: 1
+- Affiliate pending payout: 85
+
+### VERIFIED db.webhook-lock-rolls-back-failed-fulfillment
+Area: payments and webhooks
+Claim: Webhook fulfillment rolls back partial writes when provisioning fails inside the transaction.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Payment count after rollback: 0
+- Challenge count after rollback: 0
+
+### VERIFIED db.admin-payout-review-audit
+Area: admin authorization
+Claim: Admin payout review persists both the payout status change and the audit log entry.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Reviewed payout status: paid
+- Audit action: approve_payout
+
+### VERIFIED db.admin-payout-review-race
+Area: admin authorization
+Claim: Concurrent payout reviews never throw; one succeeds and the competing review returns a stable non-500 result.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Success count: 1
+- Competing review count: 1
+
+### VERIFIED db.admin-payout-reject-audit
+Area: admin authorization
+Claim: Rejecting a payout restores challenge balance and persists the audit log entry.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Rejected payout status: failed
+- Restored balance: 12000
+- Audit action: reject_payout
+
+### VERIFIED db.admin-kyc-review-audit
+Area: admin authorization
+Claim: Admin KYC review persists both the submission status change and the audit log entry.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Reviewed KYC status: approved
+- Audit action: approve_kyc
+
+### VERIFIED db.admin-kyc-reject-audit
+Area: admin authorization
+Claim: Rejecting KYC persists rejected status and the audit log entry.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Rejected KYC status: rejected
+- Audit action: reject_kyc
+
+### VERIFIED db.pick-placement-concurrency
+Area: challenge risk rules
+Claim: Concurrent pick placement only debits one pick when both requests race on the same balance snapshot.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Success count: 1
+- Blocked count: 1
+- Final balance: 10000
+- Pick count: 1
+
+### VERIFIED db.settlement-sequential-ordering
+Area: pick settlement logic
+Claim: Sequential settlement of multiple pending picks on the same challenge preserves cumulative balance updates.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- First result balance: 9000
+- Second result balance: 10000
+- Final balance: 10000
+
+### VERIFIED db.admin-manual-settlement-override
+Area: pick settlement logic
+Claim: Manual settlement override persists the chosen outcome and challenge balance update.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Settled pick status: void
+- Challenge balance: 10000
+
+### VERIFIED db.admin-user-ban-cycle
+Area: admin authorization
+Claim: Admin ban and unban mutations persist user restriction state and audit entries.
+Detail: Database-backed scenario matched the expected persisted outcome.
+Evidence:
+- Ban audit action: ban_user
+- Unban audit action: unban_user
+
 ## Unverified Claims
 
 - payments and webhooks: Provider console settings, secret rotation, and callback allowlists are configured safely. -- Unverified because those controls live outside this repository.
 - geo-blocking and rate limiting: Rate limiting is effective across all production instances and regions. -- Unverified under real production traffic across regions, even though the implementation now uses shared Postgres state.
 - geo-blocking and rate limiting: Geo-IP derivation always reflects the user's real jurisdiction. -- Unverified because it depends on provider headers and external IP lookup behavior at runtime.
-- auth and session handling: Live RLS coverage for public tables was inspected against the development database. -- Unverified because VALIDATE_PROOF_DB=1 was not set. SQL artifacts found: prisma/migrations/20260307030536_baseline/migration.sql, prisma/migrations/20260311153205_shared_rate_limit/migration.sql, prisma/migrations/20260321121000_affiliate_discounts_and_crypto_payouts/migration.sql, sql/20260318_supabase_graphql_search_path_hardening.sql, sql/20260318_supabase_public_rls_hardening.sql.
-- database-backed validation: DB-backed payout and admin mutation proofs were executed against a disposable Postgres database. -- Unverified because VALIDATE_PROOF_DB=1 was not set.

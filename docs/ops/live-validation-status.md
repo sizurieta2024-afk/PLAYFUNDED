@@ -1,9 +1,28 @@
 # Live Validation Status
 
-Updated: 2026-03-21
+Updated: 2026-03-25
 
 ## Proven Live
 
+- Auth and member flows on `playfunded.lat`:
+  - public auth pages load in default, English, and Portuguese
+  - email signup now lands on `/auth/verify`
+  - member smokes passed in default, English, and Portuguese
+  - callback fallback behavior was verified after the auth hardening pass
+- Admin/control-plane flows on `playfunded.lat`:
+  - admin smoke passed
+  - payout/KYC smoke passed
+  - admin/support smoke passed
+- Public affiliate rollout:
+  - `/affiliate`, `/en/affiliate`, and `/pt-BR/affiliate` are live
+  - affiliate is removed from sitemap discovery
+  - FAQ no longer advertises affiliate access
+- Public payment claims:
+  - Mercado Pago is intentionally disabled for launch
+  - no public Mercado Pago claim remained on the checked public pages
+- Browser/runtime health:
+  - CSP was fixed so Sentry browser reporting is no longer blocked
+  - checked public pages had a clean browser console after the fix
 - Ops health alerting:
   - live deploy returned a real unhealthy `/api/ops/health` response
   - GitHub Actions workflow dispatched successfully
@@ -13,21 +32,17 @@ Updated: 2026-03-21
   - authenticated upload returned `file_malware_detected`
   - object was written to `kyc-quarantine`
   - quarantine event was persisted in `OpsEventLog`
-- Admin positive smoke:
-  - production-mode local build on port `3004`
-  - `/en/admin`, `/en/admin/kyc`, `/en/admin/launch` all returned `200` for a real temporary admin session
 - GitHub CI and launch smokes:
   - `workflow_dispatch` is proven on the remote repository
-  - GitHub run `23133863176` completed successfully on commit `7a2f56c`
-  - `launch-smokes` passed remotely, including:
-    - `Admin smoke`
-    - `Payout KYC smoke`
-    - `Admin support smoke`
+  - remote launch-smokes passed on GitHub
 - Payment checkout guardrails on `playfunded.lat`:
   - blocked countries cannot create Stripe or NOWPayments checkouts
   - starting checkout does not create a `Challenge`
   - live NOWPayments checkout returns a real invoice and persists one pending `Payment`
-  - Mercado Pago is intentionally disabled for launch
+  - Mercado Pago returns the explicit disabled-provider response
+- Proof state:
+  - source-level proof passed
+  - DB-backed proof passed with `53 verified / 0 failed / 3 unverified`
 
 ## Proven By Archive Validation
 
@@ -38,15 +53,19 @@ Updated: 2026-03-21
 
 ## Still Not Fully Proven
 
-- Live production ops health is currently degraded, not green:
-  - live `/api/ops/health` returned `503` on 2026-03-12
-  - `odds_sync_recent` was failing
-  - `cron_failures` reported `1`
-- Permanent Slack/Discord alert destination, because no real `PF_ALERT_WEBHOOK_URL` / `PF_ALERT_WEBHOOK_KIND` is configured in GitHub
-- Production Vercel KYC scanning, because production runtime still lacks `CLAMAV_*` and `KYC_*` scan env vars
-- Live Stripe checkout on Vercel, because the local production build can create Stripe card/Pix sessions but the live Vercel runtime still reports Stripe connection failures
+- Permanent Slack/Discord incident alert destination:
+  - public Discord/community access is live
+  - GitHub Actions still does not have `PF_ALERT_WEBHOOK_URL` / `PF_ALERT_WEBHOOK_KIND`
+- Paid odds-plan freshness:
+  - `/api/odds/sync` works
+  - The Odds API account still hits quota/frequency limits until the paid plans are active
+  - because of that, `/api/ops/health` can drift red again on stale sync windows even though the handlers themselves are healthy
+- Production Vercel KYC scanning:
+  - production runtime still lacks `CLAMAV_*` and `KYC_*` scan env vars
 - Full Supabase platform restore outside the application `public` schema
-- Exact end-user browser copy for the KYC malware rejection, even though the route-level rejection path was proven
+- Automated Google login:
+  - manual Google login was verified in a normal browser
+  - bot-driven Google login is still blocked by Google anti-automation behavior
 
 ## Explicit Current KYC Runtime Status
 

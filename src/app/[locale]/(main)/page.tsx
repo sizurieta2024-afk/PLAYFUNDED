@@ -1,5 +1,7 @@
 import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
+import { hasLocale } from "next-intl";
+import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { resolveCountry } from "@/lib/country-policy";
@@ -35,6 +37,7 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 import { websiteSchema, homeFaqSchema } from "@/lib/schema";
+import { routing } from "@/i18n/routing";
 
 const BASE_URL = "https://playfunded.lat";
 const LOCALE_PREFIX: Record<string, string> = {
@@ -111,14 +114,18 @@ function getNumberLocale(locale: string) {
 
 function formatUsd(cents: number, locale: string, fractionDigits = 0) {
   const amount = cents / 100;
-  let formatted = new Intl.NumberFormat(locale, {
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
-  }).format(amount);
-  if (fractionDigits > 0 && locale !== "en-US") {
-    formatted = formatted.replace(/\.(\d+)$/, ",$1");
+  try {
+    let formatted = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    }).format(amount);
+    if (fractionDigits > 0 && locale !== "en-US") {
+      formatted = formatted.replace(/\.(\d+)$/, ",$1");
+    }
+    return `$${formatted}`;
+  } catch {
+    return `$${amount.toFixed(fractionDigits)}`;
   }
-  return `$${formatted}`;
 }
 
 export async function generateMetadata({
@@ -127,6 +134,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
+  if (!hasLocale(routing.locales, locale)) notFound();
   const t = await getTranslations({ locale, namespace: "home" });
   const prefix = LOCALE_PREFIX[locale] ?? "";
   const canonicalUrl = `${BASE_URL}${prefix}`;
@@ -162,6 +170,7 @@ export default async function HomePage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+  if (!hasLocale(routing.locales, locale)) notFound();
   const t = await getTranslations({ locale, namespace: "home" });
   const numberLocale = getNumberLocale(locale);
   const headersList = await headers();

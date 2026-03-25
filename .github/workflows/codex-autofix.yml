@@ -79,7 +79,7 @@ jobs:
           - Do not add new dependencies
           - Monetary values are always integer cents"
 
-          npx @openai/codex --model o4-mini --approval-mode full-auto "$PROMPT"
+          npx @openai/codex --model o4-mini --full-auto "$PROMPT"
 
       - name: Create Pull Request
         id: cpr

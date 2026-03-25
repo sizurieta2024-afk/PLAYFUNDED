@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useLocale } from 'next-intl'
-import { useRouter, usePathname } from '@/i18n/navigation'
 import { Globe, ChevronDown } from 'lucide-react'
 
 const LOCALES = [
@@ -13,8 +12,6 @@ const LOCALES = [
 
 export function LanguageToggle() {
   const locale = useLocale()
-  const router = useRouter()
-  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -31,9 +28,36 @@ export function LanguageToggle() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  function stripLocalePrefix(pathname: string) {
+    const stripped = pathname.replace(/^\/(es-419|pt-BR|en)(?=\/|$)/, '')
+    return stripped || '/'
+  }
+
+  function buildLocalizedPath(pathname: string, code: string) {
+    const pathWithoutLocale = stripLocalePrefix(pathname)
+    const prefix = code === 'es-419' ? '' : `/${code}`
+    if (pathWithoutLocale === '/') {
+      return prefix || '/'
+    }
+    return `${prefix}${pathWithoutLocale}`
+  }
+
   function select(code: string) {
     setOpen(false)
-    router.replace(pathname, { locale: code })
+    if (typeof window === 'undefined') return
+
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`
+    const nextPath = buildLocalizedPath(window.location.pathname, code)
+    const nextUrl = `${nextPath}${window.location.search}${window.location.hash}`
+
+    document.cookie = `NEXT_LOCALE=${encodeURIComponent(code)}; path=/; max-age=31536000; samesite=lax`
+
+    if (nextUrl !== currentUrl) {
+      window.location.assign(nextUrl)
+      return
+    }
+
+    window.location.reload()
   }
 
   return (

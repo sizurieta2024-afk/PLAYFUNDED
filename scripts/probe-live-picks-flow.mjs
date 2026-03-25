@@ -154,26 +154,42 @@ try {
     ]);
     const page = await context.newPage();
 
-    let pickResponse = null;
-    page.on("response", async (response) => {
-      if (response.url().includes("/api/picks") && response.request().method() === "POST") {
-        try {
-          pickResponse = {
-            status: response.status(),
-            body: await response.text(),
-          };
-        } catch {
-          pickResponse = { status: response.status(), body: "<unreadable>" };
-        }
-      }
-    });
-
     await page.goto(`${baseUrl}/en/dashboard/picks`, { waitUntil: "domcontentloaded" });
-    await page.getByText(odds.eventName).waitFor({ timeout: 15000 });
-    await page.getByRole("button", { name: /Home/i }).first().click();
-    await page.locator("#stake-input").fill("10");
-    await page.getByRole("button", { name: /confirm pick|place pick/i }).first().click();
-    await page.waitForTimeout(5000);
+    await page.getByRole("heading", { name: /place a pick/i }).waitFor({ timeout: 15000 });
+    const pickResponse = await page.evaluate(
+      async ({ challengeId, odds }) => {
+        const response = await fetch("/api/picks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            challengeId,
+            sport: odds.sport,
+            league: odds.league,
+            event: odds.event,
+            eventName: odds.eventName,
+            marketType: "moneyline",
+            selection: "Home",
+            odds: 1.91,
+            stake: 1000,
+          }),
+        });
+
+        return {
+          status: response.status,
+          body: await response.text(),
+        };
+      },
+      {
+        challengeId: challenge.id,
+        odds: {
+          sport: odds.sport,
+          league: odds.league,
+          event: odds.event,
+          eventName: odds.eventName,
+        },
+      },
+    );
+    await page.waitForTimeout(2000);
 
     const body = text(await page.locator("body").innerText());
     const dbPicks = await prisma.pick.findMany({

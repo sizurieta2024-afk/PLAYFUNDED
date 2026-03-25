@@ -41,7 +41,7 @@ const COPY: Record<
     privacyBody:
       "Tratamos datos de cuenta, actividad y pagos para operar la plataforma, prevenir fraude y cumplir obligaciones legales.",
     rgTitle: "Juego responsable",
-    rgBody: `Ofrecemos autoexclusión temporal o permanente y límites de depósito semanal desde el panel de configuración. Las apuestas en vivo no están permitidas y los picks se bloquean ${PLATFORM_POLICY.trading.eventLockMinutes} minutos antes del inicio del evento.`,
+    rgBody: `Ofrecemos información y recursos de apoyo para juego responsable. Las apuestas en vivo no están permitidas y los picks se bloquean ${PLATFORM_POLICY.trading.eventLockMinutes} minutos antes del inicio del evento.`,
     availabilityTitle: "Disponibilidad por país",
     availabilityBlocked:
       "PlayFunded no está disponible en tu país en este momento.",
@@ -67,7 +67,7 @@ const COPY: Record<
     privacyBody:
       "We process account, activity and payment data to operate the platform, prevent fraud and comply with legal obligations.",
     rgTitle: "Responsible gambling",
-    rgBody: `We provide temporary or permanent self-exclusion and weekly deposit limits in account settings. Live betting is not permitted and picks lock ${PLATFORM_POLICY.trading.eventLockMinutes} minutes before event start.`,
+    rgBody: `We provide responsible gambling information and support resources. Live betting is not permitted and picks lock ${PLATFORM_POLICY.trading.eventLockMinutes} minutes before event start.`,
     availabilityTitle: "Country availability",
     availabilityBlocked:
       "PlayFunded is not available in your country right now.",
@@ -93,7 +93,7 @@ const COPY: Record<
     privacyBody:
       "Tratamos dados de conta, atividade e pagamentos para operar a plataforma, prevenir fraude e cumprir obrigações legais.",
     rgTitle: "Jogo responsável",
-    rgBody: `Oferecemos autoexclusão temporária ou permanente e limites semanais de depósito nas configurações da conta. Apostas ao vivo não são permitidas e os picks fecham ${PLATFORM_POLICY.trading.eventLockMinutes} minutos antes do início do evento.`,
+    rgBody: `Oferecemos informações e recursos de apoio para jogo responsável. Apostas ao vivo não são permitidas e os picks fecham ${PLATFORM_POLICY.trading.eventLockMinutes} minutos antes do início do evento.`,
     availabilityTitle: "Disponibilidade por país",
     availabilityBlocked:
       "A PlayFunded não está disponível no seu país no momento.",

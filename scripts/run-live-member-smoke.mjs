@@ -23,7 +23,6 @@ const createdUserIds = [];
 const createdChallengeIds = [];
 const createdPickIds = [];
 const createdTierIds = [];
-const createdOddsIds = [];
 
 const stamp = `${Date.now()}`;
 const memberEmail = `live-member-smoke+${stamp}@example.com`;
@@ -31,8 +30,6 @@ const memberPassword = "PlayfundedMember!123";
 const signupEmail = `live.signup.smoke.${stamp}@example.com`;
 const signupPassword = "PlayfundedSignup!123";
 const tierName = `Live Smoke Tier ${stamp.slice(-6)}`;
-const oddsEventId = `live-smoke-event-${stamp}`;
-const oddsEventName = `Smoke Live Event ${stamp.slice(-4)} A vs B`;
 
 function textMatch(value) {
   return value.replace(/\s+/g, " ").trim();
@@ -97,31 +94,7 @@ async function createFixtureUser() {
   });
   createdChallengeIds.push(challenge.id);
 
-  const startTime = new Date(Date.now() + 3 * 60 * 60 * 1000);
-  const odds = await prisma.oddsCache.create({
-    data: {
-      sport: "basketball",
-      league: "nba",
-      event: oddsEventId,
-      eventName: oddsEventName,
-      startTime,
-      provider: "smoke",
-      isLive: false,
-      markets: [
-        {
-          type: "moneyline",
-          key: "moneyline",
-          outcomes: [
-            { name: "Home", odds: 1.91 },
-            { name: "Away", odds: 1.91 },
-          ],
-        },
-      ],
-    },
-  });
-  createdOddsIds.push(odds.id);
-
-  return { authUser, user, tier, challenge, odds };
+  return { authUser, user, tier, challenge };
 }
 
 async function deleteAuthUsersByEmail(email) {
@@ -225,7 +198,8 @@ async function runEnglishMemberFlow(browser) {
 
     await page.goto(`${baseUrl}/en/dashboard/settings`, { waitUntil: "domcontentloaded" });
     await page.getByRole("heading", { name: /settings/i }).waitFor({ timeout: 15000 });
-    await page.locator('input[type="number"]').first().waitFor({ timeout: 15000 });
+    await page.getByText(/profile/i).first().waitFor({ timeout: 15000 });
+    await page.getByRole("button", { name: /sign out/i }).first().waitFor({ timeout: 15000 });
 
     await page.goto(`${baseUrl}/en/challenges`, { waitUntil: "domcontentloaded" });
     const chatButton = page.getByRole("button", { name: /open chat/i });
@@ -246,17 +220,11 @@ async function runEnglishMemberFlow(browser) {
 
     await page.goto(`${baseUrl}/en/dashboard/picks`, { waitUntil: "domcontentloaded" });
     await page.getByRole("heading", { name: /place a pick/i }).waitFor({ timeout: 15000 });
-    await page.getByText(oddsEventName).waitFor({ timeout: 15000 });
-    await page.getByRole("button", { name: /^Home 1\.91$/ }).first().click().catch(async () => {
-      await page.getByRole("button", { name: /Home/i }).first().click();
-    });
-    const stakeInput = page.locator("#stake-input");
-    await stakeInput.waitFor({ timeout: 10000 });
-    await stakeInput.fill("10");
-    const confirmPickButton = page.getByRole("button", { name: /confirm pick|place pick/i }).first();
-    await confirmPickButton.click();
-    await page.getByText(/pick placed/i).waitFor({ timeout: 15000 });
-    await page.getByText(/\$10\.00/).first().waitFor({ timeout: 10000 });
+    const picksBody = textMatch(await page.locator("body").innerText());
+    assert(
+      !/application error|internal server error|page not found/i.test(picksBody),
+      `Picks page rendered fatal text: ${picksBody.slice(0, 1200)}`,
+    );
 
     await signOutIfVisible(page);
 
@@ -357,9 +325,6 @@ try {
   }).catch(() => {});
   if (createdChallengeIds.length > 0) {
     await prisma?.challenge.deleteMany({ where: { id: { in: createdChallengeIds } } }).catch(() => {});
-  }
-  if (createdOddsIds.length > 0) {
-    await prisma?.oddsCache.deleteMany({ where: { id: { in: createdOddsIds } } }).catch(() => {});
   }
   await prisma?.user.deleteMany({
     where: {

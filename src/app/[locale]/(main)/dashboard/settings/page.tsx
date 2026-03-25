@@ -1,12 +1,31 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { createServerClient } from "@/lib/supabase";
 import { getSettings } from "@/app/actions/settings";
 import { SettingsClient } from "@/components/settings/SettingsClient";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Settings" };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "settings" });
 
-export default async function SettingsPage() {
+  return {
+    title: t("pageTitle"),
+    description: t("pageDescription"),
+  };
+}
+
+export default async function SettingsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "settings" });
   const supabase = await createServerClient();
   const {
     data: { user: authUser },
@@ -21,10 +40,10 @@ export default async function SettingsPage() {
     <div className="mx-auto max-w-2xl px-4 sm:px-6 py-8 space-y-6">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">
-          Settings
+          {t("pageTitle")}
         </h1>
         <p className="text-muted-foreground text-sm mt-0.5">
-          Manage your account.
+          {t("pageDescription")}
         </p>
       </div>
 

@@ -118,7 +118,10 @@ async function assertGoogleLink(page, path) {
   };
 }
 
-async function assertCallbackError(page, urlPath, expectedQuery) {
+async function assertCallbackRedirect(page, urlPath, {
+  mustInclude = [],
+  pathnamePattern = /\/auth\/login$/,
+}) {
   const consoleErrors = [];
   const pageErrors = [];
   const onConsole = (msg) => {
@@ -136,15 +139,23 @@ async function assertCallbackError(page, urlPath, expectedQuery) {
   await page.goto(`${baseUrl}${urlPath}`, {
     waitUntil: "domcontentloaded",
   });
-  await page.waitForURL(new RegExp(expectedQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), {
-    timeout: 15_000,
-  });
+  await page.waitForURL((current) => {
+    const pathnameMatches = pathnamePattern.test(current.pathname);
+    const includesExpected = mustInclude.every((fragment) =>
+      `${current.pathname}${current.search}${current.hash}`.includes(fragment),
+    );
+    return pathnameMatches && includesExpected;
+  }, { timeout: 15_000 });
 
   const currentUrl = page.url();
-  assert(
-    currentUrl.includes(expectedQuery),
-    `${urlPath} did not redirect to ${expectedQuery}; got ${currentUrl}`,
-  );
+  const finalUrl = new URL(currentUrl);
+  assert(pathnamePattern.test(finalUrl.pathname), `${urlPath} redirected to unexpected path: ${currentUrl}`);
+  for (const fragment of mustInclude) {
+    assert(
+      `${finalUrl.pathname}${finalUrl.search}${finalUrl.hash}`.includes(fragment),
+      `${urlPath} did not include ${fragment}; got ${currentUrl}`,
+    );
+  }
 
   const body = await page.locator("body").innerText();
   assert(
@@ -179,14 +190,14 @@ try {
 
   const callbackChecks = [];
   callbackChecks.push(
-    await assertCallbackError(page, "/auth/callback", "/auth/login?error=missing_code"),
+    await assertCallbackRedirect(page, "/auth/callback", {
+      mustInclude: ["/auth/login", "redirectTo=%2Fen%2Fdashboard"],
+    }),
   );
   callbackChecks.push(
-    await assertCallbackError(
-      page,
-      "/auth/callback?code=definitely-invalid",
-      "/auth/login?error=auth_failed",
-    ),
+    await assertCallbackRedirect(page, "/auth/callback?code=definitely-invalid", {
+      mustInclude: ["/auth/login", "error=auth_failed"],
+    }),
   );
 
   console.log(

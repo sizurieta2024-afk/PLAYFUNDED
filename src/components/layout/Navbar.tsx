@@ -30,7 +30,6 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
   const navLinks = [
     { key: "howItWorks", href: "/how-it-works" as const },
     { key: "challenges", href: "/challenges" as const },
-    { key: "leaderboard", href: "/leaderboard" as const },
     { key: "faq", href: "/faq" as const },
   ] as const;
 

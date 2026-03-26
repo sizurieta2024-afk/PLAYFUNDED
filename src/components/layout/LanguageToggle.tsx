@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useLocale } from 'next-intl'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { Globe, ChevronDown } from 'lucide-react'
 
 const LOCALES = [
@@ -12,6 +13,8 @@ const LOCALES = [
 
 export function LanguageToggle() {
   const locale = useLocale()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -42,23 +45,13 @@ export function LanguageToggle() {
     return `${prefix}${pathWithoutLocale}`
   }
 
-  function select(code: string) {
-    setOpen(false)
+  function persistLocale(code: string) {
     if (typeof window === 'undefined') return
-
-    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`
-    const nextPath = buildLocalizedPath(window.location.pathname, code)
-    const nextUrl = `${nextPath}${window.location.search}${window.location.hash}`
-
     document.cookie = `NEXT_LOCALE=${encodeURIComponent(code)}; path=/; max-age=31536000; samesite=lax`
-
-    if (nextUrl !== currentUrl) {
-      window.location.assign(nextUrl)
-      return
-    }
-
-    window.location.reload()
   }
+
+  const query = searchParams?.toString()
+  const currentPath = pathname || '/'
 
   return (
     <div ref={ref} className="relative">
@@ -75,9 +68,11 @@ export function LanguageToggle() {
       {open && (
         <div className="absolute right-0 top-full mt-1 min-w-[120px] rounded-md border border-border bg-popover shadow-md z-50 overflow-hidden">
           {LOCALES.map((l) => (
-            <button
+            <a
               key={l.code}
-              onClick={() => select(l.code)}
+              href={`${buildLocalizedPath(currentPath, l.code)}${query ? `?${query}` : ''}`}
+              onMouseDown={() => persistLocale(l.code)}
+              onClick={() => setOpen(false)}
               className={`flex items-center gap-2 w-full px-3 py-2 text-xs transition-colors text-left ${
                 l.code === locale
                   ? 'bg-pf-brand/10 text-pf-brand font-semibold'
@@ -86,7 +81,7 @@ export function LanguageToggle() {
             >
               <span className="font-bold w-5">{l.label}</span>
               <span>{l.name}</span>
-            </button>
+            </a>
           ))}
         </div>
       )}

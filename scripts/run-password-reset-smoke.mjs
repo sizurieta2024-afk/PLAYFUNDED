@@ -87,7 +87,9 @@ try {
   const browser = await chromium.launch({ headless: true });
 
   try {
-    const context = await browser.newContext();
+    const context = await browser.newContext({
+      ignoreHTTPSErrors: baseUrl.startsWith("https://"),
+    });
     const page = await context.newPage();
 
     const entryUrl = `${baseUrl.replace(/\/$/, "")}/en/dashboard#${buildRecoveryHash(recoveryData.session)}`;

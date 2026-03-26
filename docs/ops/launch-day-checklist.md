@@ -25,12 +25,14 @@ BASE_URL=https://playfunded.lat node --env-file=.env.local scripts/run-live-memb
 BASE_URL=https://playfunded.lat node --env-file=.env.local scripts/run-admin-smoke.mjs
 BASE_URL=https://playfunded.lat node --env-file=.env.local scripts/run-payout-kyc-ui-check.mjs
 BASE_URL=https://playfunded.lat npm run smoke:admin-support
+BASE_URL=https://playfunded.lat npm run smoke:password-reset
 ```
 
 Pass criteria:
 
 - all commands return `ok: true`
 - signup lands on `/auth/verify`
+- password reset lands on `/auth/reset-password`, then reaches `/auth/login?reset=success`
 - member flow reaches the dashboard in default, English, and Portuguese
 - admin, payout/KYC, and admin-support control-plane checks stay green
 
@@ -38,6 +40,7 @@ Pass criteria:
 
 - Google login works in a real browser
 - email/password signup shows the verify-email step
+- forgot-password shows a generic success state and the reset link works
 - logout works
 - landing page copy is clean in `/`, `/en`, `/pt-BR`
 - affiliate page exists in `/affiliate`, `/en/affiliate`, `/pt-BR/affiliate`
@@ -63,6 +66,7 @@ Pass criteria:
 ## 6. Auth, KYC, And Support Posture
 
 - email verification is required before email/password login
+- password reset succeeds without exposing whether an email exists
 - Google login still works manually
 - KYC/payout gating behaves as expected
 - if production ClamAV is still not armed, do not promise live KYC upload clearance before that rollout

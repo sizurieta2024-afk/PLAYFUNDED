@@ -35,6 +35,7 @@ BASE_URL=https://playfunded.lat node --env-file=.env.local scripts/run-live-memb
 BASE_URL=https://playfunded.lat node --env-file=.env.local scripts/run-admin-smoke.mjs
 BASE_URL=https://playfunded.lat node --env-file=.env.local scripts/run-payout-kyc-ui-check.mjs
 BASE_URL=https://playfunded.lat npm run smoke:admin-support
+BASE_URL=https://playfunded.lat npm run smoke:password-reset
 ```
 
 Record:
@@ -46,6 +47,8 @@ Record:
 ### Step 3. Manual Auth Check
 
 - log in with Google in a normal browser
+- confirm forgot-password shows the generic success state
+- confirm a recovery link lands on the reset-password form and returns to login after password update
 - confirm dashboard loads
 - refresh and confirm the session persists
 - log out

@@ -2,7 +2,10 @@
 
 import { useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
-import { buildDashboardPath } from "@/lib/auth-verification";
+import {
+  buildDashboardPath,
+  buildResetPasswordPath,
+} from "@/lib/auth-verification";
 
 const DEFAULT_LOCALE = "es-419";
 
@@ -27,15 +30,24 @@ export function AuthHashSessionHandler() {
     const searchParams = new URLSearchParams(window.location.search);
     const accessToken = params.get("access_token");
     const refreshToken = params.get("refresh_token");
+    const authFlowType = params.get("type");
     const locale = inferLocaleFromPath(window.location.pathname);
     // Validate redirect target — must be a same-origin relative path to prevent open redirect
     const rawNext = searchParams.get("redirectTo") ?? "";
-    const next =
+    const safeNext =
       rawNext.startsWith("/") &&
       !rawNext.startsWith("//") &&
       !rawNext.includes("://")
         ? rawNext
-        : buildDashboardPath(locale);
+        : null;
+    const fallbackLocale =
+      authFlowType === "recovery" && safeNext ? inferLocaleFromPath(safeNext) : locale;
+    const next =
+      authFlowType === "recovery"
+        ? safeNext?.includes("/auth/reset-password")
+          ? safeNext
+          : buildResetPasswordPath(fallbackLocale)
+        : safeNext ?? buildDashboardPath(locale);
 
     if (!accessToken || !refreshToken) {
       return;

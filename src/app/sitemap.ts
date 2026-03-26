@@ -20,7 +20,6 @@ const PUBLIC_ROUTES: {
   { path: "/challenges", priority: 0.9, changeFrequency: "weekly" },
   { path: "/how-it-works", priority: 0.8, changeFrequency: "monthly" },
   { path: "/faq", priority: 0.8, changeFrequency: "monthly" },
-  { path: "/leaderboard", priority: 0.6, changeFrequency: "daily" },
   { path: "/contact", priority: 0.5, changeFrequency: "monthly" },
   { path: "/legal", priority: 0.3, changeFrequency: "yearly" },
 ];

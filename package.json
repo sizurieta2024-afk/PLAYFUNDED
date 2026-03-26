@@ -26,6 +26,7 @@
     "smoke:kyc-strict": "node --env-file=.env.local scripts/run-kyc-strict-smoke.mjs",
     "smoke:admin": "node --env-file=.env.local scripts/run-admin-smoke.mjs",
     "smoke:admin-support": "node --env-file=.env.local scripts/run-admin-support-smoke.mjs",
+    "smoke:password-reset": "node --env-file=.env.local scripts/run-password-reset-smoke.mjs",
     "diag:api-football-settlement": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' node --env-file=.env.local -r ts-node/register/transpile-only scripts/diag-api-football-settlement.js",
     "validate:proof": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' node -r ts-node/register/transpile-only scripts/validate-proof-based.js",
     "validate:proof:db": "VALIDATE_PROOF_DB=1 TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' node -r ts-node/register/transpile-only scripts/validate-proof-based.js",

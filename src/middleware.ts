@@ -61,7 +61,7 @@ export async function middleware(request: NextRequest) {
   // Auth callback is a route handler — not a locale-aware page.
   // Without this bypass, intl middleware redirects it to /en/auth/callback
   // (based on Accept-Language header), which has no handler → 404.
-  if (pathname === "/auth/callback") {
+  if (pathname === "/auth/callback" || pathname === "/indexnow.txt") {
     return NextResponse.next();
   }
 
@@ -197,6 +197,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|indexnow.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

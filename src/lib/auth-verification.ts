@@ -37,12 +37,41 @@ export function buildDashboardPath(locale: string): string {
     : `/${normalized}/dashboard`;
 }
 
+export function buildAuthPath(locale: string, path: string): string {
+  const normalized = normalizeAuthLocale(locale);
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return normalized === DEFAULT_LOCALE
+    ? normalizedPath
+    : `/${normalized}${normalizedPath}`;
+}
+
+export function buildLoginPath(locale: string): string {
+  return buildAuthPath(locale, "/auth/login");
+}
+
+export function buildForgotPasswordPath(locale: string): string {
+  return buildAuthPath(locale, "/auth/forgot-password");
+}
+
+export function buildResetPasswordPath(locale: string): string {
+  return buildAuthPath(locale, "/auth/reset-password?mode=recovery");
+}
+
 export function buildVerificationRedirectUrl(locale: string): string {
   const appUrl =
     process.env.APP_CANONICAL_URL ??
     process.env.NEXT_PUBLIC_APP_URL ??
     "https://playfunded.lat";
   const next = buildDashboardPath(locale);
+  return `${appUrl.replace(/\/$/, "")}/auth/callback?next=${encodeURIComponent(next)}`;
+}
+
+export function buildPasswordResetRedirectUrl(locale: string): string {
+  const appUrl =
+    process.env.APP_CANONICAL_URL ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    "https://playfunded.lat";
+  const next = buildResetPasswordPath(locale);
   return `${appUrl.replace(/\/$/, "")}/auth/callback?next=${encodeURIComponent(next)}`;
 }
 

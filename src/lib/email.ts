@@ -209,6 +209,74 @@ export function verificationEmail(
   };
 }
 
+export function passwordResetEmail(
+  name: string | null,
+  actionLink: string,
+  locale = "es-419",
+): { subject: string; html: string } {
+  const isEs = locale.startsWith("es");
+  const isPt = locale === "pt-BR";
+  const n = name ?? (isEs ? "trader" : isPt ? "trader" : "trader");
+
+  const subject = isEs
+    ? "Restablece tu contraseña de PlayFunded"
+    : isPt
+      ? "Redefina sua senha da PlayFunded"
+      : "Reset your PlayFunded password";
+
+  const headerTitle = isEs
+    ? "Restablece tu contraseña"
+    : isPt
+      ? "Redefina sua senha"
+      : "Reset your password";
+
+  const headerSub = isEs
+    ? "Usa este enlace para crear una contraseña nueva."
+    : isPt
+      ? "Use este link para criar uma nova senha."
+      : "Use this link to create a new password.";
+
+  const intro = isEs
+    ? `Hola ${n}, recibimos una solicitud para cambiar la contraseña de tu cuenta.`
+    : isPt
+      ? `Olá ${n}, recebemos uma solicitação para alterar a senha da sua conta.`
+      : `Hey ${n}, we received a request to change the password for your account.`;
+
+  const body = isEs
+    ? "Si fuiste tú, usa el botón de abajo para establecer una contraseña nueva. Si no solicitaste este cambio, puedes ignorar este correo."
+    : isPt
+      ? "Se foi você, use o botão abaixo para definir uma nova senha. Se não solicitou essa alteração, pode ignorar este e-mail."
+      : "If this was you, use the button below to set a new password. If you did not request this change, you can ignore this email.";
+
+  const button = isEs
+    ? "Crear nueva contraseña →"
+    : isPt
+      ? "Criar nova senha →"
+      : "Create new password →";
+
+  const footer = isEs
+    ? "Por seguridad, este enlace debe usarse desde una ventana reciente de PlayFunded."
+    : isPt
+      ? "Por segurança, este link deve ser usado a partir de uma janela recente da PlayFunded."
+      : "For security, this link should be used from a recent PlayFunded session.";
+
+  return {
+    subject,
+    html: wrap(
+      `
+      ${header(headerTitle, headerSub)}
+      <div class="body">
+        <h2>${intro}</h2>
+        <p>${body}</p>
+        <a href="${actionLink}" class="btn">${button}</a>
+        <hr/>
+        <p>${footer}</p>
+      </div>`,
+      locale,
+    ),
+  };
+}
+
 // ── 1. Welcome ───────────────────────────────────────────────────────────────
 export function welcomeEmail(
   name: string | null,

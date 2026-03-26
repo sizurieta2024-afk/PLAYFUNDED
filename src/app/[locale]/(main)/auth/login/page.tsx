@@ -53,6 +53,7 @@ function LoginForm() {
   const [state, action] = useFormState(signInWithEmail, null);
   const searchParams = useSearchParams();
   const oauthError = searchParams.get("error");
+  const resetStatus = searchParams.get("reset");
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center p-4">
@@ -69,6 +70,12 @@ function LoginForm() {
         {oauthError && (
           <div className="bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
             <p className="text-destructive text-sm">{t("oauthError")}</p>
+          </div>
+        )}
+
+        {resetStatus === "success" && (
+          <div className="bg-pf-brand/10 border border-pf-brand/20 rounded-md px-3 py-2">
+            <p className="text-pf-brand text-sm">{t("resetSuccess")}</p>
           </div>
         )}
 
@@ -107,9 +114,17 @@ function LoginForm() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="password" className="text-foreground text-sm">
-              {t("passwordLabel")}
-            </Label>
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="password" className="text-foreground text-sm">
+                {t("passwordLabel")}
+              </Label>
+              <Link
+                href="/auth/forgot-password"
+                className="text-xs font-medium text-pf-brand hover:text-pf-brand-dark transition-colors"
+              >
+                {t("forgotPassword")}
+              </Link>
+            </div>
             <Input
               id="password"
               name="password"

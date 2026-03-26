@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getMessages } from "next-intl/server";
+import { getMessages, getTranslations } from "next-intl/server";
 import { hasLocale } from "next-intl";
 import { routing } from "@/i18n/routing";
 import { Providers } from "@/providers/providers";
@@ -7,6 +7,8 @@ import type { Metadata } from "next";
 import { organizationSchema } from "@/lib/schema";
 
 const BASE_URL = "https://playfunded.lat";
+const GOOGLE_SITE_VERIFICATION = process.env.GOOGLE_SITE_VERIFICATION;
+const BING_SITE_VERIFICATION = process.env.BING_SITE_VERIFICATION;
 
 const LOCALE_PREFIX: Record<string, string> = {
   "es-419": "",
@@ -31,16 +33,16 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "home" });
   const prefix = LOCALE_PREFIX[locale] ?? "";
 
   return {
     metadataBase: new URL(BASE_URL),
     title: {
       template: "%s | PlayFunded",
-      default: "PlayFunded — Nuestro riesgo, tus ganancias",
+      default: t("meta_title"),
     },
-    description:
-      "La plataforma de trading deportivo para América Latina. Demuestra tu talento y obtén una cuenta financiada.",
+    description: t("meta_description"),
     keywords: [
       "prop trading deportivo",
       "cuenta financiada deportes",
@@ -81,6 +83,16 @@ export async function generateMetadata({
     twitter: {
       card: "summary_large_image",
       site: "@playfunded",
+    },
+    verification: {
+      ...(GOOGLE_SITE_VERIFICATION ? { google: GOOGLE_SITE_VERIFICATION } : {}),
+      ...(BING_SITE_VERIFICATION
+        ? {
+            other: {
+              "msvalidate.01": BING_SITE_VERIFICATION,
+            },
+          }
+        : {}),
     },
     icons: {
       icon: "/favicon.ico",

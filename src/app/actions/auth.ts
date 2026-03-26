@@ -4,6 +4,8 @@ import { getTranslations } from "next-intl/server";
 import { createServerClient, createServiceClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import {
+  buildLoginPath,
+  buildPasswordResetRedirectUrl,
   buildDashboardPath,
   buildVerificationRedirectUrl,
   normalizeAuthLocale,
@@ -13,7 +15,11 @@ import {
   unsealPendingVerificationState,
 } from "@/lib/auth-verification";
 import { syncAppUserFromAuthUser } from "@/lib/auth-user-sync";
-import { sendRequiredEmail, verificationEmail } from "@/lib/email";
+import {
+  passwordResetEmail,
+  sendRequiredEmail,
+  verificationEmail,
+} from "@/lib/email";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
@@ -48,6 +54,16 @@ function isEmailNotConfirmedError(error: { message?: string; code?: string }) {
   const code = error.code?.toLowerCase();
   const message = error.message?.toLowerCase() ?? "";
   return code === "email_not_confirmed" || message.includes("email not confirmed");
+}
+
+function isAuthUserMissingError(message?: string) {
+  const value = message?.toLowerCase() ?? "";
+  return (
+    value.includes("user not found") ||
+    value.includes("unable to find") ||
+    value.includes("no user found") ||
+    value.includes("email not found")
+  );
 }
 
 async function resolveActionLocale() {
@@ -154,6 +170,67 @@ async function enforceSignupGuard(email: string): Promise<ActionResult> {
   const bucket = rows[0];
   if (!bucket) {
     return { code: "SIGNUP_UNAVAILABLE" };
+  }
+
+  if (bucket.count > 5) {
+    return { code: "RATE_LIMITED" };
+  }
+
+  return null;
+}
+
+async function enforcePasswordResetGuard(email: string): Promise<ActionResult> {
+  const headersList = await headers();
+  const forwarded = headersList.get("x-forwarded-for");
+  const ip =
+    forwarded?.split(",")[0]?.trim() ||
+    headersList.get("x-real-ip") ||
+    headersList.get("cf-connecting-ip") ||
+    headersList.get("x-vercel-forwarded-for") ||
+    "unknown";
+  const userAgent = (headersList.get("user-agent") ?? "unknown").slice(0, 120);
+  const bucketKey = `password-reset:${ip}:${userAgent}:${email}`;
+  const now = new Date();
+  const resetAt = new Date(now.getTime() + 10 * 60 * 1000);
+
+  const rows = await prisma.$queryRaw<
+    Array<{ count: number; resetAt: Date }>
+  >(Prisma.sql`
+    INSERT INTO "RateLimitBucket" (
+      "key",
+      "routeKey",
+      "clientKey",
+      "count",
+      "resetAt",
+      "createdAt",
+      "updatedAt"
+    )
+    VALUES (
+      ${bucketKey},
+      ${"action:auth:password-reset"},
+      ${bucketKey},
+      1,
+      ${resetAt},
+      ${now},
+      ${now}
+    )
+    ON CONFLICT ("key") DO UPDATE
+    SET
+      "count" = CASE
+        WHEN "RateLimitBucket"."resetAt" <= ${now} THEN 1
+        ELSE "RateLimitBucket"."count" + 1
+      END,
+      "resetAt" = CASE
+        WHEN "RateLimitBucket"."resetAt" <= ${now} THEN ${resetAt}
+        ELSE "RateLimitBucket"."resetAt"
+      END,
+      "updatedAt" = ${now}
+    RETURNING "count", "resetAt"
+  `);
+
+  const bucket = rows[0];
+  if (!bucket) {
+    return { code: "PASSWORD_RESET_UNAVAILABLE" };
   }
 
   if (bucket.count > 5) {
@@ -375,6 +452,151 @@ export async function resendVerificationEmail(): Promise<ActionResult> {
     code: "VERIFY_EMAIL_RESENT",
     email: pendingState.email,
   };
+}
+
+export async function requestPasswordReset(
+  _prevState: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const locale = await resolveActionLocale();
+  const t = await getTranslations({ locale, namespace: "auth.forgot" });
+  const email = normalizeEmail((formData.get("email") as string) ?? "");
+
+  if (!email) {
+    return {
+      error: t("missingEmail"),
+      code: "MISSING_EMAIL",
+    };
+  }
+
+  if (!looksLikeEmail(email)) {
+    return {
+      error: t("invalidEmail"),
+      code: "INVALID_EMAIL",
+    };
+  }
+
+  const resetGuard = await enforcePasswordResetGuard(email);
+  if (resetGuard?.code === "RATE_LIMITED") {
+    return { error: t("rateLimited"), code: "RATE_LIMITED" };
+  }
+  if (resetGuard?.code) {
+    return { error: t("sendError"), code: resetGuard.code };
+  }
+
+  const adminSupabase = createServiceClient();
+  const { data, error } = await adminSupabase.auth.admin.generateLink({
+    type: "recovery",
+    email,
+    options: {
+      redirectTo: buildPasswordResetRedirectUrl(locale),
+    },
+  });
+
+  if (error) {
+    if (isAuthUserMissingError(error.message)) {
+      return {
+        success: true,
+        code: "RESET_EMAIL_SENT",
+        email,
+      };
+    }
+
+    console.error("[auth/forgot] generate link failed:", error);
+    return {
+      error: t("sendError"),
+      code: "RESET_SEND_FAILED",
+    };
+  }
+
+  if (!data?.properties?.action_link) {
+    return {
+      success: true,
+      code: "RESET_EMAIL_SENT",
+      email,
+    };
+  }
+
+  try {
+    const { subject, html } = passwordResetEmail(
+      (data.user?.user_metadata?.full_name as string | undefined) ??
+        (data.user?.user_metadata?.name as string | undefined) ??
+        null,
+      data.properties.action_link,
+      locale,
+    );
+    await sendRequiredEmail(email, subject, html);
+  } catch (sendError) {
+    console.error("[auth/forgot] reset email delivery failed:", sendError);
+    return {
+      error: t("sendError"),
+      code: "RESET_SEND_FAILED",
+    };
+  }
+
+  return {
+    success: true,
+    code: "RESET_EMAIL_SENT",
+    email,
+  };
+}
+
+export async function updatePassword(
+  _prevState: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const locale = await resolveActionLocale();
+  const t = await getTranslations({ locale, namespace: "auth.reset" });
+  const password = (formData.get("password") as string) ?? "";
+  const confirmPassword = (formData.get("confirmPassword") as string) ?? "";
+
+  if (!password || !confirmPassword) {
+    return {
+      error: t("missingFields"),
+      code: "MISSING_FIELDS",
+    };
+  }
+
+  if (password.length < 8) {
+    return {
+      error: t("weakPassword"),
+      code: "WEAK_PASSWORD",
+    };
+  }
+
+  if (password !== confirmPassword) {
+    return {
+      error: t("passwordMismatch"),
+      code: "PASSWORD_MISMATCH",
+    };
+  }
+
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return {
+      error: t("sessionExpired"),
+      code: "SESSION_EXPIRED",
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    console.error("[auth/reset] password update failed:", error);
+    return {
+      error: t("updateError"),
+      code: "PASSWORD_UPDATE_FAILED",
+    };
+  }
+
+  await supabase.auth.signOut();
+  await clearPendingVerificationCookie();
+  redirect(`${buildLoginPath(locale)}?reset=success`);
 }
 
 export async function signOut(): Promise<void> {

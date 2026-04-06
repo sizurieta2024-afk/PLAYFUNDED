@@ -248,7 +248,10 @@
     "pendingPicks": "Pending",
     "profitability": "Profitability",
     "payouts": "Payouts",
-    "settings": "Settings"
+    "settings": "Settings",
+    "errorTitle": "Something went wrong",
+    "errorBody": "An unexpected error occurred. It has been reported automatically.",
+    "errorRetry": "Try again"
   },
   "analytics": {
     "pageTitle": "Analytics",

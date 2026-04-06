@@ -248,7 +248,10 @@
     "pendingPicks": "Pendientes",
     "profitability": "Rentabilidad",
     "payouts": "Pagos",
-    "settings": "Configuración"
+    "settings": "Configuración",
+    "errorTitle": "Algo salió mal",
+    "errorBody": "Ocurrió un error inesperado. Ha sido reportado automáticamente.",
+    "errorRetry": "Intentar de nuevo"
   },
   "analytics": {
     "pageTitle": "Analíticas",

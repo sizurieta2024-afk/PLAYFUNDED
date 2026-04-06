@@ -25,6 +25,17 @@ const cspDirectives = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  serverExternalPackages: ['pg', '@prisma/adapter-pg'],
+  webpack(config) {
+    config.resolve ??= {}
+    config.resolve.alias ??= {}
+    config.resolve.alias['pg-native$'] = false
+    config.infrastructureLogging = {
+      ...(config.infrastructureLogging ?? {}),
+      level: 'error',
+    }
+    return config
+  },
   async headers() {
     return [
       {

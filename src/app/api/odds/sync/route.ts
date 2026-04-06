@@ -12,6 +12,8 @@ import { ApiFootballProvider } from "@/lib/odds/api-football";
 import { LEAGUE_CONFIG } from "@/lib/odds/types";
 import type { OddsEvent } from "@/lib/odds/types";
 import { recordOpsEvent } from "@/lib/ops-events";
+import { withRouteMetric } from "@/lib/ops-observability";
+import { getExternalReadFailureCode } from "@/lib/net/external-read";
 
 function isAuthorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -26,6 +28,7 @@ interface SyncResult {
   fetched: number;
   upserted: number;
   error?: string;
+  errorCode?: string;
 }
 
 async function upsertEvents(
@@ -68,6 +71,7 @@ async function upsertEvents(
 }
 
 async function runSync(req: NextRequest) {
+  const startedAt = Date.now();
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -90,6 +94,7 @@ async function runSync(req: NextRequest) {
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      const errorCode = getExternalReadFailureCode(err);
       console.error(`[odds/sync] Failed for ${config.leagueDisplay}:`, message);
       results.push({
         league: config.leagueDisplay,
@@ -97,6 +102,7 @@ async function runSync(req: NextRequest) {
         fetched: 0,
         upserted: 0,
         error: message,
+        errorCode: errorCode ?? undefined,
       });
     }
   }
@@ -106,15 +112,8 @@ async function runSync(req: NextRequest) {
   const syncedAt = new Date().toISOString();
 
   // External quota/rate errors mean our cron ran correctly — only flag internal failures
-  const EXTERNAL_ERROR_PATTERNS = [
-    "OUT_OF_USAGE_CREDITS",
-    "EXCEEDED_FREQ_LIMIT",
-    "Usage quota has been reached",
-    "Requests are too frequent",
-  ];
   const internalErrors = results.filter(
-    (r) =>
-      r.error && !EXTERNAL_ERROR_PATTERNS.some((p) => r.error!.includes(p)),
+    (r) => r.error && r.errorCode !== "quota_exhausted",
   ).length;
 
   await recordOpsEvent({
@@ -129,7 +128,10 @@ async function runSync(req: NextRequest) {
       totalFetched,
       totalErrors,
       internalErrors,
-      failedLeagues: results.filter((r) => r.error).map((r) => r.league),
+      durationMs: Date.now() - startedAt,
+      failedLeagues: results
+        .filter((r) => r.error)
+        .map((r) => ({ league: r.league, code: r.errorCode ?? "unknown" })),
     },
   });
 
@@ -170,7 +172,13 @@ async function getSyncStatus(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  return runSync(req);
+  return withRouteMetric(
+    {
+      route: "POST /api/odds/sync",
+      source: "api:odds:sync",
+    },
+    () => runSync(req),
+  );
 }
 
 // The scheduler calls GET. Default GET behavior is to run sync.
@@ -178,7 +186,19 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const mode = req.nextUrl.searchParams.get("mode");
   if (mode === "status") {
-    return getSyncStatus(req);
+    return withRouteMetric(
+      {
+        route: "GET /api/odds/sync?mode=status",
+        source: "api:odds:sync",
+      },
+      () => getSyncStatus(req),
+    );
   }
-  return runSync(req);
+  return withRouteMetric(
+    {
+      route: "GET /api/odds/sync",
+      source: "api:odds:sync",
+    },
+    () => runSync(req),
+  );
 }

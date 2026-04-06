@@ -9,6 +9,7 @@ import {
   giftVoucherEmail,
 } from "@/lib/email";
 import { recordOpsEvent } from "@/lib/ops-events";
+import { withRouteMetric } from "@/lib/ops-observability";
 import { withWebhookLock } from "@/lib/payments/webhook-lock";
 import { attributeAffiliatePurchase } from "@/lib/affiliate/attribution";
 
@@ -211,72 +212,80 @@ async function handleCheckoutCompleted(
 }
 
 export async function POST(req: NextRequest) {
-  const limit = await enforceRateLimit(req, "api:webhooks:stripe", {
-    windowMs: 60_000,
-    max: 240,
-  });
-  if (!limit.allowed) {
-    return rateLimitExceededResponse("Too many webhook calls", limit);
-  }
-
-  if (!process.env.STRIPE_WEBHOOK_SECRET) {
-    return NextResponse.json(
-      { error: "Webhook secret not configured" },
-      { status: 500 },
-    );
-  }
-
-  const sig = req.headers.get("stripe-signature");
-  if (!sig) {
-    return NextResponse.json(
-      { error: "Missing stripe-signature" },
-      { status: 400 },
-    );
-  }
-
-  const body = await req.text();
-
-  let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET,
-    );
-  } catch (err) {
-    console.error("[webhook/stripe] Signature verification failed:", err);
-    return NextResponse.json(
-      { error: "Invalid webhook signature" },
-      { status: 400 },
-    );
-  }
-
-  try {
-    if (
-      event.type === "checkout.session.completed" &&
-      (event.data.object as Stripe.Checkout.Session).payment_status === "paid"
-    ) {
-      await handleCheckoutCompleted(
-        event.data.object as Stripe.Checkout.Session,
-      );
-    }
-    return NextResponse.json({ received: true });
-  } catch (err) {
-    console.error("[webhook/stripe] Handler error:", err);
-    await recordOpsEvent({
-      type: "webhook_handler_failed",
-      level: "error",
+  return withRouteMetric(
+    {
+      route: "POST /api/webhooks/stripe",
       source: "api:webhooks:stripe",
-      subjectType: "payment",
-      details: {
-        provider: "stripe",
-        eventType: event.type,
-        error: err instanceof Error ? err.message : String(err),
-      },
-    });
-    return NextResponse.json(
-      { error: "Webhook handler error" },
-      { status: 500 },
-    );
-  }
+    },
+    async () => {
+      const limit = await enforceRateLimit(req, "api:webhooks:stripe", {
+        windowMs: 60_000,
+        max: 240,
+      });
+      if (!limit.allowed) {
+        return rateLimitExceededResponse("Too many webhook calls", limit);
+      }
+
+      if (!process.env.STRIPE_WEBHOOK_SECRET) {
+        return NextResponse.json(
+          { error: "Webhook secret not configured" },
+          { status: 500 },
+        );
+      }
+
+      const sig = req.headers.get("stripe-signature");
+      if (!sig) {
+        return NextResponse.json(
+          { error: "Missing stripe-signature" },
+          { status: 400 },
+        );
+      }
+
+      const body = await req.text();
+
+      let event: Stripe.Event;
+      try {
+        event = stripe.webhooks.constructEvent(
+          body,
+          sig,
+          process.env.STRIPE_WEBHOOK_SECRET,
+        );
+      } catch (err) {
+        console.error("[webhook/stripe] Signature verification failed:", err);
+        return NextResponse.json(
+          { error: "Invalid webhook signature" },
+          { status: 400 },
+        );
+      }
+
+      try {
+        if (
+          event.type === "checkout.session.completed" &&
+          (event.data.object as Stripe.Checkout.Session).payment_status === "paid"
+        ) {
+          await handleCheckoutCompleted(
+            event.data.object as Stripe.Checkout.Session,
+          );
+        }
+        return NextResponse.json({ received: true });
+      } catch (err) {
+        console.error("[webhook/stripe] Handler error:", err);
+        await recordOpsEvent({
+          type: "webhook_handler_failed",
+          level: "error",
+          source: "api:webhooks:stripe",
+          subjectType: "payment",
+          details: {
+            provider: "stripe",
+            eventType: event.type,
+            error: err instanceof Error ? err.message : String(err),
+          },
+        });
+        return NextResponse.json(
+          { error: "Webhook handler error" },
+          { status: 500 },
+        );
+      }
+    },
+  );
 }

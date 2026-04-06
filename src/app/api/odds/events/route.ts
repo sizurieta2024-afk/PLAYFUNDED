@@ -53,5 +53,12 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ events, count: events.length });
+  return NextResponse.json(
+    { events, count: events.length },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120",
+      },
+    },
+  );
 }

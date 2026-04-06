@@ -23,6 +23,8 @@ import {
   dailyLossWarningEmail,
 } from "@/lib/email";
 import { recordOpsEvent } from "@/lib/ops-events";
+import { withRouteMetric } from "@/lib/ops-observability";
+import { describeExternalReadFailure } from "@/lib/net/external-read";
 import { settlePendingPick } from "@/lib/settlement/settle-service";
 import { settlePendingParlay } from "@/lib/settlement/settle-parlay";
 
@@ -48,10 +50,8 @@ interface SettleReport {
   reason?: string;
 }
 
-// The scheduler sends GET — alias so both work
-export { POST as GET };
-
-export async function POST(req: NextRequest) {
+async function runSettle(req: NextRequest) {
+  const startedAt = Date.now();
   if (!isAuthorized(req)) {
     return NextResponse.json(
       { error: "Unauthorized", code: "UNAUTHORIZED" },
@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
         skipped: 0,
         errorCount: 0,
         pendingPicks: 0,
+        durationMs: Date.now() - startedAt,
         noop: true,
       },
     });
@@ -108,6 +109,7 @@ export async function POST(req: NextRequest) {
       eventIds: Set<string>;
     }
   >();
+  const scoreGroupFailures = new Map<string, string>();
 
   for (const pick of pendingPicks) {
     const config = getLeagueConfig(pick.sport, pick.league);
@@ -137,6 +139,14 @@ export async function POST(req: NextRequest) {
         scoresByEventId.set(result.eventId, result);
       }
     } catch (err) {
+      const failureReason = describeExternalReadFailure(
+        err,
+        config.provider === "odds_api" ? "Odds API" : "API-Football",
+      );
+      scoreGroupFailures.set(
+        `${config.provider}:${config.sport}:${config.league}`,
+        failureReason,
+      );
       console.error(
         `[settle] Failed to fetch scores for ${config.leagueDisplay} (${config.provider}):`,
         err,
@@ -167,13 +177,17 @@ export async function POST(req: NextRequest) {
       // Look up score for this event
       const gameResult = scoresByEventId.get(pick.event);
       if (!gameResult) {
+        const failureReason = scoreGroupFailures.get(
+          `${config.provider}:${config.sport}:${config.league}`,
+        );
         report.push({
           pickId: pick.id,
           eventName: pick.eventName,
           status: "pending",
           outcome: "skipped",
-          reason:
-            config.provider === "api_football"
+          reason: failureReason
+            ? failureReason
+            : config.provider === "api_football"
               ? "Final score not yet available from API-Football"
               : "Score not yet available",
         });
@@ -319,10 +333,11 @@ export async function POST(req: NextRequest) {
       const parlayEventIds = new Set(parlay.parlayLegs.map((l) => l.event));
 
       // Collect the leagues for fetching scores
-      const parlayLeagueGroups = new Map<
+    const parlayLeagueGroups = new Map<
         string,
         { config: ReturnType<typeof getLeagueConfig>; eventIds: Set<string> }
-      >();
+    >();
+    const parlayGroupFailures = new Map<string, string>();
       for (const leg of parlay.parlayLegs) {
         const cfg = getLeagueConfig(leg.sport, leg.league);
         if (!cfg) continue;
@@ -350,8 +365,14 @@ export async function POST(req: NextRequest) {
           for (const result of results) {
             parlayScores.set(result.eventId, result);
           }
-        } catch {
-          // skip this league
+        } catch (error) {
+          parlayGroupFailures.set(
+            `${config.provider}:${config.sport}:${config.league}`,
+            describeExternalReadFailure(
+              error,
+              config.provider === "odds_api" ? "Odds API" : "API-Football",
+            ),
+          );
         }
       }
 
@@ -360,12 +381,21 @@ export async function POST(req: NextRequest) {
         parlayScores.has(id),
       );
       if (!allLegsHaveScores) {
+        const providerFailureReason = Array.from(parlayLeagueGroups.values())
+          .map(({ config }) => {
+            if (!config) return null;
+            return parlayGroupFailures.get(
+              `${config.provider}:${config.sport}:${config.league}`,
+            );
+          })
+          .find(Boolean);
         report.push({
           pickId: parlay.id,
           eventName: parlay.eventName,
           status: "pending",
           outcome: "skipped",
-          reason: "Not all parlay leg scores are available yet",
+          reason:
+            providerFailureReason ?? "Not all parlay leg scores are available yet",
         });
         skipped++;
         continue;
@@ -453,6 +483,7 @@ export async function POST(req: NextRequest) {
       settled,
       skipped,
       errorCount,
+      durationMs: Date.now() - startedAt,
     },
   });
 
@@ -463,4 +494,24 @@ export async function POST(req: NextRequest) {
     skipped,
     report,
   });
+}
+
+export async function POST(req: NextRequest) {
+  return withRouteMetric(
+    {
+      route: "POST /api/settle",
+      source: "api:settle",
+    },
+    () => runSettle(req),
+  );
+}
+
+export async function GET(req: NextRequest) {
+  return withRouteMetric(
+    {
+      route: "GET /api/settle",
+      source: "api:settle",
+    },
+    () => runSettle(req),
+  );
 }

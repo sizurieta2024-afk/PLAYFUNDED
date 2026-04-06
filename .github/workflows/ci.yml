@@ -104,6 +104,9 @@ jobs:
       - name: Payout gating proof
         run: node scripts/prove-payout-gating.js
 
+      - name: Security controls proof
+        run: node scripts/prove-security-controls.js
+
       - name: Proof-based validation
         run: TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"node"}' node -r ts-node/register/transpile-only scripts/validate-proof-based.js
 

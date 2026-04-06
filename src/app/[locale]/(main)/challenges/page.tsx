@@ -1,10 +1,10 @@
 import { getTranslations } from "next-intl/server";
 import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
 import { formatLocalPrice, getCurrencyForCountry } from "@/lib/exchangerates";
 import { resolveCountry } from "@/lib/country-policy";
 import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
+import { getActiveTiers } from "@/lib/catalog";
 import { TierCard } from "@/components/challenges/TierCard";
 import type { Metadata } from "next";
 
@@ -56,10 +56,7 @@ export default async function ChallengesPage({
 
   // Fetch tiers and current user in parallel
   const [tiers, supabase] = await Promise.all([
-    prisma.tier.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: "asc" },
-    }),
+    getActiveTiers(),
     createServerClient(),
   ]);
 

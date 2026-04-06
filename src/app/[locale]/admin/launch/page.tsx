@@ -17,6 +17,7 @@ import {
   getKycDeployEnvironment,
   getKycScanMode,
 } from "@/lib/kyc-malware-scan";
+import { getOpsObservabilitySnapshot } from "@/lib/ops-observability";
 
 type OpsEventRow = Awaited<ReturnType<typeof listRecentOpsEvents>>[number];
 import { PLATFORM_POLICY, getPayoutWindowLabel } from "@/lib/platform-policy";
@@ -33,9 +34,10 @@ export default async function AdminLaunchPage() {
   const kycDeployEnvironment = getKycDeployEnvironment();
   const kycScanMode = getKycScanMode();
   const clamavConfigured = Boolean(process.env.CLAMAV_HOST?.trim());
-  const [policies, recentOpsEvents] = await Promise.all([
+  const [policies, recentOpsEvents, observability] = await Promise.all([
     listResolvedCountryPolicies(),
     listRecentOpsEvents(50),
+    getOpsObservabilitySnapshot(),
   ]);
 
   return (
@@ -369,6 +371,148 @@ export default async function AdminLaunchPage() {
               </button>
             </form>
           ))}
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">Observability Snapshot</h2>
+          <p className="text-sm text-muted-foreground">
+            Real route, provider, database, webhook, and cron signals from the
+            last 24 hours. Checked {observability.checkedAt}.
+          </p>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-4">
+          <div className="rounded-xl border border-border bg-card p-4">
+            <p className="text-xs text-muted-foreground mb-1">DB latency</p>
+            <p className="text-lg font-semibold">
+              {observability.db.latencyMs === null
+                ? "Unavailable"
+                : `${observability.db.latencyMs} ms`}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {observability.db.error ?? "Round-trip query against primary DB"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4">
+            <p className="text-xs text-muted-foreground mb-1">DB connections</p>
+            <p className="text-lg font-semibold">
+              {observability.db.totalConnections ?? "Unavailable"}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              active {observability.db.activeConnections ?? "-"} · idle in tx{" "}
+              {observability.db.idleInTransaction ?? "-"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4">
+            <p className="text-xs text-muted-foreground mb-1">Webhook failures</p>
+            <p className="text-lg font-semibold">
+              {observability.webhooks.failureCount}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              duplicates {observability.webhooks.duplicateCount}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4">
+            <p className="text-xs text-muted-foreground mb-1">Tracked routes</p>
+            <p className="text-lg font-semibold">{observability.routes.length}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              critical checkout, webhook, and cron endpoints
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-3">
+          <div className="rounded-xl border border-border overflow-x-auto xl:col-span-1">
+            <table className="w-full min-w-[420px] text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  {["Route", "Count", "Errors", "Avg", "P95"].map((label) => (
+                    <th
+                      key={label}
+                      className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap"
+                    >
+                      {label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {observability.routes.map((route) => (
+                  <tr key={route.route} className="border-b border-border last:border-0">
+                    <td className="px-4 py-3 text-xs font-medium">{route.route}</td>
+                    <td className="px-4 py-3">{route.count}</td>
+                    <td className="px-4 py-3">{route.errorCount}</td>
+                    <td className="px-4 py-3">{route.avgMs ?? "-"}</td>
+                    <td className="px-4 py-3">{route.p95Ms ?? "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="rounded-xl border border-border overflow-x-auto xl:col-span-1">
+            <table className="w-full min-w-[520px] text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  {["Provider", "Operation", "OK", "Fail", "Quota", "Timeout"].map(
+                    (label) => (
+                      <th
+                        key={label}
+                        className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap"
+                      >
+                        {label}
+                      </th>
+                    ),
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {observability.providers.map((provider) => (
+                  <tr
+                    key={`${provider.provider}:${provider.operation}`}
+                    className="border-b border-border last:border-0"
+                  >
+                    <td className="px-4 py-3 font-medium">{provider.provider}</td>
+                    <td className="px-4 py-3 text-xs">{provider.operation}</td>
+                    <td className="px-4 py-3">{provider.successCount}</td>
+                    <td className="px-4 py-3">{provider.failureCount}</td>
+                    <td className="px-4 py-3">{provider.quotaCount}</td>
+                    <td className="px-4 py-3">{provider.timeoutCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="rounded-xl border border-border overflow-x-auto xl:col-span-1">
+            <table className="w-full min-w-[420px] text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  {["Cron", "Runs", "Failures", "Avg", "P95"].map((label) => (
+                    <th
+                      key={label}
+                      className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground whitespace-nowrap"
+                    >
+                      {label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {observability.crons.map((cron) => (
+                  <tr key={cron.source} className="border-b border-border last:border-0">
+                    <td className="px-4 py-3 text-xs font-medium">{cron.source}</td>
+                    <td className="px-4 py-3">{cron.runs}</td>
+                    <td className="px-4 py-3">{cron.failures}</td>
+                    <td className="px-4 py-3">{cron.avgMs ?? "-"}</td>
+                    <td className="px-4 py-3">{cron.p95Ms ?? "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 

@@ -13,6 +13,7 @@ import type {
   LeagueConfig,
 } from "./types";
 import { LEAGUE_CONFIG } from "./types";
+import { fetchExternalJson } from "@/lib/net/external-read";
 
 const BASE_URL = "https://v3.football.api-sports.io";
 
@@ -116,31 +117,31 @@ async function fetchFixtures(
   url.searchParams.set("from", from);
   url.searchParams.set("to", to);
 
-  const res = await fetch(url.toString(), {
-    headers: { "x-apisports-key": getApiKey() },
-    next: { revalidate: 0 },
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(
-      `API-Football fixtures error (league ${leagueId}): ${res.status} ${err}`,
-    );
-  }
-
-  const data = (await res.json()) as {
+  const { data } = await fetchExternalJson<{
     response: ApiFootballFixture[];
     errors: Record<string, string>;
-  };
-
-  // Free plan returns errors.plan when season/feature not available — return empty gracefully
-  if (data.errors && Object.keys(data.errors).length > 0) {
-    console.warn(
-      `[api-football] league ${leagueId} season ${season}:`,
-      data.errors,
-    );
-    return [];
-  }
+  }>({
+    provider: "api_football",
+    operation: `fixtures:${leagueId}:${season}`,
+    url,
+    init: {
+      headers: { "x-apisports-key": getApiKey() },
+      next: { revalidate: 0 },
+    },
+    recordOps: true,
+    validate: (payload) => {
+      if (payload.errors && Object.keys(payload.errors).length > 0) {
+        const combined = JSON.stringify(payload.errors);
+        return {
+          code: /plan|quota|limit/i.test(combined)
+            ? "quota_exhausted"
+            : "bad_response",
+          message: combined,
+        };
+      }
+      return null;
+    },
+  });
 
   return data.response ?? [];
 }
@@ -151,14 +152,17 @@ async function fetchOdds(
   const url = new URL(`${BASE_URL}/odds`);
   url.searchParams.set("fixture", String(fixtureId));
 
-  const res = await fetch(url.toString(), {
-    headers: { "x-apisports-key": getApiKey() },
-    next: { revalidate: 0 },
-  });
-
-  if (!res.ok) return undefined;
-
-  const data = (await res.json()) as { response: ApiFootballOdds[] };
+  const { data } = await fetchExternalJson<{ response: ApiFootballOdds[] }>({
+    provider: "api_football",
+    operation: `odds:${fixtureId}`,
+    url,
+    init: {
+      headers: { "x-apisports-key": getApiKey() },
+      next: { revalidate: 0 },
+    },
+    retries: 1,
+    recordOps: true,
+  }).catch(() => ({ data: { response: [] } }));
   return data.response?.[0];
 }
 

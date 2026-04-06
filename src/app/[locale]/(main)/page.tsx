@@ -3,9 +3,9 @@ import { getTranslations } from "next-intl/server";
 import { hasLocale } from "next-intl";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
 import { resolveCountry } from "@/lib/country-policy";
 import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
+import { getActiveTiers } from "@/lib/catalog";
 import { formatLocalPrice, getCurrencyForCountry } from "@/lib/exchangerates";
 import { BackgroundBeams } from "@/components/landing/BackgroundBeams";
 import { GlowingCard } from "@/components/landing/GlowingCard";
@@ -183,17 +183,13 @@ export default async function HomePage({
   const hasExactCommercialTerms =
     countryPolicy.marketing.showExactCommercialTerms;
 
-  const tiers = await prisma.tier.findMany({
-    where: { isActive: true },
-    orderBy: { sortOrder: "asc" },
-    select: {
-      id: true,
-      name: true,
-      fee: true,
-      fundedBankroll: true,
-      profitSplitPct: true,
-    },
-  });
+  const tiers = (await getActiveTiers()).map((tier) => ({
+    id: tier.id,
+    name: tier.name,
+    fee: tier.fee,
+    fundedBankroll: tier.fundedBankroll,
+    profitSplitPct: tier.profitSplitPct,
+  }));
 
   const localCurrencyCode = getCurrencyForCountry(country);
   const localFeeByTier = new Map<string, string>();

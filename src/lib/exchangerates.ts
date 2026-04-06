@@ -1,5 +1,7 @@
 // Exchange rates cache — refreshed once per hour
 // Maps supported currencies and country → currency defaults.
+import { fetchExternalJson } from "@/lib/net/external-read";
+
 export const LATAM_CURRENCIES: Record<
   string,
   { code: string; symbol: string; name: string }
@@ -63,10 +65,14 @@ export async function getUsdRates(): Promise<Record<string, number>> {
       ? `https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`
       : "https://open.er-api.com/v6/latest/USD"; // free fallback, no key needed
 
-    const res = await fetch(url, { next: { revalidate: 3600 } });
-    if (!res.ok) throw new Error("Exchange rate fetch failed");
-
-    const data = (await res.json()) as { rates: Record<string, number> };
+    const { data } = await fetchExternalJson<{ rates: Record<string, number> }>({
+      provider: apiKey ? "exchangerate_api" : "open_er_api",
+      operation: "usd_rates",
+      url,
+      init: { next: { revalidate: 3600 } },
+      retries: 1,
+      recordOps: false,
+    });
     const mergedRates = { ...FALLBACK_USD_RATES, ...data.rates };
     _cache = { rates: mergedRates, fetchedAt: Date.now() };
     return mergedRates;

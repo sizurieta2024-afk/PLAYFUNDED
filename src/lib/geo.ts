@@ -46,13 +46,11 @@ export async function lookupCountryByIp(ip: string): Promise<string | null> {
       headers: { Accept: "application/json" },
       signal: controller.signal,
     });
-
     clearTimeout(timeout);
 
     if (!res.ok) return null;
 
     const data = (await res.json()) as IpapiResponse;
-
     if (data.error) return null;
 
     return normalizeCountry(data.country_code ?? null);

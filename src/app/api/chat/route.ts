@@ -3,6 +3,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 import { PLATFORM_POLICY, getPayoutWindowLabel } from "@/lib/platform-policy";
 import { createServerClient } from "@/lib/supabase";
+import { withRouteMetric } from "@/lib/ops-observability";
+import { z } from "zod";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -65,6 +67,26 @@ interface UserContext {
   activePicks?: number;
 }
 
+const messageSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  content: z.string().min(1).max(4000),
+});
+
+const userContextSchema = z
+  .object({
+    phase: z.string().max(32).optional(),
+    tierName: z.string().max(64).optional(),
+    balance: z.number().int().optional(),
+    startBalance: z.number().int().optional(),
+    activePicks: z.number().int().min(0).optional(),
+  })
+  .optional();
+
+const bodySchema = z.object({
+  messages: z.array(messageSchema).min(1).max(20),
+  userContext: userContextSchema,
+});
+
 function buildSystemPrompt(userContext?: UserContext): string {
   if (!userContext || !userContext.phase) return SYSTEM_PROMPT;
   const profit = (userContext.balance ?? 0) - (userContext.startBalance ?? 0);
@@ -84,62 +106,75 @@ When answering, use this context to give personalized advice (e.g. how much more
 }
 
 export async function POST(req: NextRequest) {
-  const limit = await enforceRateLimit(req, "api:chat", {
-    windowMs: 60_000,
-    max: 20,
-  });
-  if (!limit.allowed) {
-    return rateLimitExceededResponse(
-      "Too many chat requests. Please wait and try again.",
-      limit,
-    );
-  }
+  return withRouteMetric(
+    {
+      route: "POST /api/chat",
+      source: "api:chat",
+    },
+    async () => {
+      const limit = await enforceRateLimit(req, "api:chat", {
+        windowMs: 60_000,
+        max: 20,
+      });
+      if (!limit.allowed) {
+        return rateLimitExceededResponse(
+          "Too many chat requests. Please wait and try again.",
+          limit,
+        );
+      }
 
-  // Require authentication — only logged-in users can use the chatbot
-  const supabase = await createServerClient();
-  const {
-    data: { user: authUser },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError || !authUser) {
-    return NextResponse.json(
-      { error: "Unauthorized", code: "UNAUTHORIZED" },
-      { status: 401 },
-    );
-  }
+      // Require authentication — only logged-in users can use the chatbot
+      const supabase = await createServerClient();
+      const {
+        data: { user: authUser },
+        error: authError,
+      } = await supabase.auth.getUser();
+      if (authError || !authUser) {
+        return NextResponse.json(
+          { error: "Unauthorized", code: "UNAUTHORIZED" },
+          { status: 401 },
+        );
+      }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json({ error: "Chat not configured" }, { status: 500 });
-  }
+      if (!process.env.ANTHROPIC_API_KEY) {
+        return NextResponse.json(
+          { error: "Chat not configured" },
+          { status: 500 },
+        );
+      }
 
-  let messages: Message[];
-  let userContext: UserContext | undefined;
-  try {
-    const body = await req.json();
-    messages = body.messages;
-    userContext = body.userContext;
-    if (!Array.isArray(messages) || messages.length === 0) throw new Error();
-  } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-  }
+      let messages: Message[];
+      let userContext: UserContext | undefined;
+      try {
+        const body = bodySchema.parse(await req.json());
+        messages = body.messages;
+        userContext = body.userContext;
+      } catch {
+        return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+      }
 
-  // Cap to last 10 messages to limit token usage
-  const trimmed = messages.slice(-10);
+      // Cap to last 10 messages to limit token usage
+      const trimmed = messages.slice(-10);
 
-  try {
-    const response = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 512,
-      system: buildSystemPrompt(userContext),
-      messages: trimmed,
-    });
+      try {
+        const response = await client.messages.create({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 512,
+          system: buildSystemPrompt(userContext),
+          messages: trimmed,
+        });
 
-    const text =
-      response.content[0].type === "text" ? response.content[0].text : "";
+        const text =
+          response.content[0].type === "text" ? response.content[0].text : "";
 
-    return NextResponse.json({ message: text });
-  } catch (err) {
-    console.error("[chat] Anthropic error:", err);
-    return NextResponse.json({ error: "Chat unavailable" }, { status: 500 });
-  }
+        return NextResponse.json({ message: text });
+      } catch (err) {
+        console.error("[chat] Anthropic error:", err);
+        return NextResponse.json(
+          { error: "Chat unavailable" },
+          { status: 500 },
+        );
+      }
+    },
+  );
 }

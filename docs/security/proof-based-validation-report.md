@@ -1,6 +1,6 @@
 # Playfunded Proof-Based Validation Report
 
-Generated: 2026-03-26T12:35:34.824Z
+Generated: 2026-04-06T04:27:04.506Z
 
 This report follows a Shannon-style rule: claims must be backed by executable or source-level proof. Anything not proven is listed as unverified.
 
@@ -35,21 +35,21 @@ Area: payments and webhooks
 Claim: Stripe fulfillment only runs after signature verification and duplicate-safe locking.
 Detail: All required proof points were found in source.
 Evidence:
-- Stripe signature header is required: L229: const sig = req.headers.get("stripe-signature");
-- constructEvent verifies the webhook body: L241: event = stripe.webhooks.constructEvent(
-- Invalid signatures are rejected: L249: { error: "Invalid webhook signature" },
-- Fulfillment is wrapped in a webhook duplicate lock: L60: const fulfillment = await withWebhookLock(
+- Stripe signature header is required: L236: const sig = req.headers.get("stripe-signature");
+- constructEvent verifies the webhook body: L248: event = stripe.webhooks.constructEvent(
+- Invalid signatures are rejected: L256: { error: "Invalid webhook signature" },
+- Fulfillment is wrapped in a webhook duplicate lock: L61: const fulfillment = await withWebhookLock(
 
 ### VERIFIED payments.nowpayments-signature
 Area: payments and webhooks
 Claim: NOWPayments callbacks require a verified provider signature, reject malformed payloads, and deduplicate fulfillment.
 Detail: All required proof points were found in source.
 Evidence:
-- NOWPayments signature header is read: L23: const signature = request.headers.get("x-nowpayments-sig") ?? "";
-- Signature verifier is called: L27: isValid = await verifyNowPaymentsSignature(body, signature);
-- Invalid signatures are rejected: L33: console.error("[NOWPayments webhook] Invalid signature");
-- Malformed payloads are rejected: L49: data = JSON.parse(body) as typeof data;
-- Fulfillment is delegated to the shared NOWPayments payment service: L83: const outcome = await fulfillNowPaymentsPayment({
+- NOWPayments signature header is read: L30: const signature = request.headers.get("x-nowpayments-sig") ?? "";
+- Signature verifier is called: L34: isValid = await verifyNowPaymentsSignature(body, signature);
+- Invalid signatures are rejected: L40: console.error("[NOWPayments webhook] Invalid signature");
+- Malformed payloads are rejected: L56: data = JSON.parse(body) as typeof data;
+- Fulfillment is delegated to the shared NOWPayments payment service: L90: const outcome = await fulfillNowPaymentsPayment({
 
 ### VERIFIED payments.nowpayments-fulfillment-service
 Area: payments and webhooks
@@ -66,19 +66,19 @@ Claim: The CI workflow can run launch smokes from either push or manual dispatch
 Detail: All required proof points were found in source.
 Evidence:
 - CI supports workflow_dispatch: L8: workflow_dispatch:
-- Launch smokes are not limited to push-only events: L112: if: ${{ github.event_name != 'pull_request' }}
-- Launch smokes run the admin support smoke: L198: run: BASE_URL=http://localhost:3004 node scripts/run-admin-support-smoke.mjs
+- Launch smokes are not limited to push-only events: L115: if: ${{ github.event_name != 'pull_request' }}
+- Launch smokes run the admin support smoke: L201: run: BASE_URL=http://localhost:3004 node scripts/run-admin-support-smoke.mjs
 
 ### VERIFIED ops.admin-launch-kyc-status
 Area: payout flows
 Claim: The admin launch page exposes whether KYC scanning is configured plus the resolved deploy environment and scan mode.
 Detail: All required proof points were found in source.
 Evidence:
-- The admin launch page reads the resolved KYC deploy environment: L33: const kycDeployEnvironment = getKycDeployEnvironment();
-- The admin launch page reads the KYC scan mode: L34: const kycScanMode = getKycScanMode();
-- The page shows the KYC scanning card: L76: <p className="text-xs text-muted-foreground mb-1">KYC scanning</p>
-- The page shows the scanner configured vs unconfigured state: L78: {clamavConfigured ? "ClamAV configured" : "Scanner not configured"}
-- The page shows the deploy environment alongside the mode: L81: {kycDeployEnvironment} · mode {kycScanMode}
+- The admin launch page reads the resolved KYC deploy environment: L34: const kycDeployEnvironment = getKycDeployEnvironment();
+- The admin launch page reads the KYC scan mode: L35: const kycScanMode = getKycScanMode();
+- The page shows the KYC scanning card: L78: <p className="text-xs text-muted-foreground mb-1">KYC scanning</p>
+- The page shows the scanner configured vs unconfigured state: L80: {clamavConfigured ? "ClamAV configured" : "Scanner not configured"}
+- The page shows the deploy environment alongside the mode: L83: {kycDeployEnvironment} · mode {kycScanMode}
 
 ### VERIFIED payments.mercadopago-checkout-disabled
 Area: payments and webhooks
@@ -119,10 +119,10 @@ Area: admin authorization
 Claim: Admin payout review uses the transactional review service and notifies the user.
 Detail: All required proof points were found in source.
 Evidence:
-- Transactional review service is called: L90: const updated = await reviewPayoutByAdmin({
-- Conflict responses return 409 from the admin payouts route: L105: { status: 409 },
-- Payout approval email is available: L135: const { subject, html } = payoutPaidEmail(
-- Payout rejection email is available: L143: const { subject, html } = payoutRejectedEmail(
+- Transactional review service is called: L107: const updated = await reviewPayoutByAdmin({
+- Conflict responses return 409 from the admin payouts route: L122: { status: 409 },
+- Payout approval email is available: L152: const { subject, html } = payoutPaidEmail(
+- Payout rejection email is available: L160: const { subject, html } = payoutRejectedEmail(
 
 ### VERIFIED admin.payout-ui-conflict-message
 Area: admin authorization
@@ -149,9 +149,9 @@ Area: admin authorization
 Claim: Admin KYC review uses the transactional review service and notifies the user.
 Detail: All required proof points were found in source.
 Evidence:
-- Transactional review service is called: L127: const updated = await reviewKycByAdmin({
-- KYC approval email is available: L142: const { subject, html } = kycApprovedEmail(updated.user.name);
-- KYC rejection email is available: L145: const { subject, html } = kycRejectedEmail(updated.user.name, reviewNote);
+- Transactional review service is called: L144: const updated = await reviewKycByAdmin({
+- KYC approval email is available: L159: const { subject, html } = kycApprovedEmail(updated.user.name);
+- KYC rejection email is available: L162: const { subject, html } = kycRejectedEmail(updated.user.name, reviewNote);
 
 ### VERIFIED admin.kyc-review-transaction
 Area: admin authorization
@@ -168,9 +168,9 @@ Area: pick settlement logic
 Claim: Manual settlement is limited to authenticated admins.
 Detail: All required proof points were found in source.
 Evidence:
-- Admin requests are authenticated via Supabase: L29: } = await supabase.auth.getUser();
-- Admin role is checked server-side: L40: where: { supabaseId: authUser.id, role: "admin" },
-- Non-admins receive a forbidden response: L44: { error: "Forbidden", code: "FORBIDDEN" },
+- Admin requests are authenticated via Supabase: L42: } = await supabase.auth.getUser();
+- Admin role is checked server-side: L53: where: { supabaseId: authUser.id, role: "admin" },
+- Non-admins receive a forbidden response: L57: { error: "Forbidden", code: "FORBIDDEN" },
 
 ### VERIFIED settlement.cron-secret
 Area: pick settlement logic
@@ -178,7 +178,7 @@ Claim: Automated settlement requires the CRON secret bearer token.
 Detail: All required proof points were found in source.
 Evidence:
 - CRON secret is loaded from environment: L3: // POST /api/settle  (Bearer CRON_SECRET required)
-- Authorization header is checked: L32: return req.headers.get("authorization") === `Bearer ${secret}`;
+- Authorization header is checked: L34: return req.headers.get("authorization") === `Bearer ${secret}`;
 - Unauthorized requests are rejected: L57: { error: "Unauthorized", code: "UNAUTHORIZED" },
 
 ### VERIFIED settlement.multi-provider-auto
@@ -186,9 +186,9 @@ Area: pick settlement logic
 Claim: Automated settlement fetches final scores for both The Odds API and API-Football leagues.
 Detail: All required proof points were found in source.
 Evidence:
-- The Odds API scoring path is used: L134: ? await fetchOddsApiScores(config.providerKey)
-- API-Football scoring path is used: L135: : await fetchApiFootballScores(eventIds);
-- Provider-specific branching chooses the scoring source: L133: config.provider === "odds_api"
+- The Odds API scoring path is used: L136: ? await fetchOddsApiScores(config.providerKey)
+- API-Football scoring path is used: L137: : await fetchApiFootballScores(eventIds);
+- Provider-specific branching chooses the scoring source: L135: config.provider === "odds_api"
 
 ### VERIFIED picks.optimistic-balance-update
 Area: challenge risk rules
@@ -212,7 +212,7 @@ Area: geo-blocking and rate limiting
 Claim: Webhook and manual settlement routes apply route-specific rate limiting.
 Detail: All required proof points were found in source.
 Evidence:
-- Manual settlement uses enforceRateLimit: L16: const limit = await enforceRateLimit(req, "api:admin:picks:settle", {
+- Manual settlement uses enforceRateLimit: L29: const limit = await enforceRateLimit(req, "api:admin:picks:settle", {
 - Rate-limit failures return a structured response: L13: import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 
 ### VERIFIED risk.drawdown-breach
@@ -405,7 +405,7 @@ Area: payments and webhooks
 Claim: A paid purchase with an affiliate code records one conversion row and updates affiliate totals exactly once.
 Detail: Database-backed scenario matched the expected persisted outcome.
 Evidence:
-- Conversion code: PF-D1AAB1
+- Conversion code: PF-2FE4C9
 - Affiliate conversions: 1
 - Affiliate pending payout: 85
 

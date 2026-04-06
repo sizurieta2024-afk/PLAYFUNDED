@@ -6,6 +6,7 @@ import {
   mapNowPaymentsPayoutStatus,
 } from "@/lib/payouts/nowpayments-mass";
 import { recordOpsEvent } from "@/lib/ops-events";
+import { withRouteMetric } from "@/lib/ops-observability";
 import { payoutPaidEmail, payoutRejectedEmail, sendEmail } from "@/lib/email";
 
 function isAuthorized(req: NextRequest): boolean {
@@ -50,9 +51,8 @@ async function restoreChallengeBalance(payout: {
   });
 }
 
-export { POST as GET };
-
-export async function POST(req: NextRequest) {
+async function runPayoutSync(req: NextRequest) {
+  const startedAt = Date.now();
   if (!isAuthorized(req)) {
     return NextResponse.json(
       { error: "Unauthorized", code: "UNAUTHORIZED" },
@@ -85,6 +85,18 @@ export async function POST(req: NextRequest) {
   });
 
   if (payouts.length === 0) {
+    await recordOpsEvent({
+      type: "cron_payout_sync_completed",
+      source: "api:payouts:sync",
+      subjectType: "cron",
+      subjectId: "payout-sync",
+      details: {
+        synced: 0,
+        durationMs: Date.now() - startedAt,
+        report: [],
+        noop: true,
+      },
+    });
     return NextResponse.json({ ok: true, synced: 0, report: [] });
   }
 
@@ -146,9 +158,30 @@ export async function POST(req: NextRequest) {
     subjectId: "payout-sync",
     details: {
       synced: payouts.length,
+      durationMs: Date.now() - startedAt,
       report,
     },
   });
 
   return NextResponse.json({ ok: true, synced: payouts.length, report });
+}
+
+export async function POST(req: NextRequest) {
+  return withRouteMetric(
+    {
+      route: "POST /api/payouts/sync",
+      source: "api:payouts:sync",
+    },
+    () => runPayoutSync(req),
+  );
+}
+
+export async function GET(req: NextRequest) {
+  return withRouteMetric(
+    {
+      route: "GET /api/payouts/sync",
+      source: "api:payouts:sync",
+    },
+    () => runPayoutSync(req),
+  );
 }

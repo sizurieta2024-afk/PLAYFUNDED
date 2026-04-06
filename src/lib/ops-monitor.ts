@@ -25,6 +25,7 @@ export async function getOpsHealthSummary(): Promise<OpsHealthSummary> {
   const [
     latestOddsSyncSuccess,
     latestSettlementSuccess,
+    latestPayoutSyncSuccess,
     recentCronFailures,
     recentWebhookFailures,
     recentWebhookDuplicates,
@@ -39,9 +40,20 @@ export async function getOpsHealthSummary(): Promise<OpsHealthSummary> {
       orderBy: { createdAt: "desc" },
       select: { createdAt: true },
     }),
+    prisma.opsEventLog.findFirst({
+      where: { type: "cron_payout_sync_completed" },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    }),
     prisma.opsEventLog.count({
       where: {
-        type: { in: ["cron_odds_sync_failed", "cron_settle_failed"] },
+        type: {
+          in: [
+            "cron_odds_sync_failed",
+            "cron_settle_failed",
+            "cron_payout_sync_failed",
+          ],
+        },
         createdAt: { gte: errorSince },
       },
     }),
@@ -75,6 +87,14 @@ export async function getOpsHealthSummary(): Promise<OpsHealthSummary> {
         latestSettlementSuccess.createdAt >= cronSince,
       message: "Settlement has succeeded recently.",
       value: latestSettlementSuccess?.createdAt.toISOString() ?? null,
+    },
+    {
+      key: "payout_sync_recent",
+      ok:
+        !!latestPayoutSyncSuccess &&
+        latestPayoutSyncSuccess.createdAt >= cronSince,
+      message: "Payout sync has succeeded recently.",
+      value: latestPayoutSyncSuccess?.createdAt.toISOString() ?? null,
     },
     {
       key: "cron_failures",

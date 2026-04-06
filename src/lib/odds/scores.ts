@@ -5,7 +5,7 @@
 // soccer leagues that are quoted through API-Sports.
 // ============================================================
 
-import { fetchWithTimeout } from "../net/fetch-with-timeout";
+import { fetchExternalJson } from "../net/external-read";
 
 const ODDS_API_BASE_URL = "https://api.the-odds-api.com/v4";
 const API_FOOTBALL_BASE_URL = "https://v3.football.api-sports.io";
@@ -115,13 +115,13 @@ export async function fetchOddsApiScores(
   url.searchParams.set("daysFrom", String(daysFrom));
   url.searchParams.set("dateFormat", "iso");
 
-  const res = await fetch(url.toString(), { next: { revalidate: 0 } });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`OddsAPI scores error (${sportKey}): ${res.status} ${err}`);
-  }
-
-  const data = (await res.json()) as OddsApiScoreEvent[];
+  const { data } = await fetchExternalJson<OddsApiScoreEvent[]>({
+    provider: "odds_api",
+    operation: `scores:${sportKey}`,
+    url,
+    init: { next: { revalidate: 0 } },
+    recordOps: true,
+  });
 
   return data
     .filter((e) => e.completed && e.scores && e.scores.length >= 2)
@@ -153,30 +153,32 @@ async function fetchApiFootballFixtureScore(
   const url = new URL(`${API_FOOTBALL_BASE_URL}/fixtures`);
   url.searchParams.set("id", eventId);
 
-  const res = await fetchWithTimeout(
-    url.toString(),
-    {
+  const { data } = await fetchExternalJson<{
+    response?: ApiFootballScoreFixture[];
+    errors?: Record<string, string>;
+  }>({
+    provider: "api_football",
+    operation: `scores:${eventId}`,
+    url,
+    init: {
       headers: { "x-apisports-key": getApiFootballKey() },
       cache: "no-store",
     },
-    10_000,
-  );
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`API-Football scores error (${eventId}): ${res.status} ${err}`);
-  }
-
-  const data = (await res.json()) as {
-    response?: ApiFootballScoreFixture[];
-    errors?: Record<string, string>;
-  };
-
-  if (data.errors && Object.keys(data.errors).length > 0) {
-    throw new Error(
-      `API-Football scores error (${eventId}): ${JSON.stringify(data.errors)}`,
-    );
-  }
+    timeoutMs: 10_000,
+    recordOps: true,
+    validate: (payload) => {
+      if (payload.errors && Object.keys(payload.errors).length > 0) {
+        const combined = JSON.stringify(payload.errors);
+        return {
+          code: /plan|quota|limit/i.test(combined)
+            ? "quota_exhausted"
+            : "bad_response",
+          message: combined,
+        };
+      }
+      return null;
+    },
+  });
 
   const fixture = data.response?.[0];
   return fixture ? mapApiFootballFixtureToGameResult(fixture) : null;

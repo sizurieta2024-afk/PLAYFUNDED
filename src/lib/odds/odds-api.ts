@@ -6,6 +6,7 @@
 
 import type { OddsEvent, Market, Outcome, OddsProvider, LeagueConfig } from "./types";
 import { LEAGUE_CONFIG } from "./types";
+import { fetchExternalJson } from "@/lib/net/external-read";
 
 const BASE_URL = "https://api.the-odds-api.com/v4";
 const MARKETS = "h2h,spreads,totals"; // moneyline, spread, over/under
@@ -96,16 +97,15 @@ export class OddsApiProvider implements OddsProvider {
     url.searchParams.set("oddsFormat", ODDS_FORMAT);
     url.searchParams.set("dateFormat", "iso");
 
-    const res = await fetch(url.toString(), {
-      next: { revalidate: 0 }, // always fresh in cron context
+    const { data } = await fetchExternalJson<OddsApiEvent[]>({
+      provider: "odds_api",
+      operation: `events:${config.providerKey}`,
+      url,
+      init: {
+        next: { revalidate: 0 }, // always fresh in cron context
+      },
+      recordOps: true,
     });
-
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`OddsAPI error (${config.providerKey}): ${res.status} ${err}`);
-    }
-
-    const data = (await res.json()) as OddsApiEvent[];
 
     return data.map((event): OddsEvent => ({
       id: event.id,

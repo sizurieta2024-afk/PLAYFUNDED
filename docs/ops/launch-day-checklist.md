@@ -12,10 +12,23 @@ Scope:
 
 - Confirm `playfunded.lat` resolves and loads in a normal browser
 - Confirm the latest intended branch/commit is the version live on production
+- Production source of truth is `main`
+- Automatic production deploys run from GitHub Actions on pushes to `main`
+- Manual `vercel --prod` deploys are emergency-only
 - Confirm the paid odds plans are active before public launch messaging depends on fresh odds
 - Confirm the public Discord/community link is still valid
 
-## 2. Run The Live Smoke Set
+## 2. Shipping Rule
+
+- Do feature and launch hardening work on non-`main` branches
+- Do not treat a feature branch deployment as the final production source of truth
+- Move only verified changes onto `main`
+- Push `main`
+- Wait for GitHub Actions workflow `Deploy Production` to pass
+- Confirm Vercel shows the new `main` commit as the current production deployment
+- Only then run the live smoke set against `https://playfunded.lat`
+
+## 3. Run The Live Smoke Set
 
 From the repo root:
 
@@ -36,7 +49,7 @@ Pass criteria:
 - member flow reaches the dashboard in default, English, and Portuguese
 - admin, payout/KYC, and admin-support control-plane checks stay green
 
-## 3. Manual Browser Checks
+## 4. Manual Browser Checks
 
 - Google login works in a real browser
 - email/password signup shows the verify-email step
@@ -46,7 +59,7 @@ Pass criteria:
 - affiliate routes redirect away and are not presented as a public launch surface
 - FAQ does not advertise public affiliate discovery
 
-## 4. Payments And Availability
+## 5. Payments And Availability
 
 - Stripe card checkout initializes successfully
 - Stripe Pix initializes successfully for Brazil-allowed paths
@@ -55,15 +68,16 @@ Pass criteria:
 - blocked-country checkout still returns the expected rejection
 - challenge access is not granted from checkout initiation alone
 
-## 5. Ops And Health
+## 6. Ops And Health
 
 - `/api/odds/sync` returns `200` with `CRON_SECRET`
 - `/api/settle` returns `200` with `CRON_SECRET`
 - `/api/ops/health` is green after fresh sync and settle
 - GitHub CI is green on the final launch commit
+- GitHub workflow `Deploy Production` is green on the final `main` commit
 - GitHub cron workflows are green
 
-## 6. Auth, KYC, And Support Posture
+## 7. Auth, KYC, And Support Posture
 
 - email verification is required before email/password login
 - password reset succeeds without exposing whether an email exists
@@ -71,14 +85,14 @@ Pass criteria:
 - KYC/payout gating behaves as expected
 - if production ClamAV is still not armed, do not promise live KYC upload clearance before that rollout
 
-## 7. Public Claims Check
+## 8. Public Claims Check
 
 - no public Mercado Pago claim remains
 - affiliate is admin-only in the live product
 - sitemap excludes affiliate
 - browser console is clean on core public pages
 
-## 8. Optional But Recommended
+## 9. Optional But Recommended
 
 - configure `PF_ALERT_WEBHOOK_URL`
 - configure `PF_ALERT_WEBHOOK_KIND=discord`

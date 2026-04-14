@@ -1,0 +1,83 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    env:
+      PRISMA_DISABLE_WARNINGS: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Pin npm
+        run: npm install -g npm@11.9.0
+
+      - name: Install
+        run: |
+          set -o pipefail
+          npm ci 2>&1 | awk '!/The configuration property `package.json#prisma`/ && !/The Prisma config file in prisma.config.ts overrides the deprecated `package.json#prisma` property in package.json\./ && !/For more information, see: https:\/\/pris.ly\/prisma-config/'
+
+      - name: Generate Prisma client
+        run: |
+          set -o pipefail
+          npx prisma generate 2>&1 | awk '!/The configuration property `package.json#prisma`/ && !/The Prisma config file in prisma.config.ts overrides the deprecated `package.json#prisma` property in package.json\./ && !/For more information, see: https:\/\/pris.ly\/prisma-config/'
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Hardening proof
+        run: TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"node"}' node -r ts-node/register/transpile-only scripts/prove-hardening.js
+
+      - name: Payment webhook proof
+        run: node scripts/prove-payment-webhooks.js
+
+      - name: Payout gating proof
+        run: node scripts/prove-payout-gating.js
+
+      - name: Security controls proof
+        run: node scripts/prove-security-controls.js
+
+      - name: Proof-based validation
+        run: TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"node"}' node -r ts-node/register/transpile-only scripts/validate-proof-based.js
+
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+
+      - name: Deploy to Vercel production
+        run: npx vercel@51.2.1 deploy --prod --yes --token="${VERCEL_TOKEN}"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

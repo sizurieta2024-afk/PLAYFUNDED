@@ -12,15 +12,26 @@ function requireEnv(name: string): string {
   return value;
 }
 
-const supabaseUrl = requireEnv("NEXT_PUBLIC_SUPABASE_URL");
-const supabaseAnonKey = requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
-const supabaseServiceKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
+function getPublicSupabaseEnv() {
+  return {
+    supabaseUrl: requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
+    supabaseAnonKey: requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+  };
+}
+
+function getServiceSupabaseEnv() {
+  return {
+    ...getPublicSupabaseEnv(),
+    supabaseServiceKey: requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
+  };
+}
 
 // ------------------------------------------------------------
 // Browser / client-side client
 // Use in Client Components ('use client')
 // ------------------------------------------------------------
 export function createClient() {
+  const { supabaseUrl, supabaseAnonKey } = getPublicSupabaseEnv();
   return createBrowserClient(supabaseUrl, supabaseAnonKey);
 }
 
@@ -30,6 +41,7 @@ export function createClient() {
 // Respects Row Level Security — acts as the logged-in user
 // ------------------------------------------------------------
 export async function createServerClient() {
+  const { supabaseUrl, supabaseAnonKey } = getPublicSupabaseEnv();
   const cookieStore = (await cookies()) as unknown as {
     get(name: string): { value: string } | undefined;
     set(
@@ -69,6 +81,7 @@ export async function createServerClient() {
 // NEVER expose to the client
 // ------------------------------------------------------------
 export function createServiceClient() {
+  const { supabaseUrl, supabaseServiceKey } = getServiceSupabaseEnv();
   return createAdminClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,

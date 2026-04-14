@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isCronAuthorized } from "@/lib/auth-cron";
 import {
   sendEmail,
   welcomeEmail,
@@ -34,9 +35,7 @@ const VALID_TEMPLATES = [
 type Template = (typeof VALID_TEMPLATES)[number];
 
 export async function POST(request: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET;
-  const auth = request.headers.get("authorization");
-  if (!cronSecret || auth !== `Bearer ${cronSecret}`) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

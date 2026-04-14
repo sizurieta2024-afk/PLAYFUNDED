@@ -134,7 +134,7 @@ async function handleCheckoutCompleted(
   );
 
   if (fulfillment.status === "duplicate") {
-    console.log("[webhook/stripe] Duplicate event, skipping:", session.id);
+    console.info("[webhook/stripe] Duplicate event, skipping:", session.id);
     await recordOpsEvent({
       type: "webhook_duplicate",
       source: "api:webhooks:stripe",
@@ -205,7 +205,7 @@ async function handleCheckoutCompleted(
     }
   }
 
-  console.log(
+  console.info(
     `[webhook/stripe] Challenge created — userId: ${userId}, tier: ${tier.name}`,
   );
   return { status: "created", paymentId: fulfillment.paymentId };
@@ -261,7 +261,8 @@ export async function POST(req: NextRequest) {
       try {
         if (
           event.type === "checkout.session.completed" &&
-          (event.data.object as Stripe.Checkout.Session).payment_status === "paid"
+          (event.data.object as Stripe.Checkout.Session).payment_status ===
+            "paid"
         ) {
           await handleCheckoutCompleted(
             event.data.object as Stripe.Checkout.Session,

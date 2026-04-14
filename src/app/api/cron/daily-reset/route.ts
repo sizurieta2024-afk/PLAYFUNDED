@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isCronAuthorized } from "@/lib/auth-cron";
 
 // Runs daily at 00:00 UTC via Vercel Cron.
 // Resets dailyStartBalance = current balance for all active challenges.
@@ -12,8 +13,7 @@ import { prisma } from "@/lib/prisma";
 export { POST as GET };
 
 export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

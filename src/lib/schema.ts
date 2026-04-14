@@ -8,13 +8,7 @@ export function organizationSchema() {
     name: "PlayFunded",
     legalName: "PlayFunded",
     url: BASE_URL,
-    logo: {
-      "@type": "ImageObject",
-      url: `${BASE_URL}/logo.png`,
-      width: 512,
-      height: 512,
-    },
-    image: `${BASE_URL}/og-image.png`,
+    image: `${BASE_URL}/logo.png`,
     description:
       "PlayFunded es la primera prop firm de trading deportivo de América Latina. Los traders pagan una tarifa única de entrada, completan dos fases de evaluación con fondos simulados y obtienen una cuenta financiada con hasta 80% de reparto de ganancias.",
     slogan: "Nuestro riesgo, tus ganancias",
@@ -152,9 +146,10 @@ export function homeFaqSchema(locale: string) {
           "Sí. PlayFunded opera con fondos simulados durante la evaluación, por lo que nunca arriesgas más que tu tarifa de entrada. Somos la alternativa latinoamericana confiable al mercado anglosajón de prop firms deportivos, con reglas transparentes y pagos reales mensuales.",
       },
       {
-        question: "¿Cuál es la diferencia entre PlayFunded y playfunded.com?",
+        question:
+          "¿Qué diferencia a PlayFunded de otras plataformas de prop trading deportivo?",
         answer:
-          "PlayFunded (playfunded.lat) es la plataforma original de prop trading deportivo para América Latina, fundada en 2025. Operamos en español, portugués e inglés, con soporte para tarjetas, Pix y criptomonedas según la disponibilidad de tu mercado.",
+          "PlayFunded es una plataforma de prop trading deportivo creada para América Latina. Operamos en español, portugués e inglés, con soporte para tarjetas, Pix y criptomonedas según la disponibilidad de tu mercado.",
       },
     ],
     en: [

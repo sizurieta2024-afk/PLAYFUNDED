@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createServiceClient } from "@/lib/supabase";
+import { isCronAuthorized } from "@/lib/auth-cron";
 
 // Runs daily at 03:00 UTC via Vercel Cron.
 // Exports all business-critical tables to JSON and uploads to Supabase Storage
@@ -26,8 +27,7 @@ async function uploadJson(
 }
 
 export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -15,11 +15,10 @@ import { recordOpsEvent } from "@/lib/ops-events";
 import { withRouteMetric } from "@/lib/ops-observability";
 import { getExternalReadFailureCode } from "@/lib/net/external-read";
 
+import { isCronAuthorized } from "@/lib/auth-cron";
+
 function isAuthorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  const auth = req.headers.get("authorization");
-  return auth === `Bearer ${secret}`;
+  return isCronAuthorized(req);
 }
 
 interface SyncResult {

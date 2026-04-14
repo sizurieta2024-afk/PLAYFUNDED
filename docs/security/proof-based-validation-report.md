@@ -1,6 +1,6 @@
 # Playfunded Proof-Based Validation Report
 
-Generated: 2026-04-06T04:27:04.506Z
+Generated: 2026-04-09T06:21:59.496Z
 
 This report follows a Shannon-style rule: claims must be backed by executable or source-level proof. Anything not proven is listed as unverified.
 
@@ -67,7 +67,7 @@ Detail: All required proof points were found in source.
 Evidence:
 - CI supports workflow_dispatch: L8: workflow_dispatch:
 - Launch smokes are not limited to push-only events: L115: if: ${{ github.event_name != 'pull_request' }}
-- Launch smokes run the admin support smoke: L201: run: BASE_URL=http://localhost:3004 node scripts/run-admin-support-smoke.mjs
+- Launch smokes run the admin support smoke: L202: run: BASE_URL=http://localhost:3004 node scripts/run-admin-support-smoke.mjs
 
 ### VERIFIED ops.admin-launch-kyc-status
 Area: payout flows
@@ -177,8 +177,8 @@ Area: pick settlement logic
 Claim: Automated settlement requires the CRON secret bearer token.
 Detail: All required proof points were found in source.
 Evidence:
-- CRON secret is loaded from environment: L3: // POST /api/settle  (Bearer CRON_SECRET required)
-- Authorization header is checked: L34: return req.headers.get("authorization") === `Bearer ${secret}`;
+- Shared cron auth helper is used: L31: import { isCronAuthorized } from "@/lib/auth-cron";
+- Authorization check delegates to the helper: L34: return isCronAuthorized(req);
 - Unauthorized requests are rejected: L57: { error: "Unauthorized", code: "UNAUTHORIZED" },
 
 ### VERIFIED settlement.multi-provider-auto
@@ -405,7 +405,7 @@ Area: payments and webhooks
 Claim: A paid purchase with an affiliate code records one conversion row and updates affiliate totals exactly once.
 Detail: Database-backed scenario matched the expected persisted outcome.
 Evidence:
-- Conversion code: PF-2FE4C9
+- Conversion code: PF-8AFC4D
 - Affiliate conversions: 1
 - Affiliate pending payout: 85
 

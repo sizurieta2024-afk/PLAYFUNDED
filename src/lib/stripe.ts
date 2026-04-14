@@ -176,7 +176,8 @@ export async function createCheckoutSession({
   discountAmount = 0,
   discountPct = 0,
 }: CreateCheckoutSessionParams): Promise<string> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!baseUrl) throw new Error("NEXT_PUBLIC_APP_URL is not configured");
   const localePath =
     locale === "en" ? "/en" : locale === "pt-BR" ? "/pt-BR" : "";
 

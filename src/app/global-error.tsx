@@ -23,16 +23,19 @@ export default function GlobalError({
               <span className="text-xl font-bold text-destructive">!</span>
             </div>
             <h1 className="mb-2 text-xl font-semibold">
-              Something went wrong
+              Algo salio mal / Something went wrong
             </h1>
-            <p className="mb-6 text-sm text-muted-foreground">
+            <p className="mb-1 text-sm text-muted-foreground">
+              Ocurrio un error inesperado. Se ha reportado automaticamente.
+            </p>
+            <p className="mb-6 text-xs text-muted-foreground">
               An unexpected error occurred. It has been reported automatically.
             </p>
             <button
               onClick={reset}
               className="rounded-lg bg-pf-pink px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-pf-pink-dark"
             >
-              Try again
+              Intentar de nuevo / Try again
             </button>
           </div>
         </div>

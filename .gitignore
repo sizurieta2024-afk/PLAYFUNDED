@@ -30,8 +30,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
-.env*.local
+# env files (never commit secrets)
+.env
+.env.*
+!.env.example
 
 # vercel
 .vercel
@@ -50,3 +52,8 @@ next-env.d.ts
 error.log
 __pycache__/
 *.pyc
+
+# build artifacts
+/output/
+/.tmp/
+/public/brand/

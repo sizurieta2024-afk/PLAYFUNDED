@@ -3,10 +3,16 @@ import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
-import { WinRateChart } from "@/components/dashboard/WinRateChart";
+import dynamic from "next/dynamic";
 import type { WinRateEntry } from "@/components/dashboard/WinRateChart";
-import { PicksTable } from "@/components/dashboard/PicksTable";
 import type { PickRow } from "@/components/dashboard/PicksTable";
+
+const WinRateChart = dynamic(() =>
+  import("@/components/dashboard/WinRateChart").then((m) => m.WinRateChart),
+);
+const PicksTable = dynamic(() =>
+  import("@/components/dashboard/PicksTable").then((m) => m.PicksTable),
+);
 import type { Metadata } from "next";
 
 export async function generateMetadata({

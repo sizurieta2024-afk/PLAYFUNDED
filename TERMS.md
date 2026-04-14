@@ -50,4 +50,4 @@ These terms may be updated. Continued use after updates means acceptance of the 
 
 ## 11. Contact
 
-For support or legal requests: `support@playfunded.com`
+For support or legal requests: `support@playfunded.lat`

@@ -13,10 +13,11 @@ Updated: 2026-03-25
   - admin smoke passed
   - payout/KYC smoke passed
   - admin/support smoke passed
-- Public affiliate rollout:
-  - `/affiliate`, `/en/affiliate`, and `/pt-BR/affiliate` are live
+- Public affiliate surface:
+  - `/affiliate`, `/en/affiliate`, and `/pt-BR/affiliate` redirect away from the public product
+  - user dashboard affiliate routes redirect away
   - affiliate is removed from sitemap discovery
-  - FAQ no longer advertises affiliate access
+  - FAQ no longer advertises public affiliate access
 - Public payment claims:
   - Mercado Pago is intentionally disabled for launch
   - no public Mercado Pago claim remained on the checked public pages

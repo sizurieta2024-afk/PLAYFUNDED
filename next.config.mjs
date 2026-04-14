@@ -9,17 +9,17 @@ const cspDirectives = [
   "base-uri 'self'",
   "frame-ancestors 'none'",
   "object-src 'none'",
-  // NOTE: 'unsafe-inline' is required while JSON-LD script tags and third-party
-  // SDKs (Stripe, MP) inject inline scripts. Migrate to nonce-based CSP once
-  // those integrations support it.
-  `script-src 'self' 'unsafe-inline'${isProduction ? '' : " 'unsafe-eval'"} https://js.stripe.com https://sdk.mercadopago.com`,
+  // NOTE: 'unsafe-inline' is required while JSON-LD script tags and Stripe
+  // inject inline scripts. Migrate to nonce-based CSP once those integrations
+  // support it.
+  `script-src 'self' 'unsafe-inline'${isProduction ? '' : " 'unsafe-eval'"} https://js.stripe.com`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  `connect-src 'self'${isProduction ? '' : ' ws://localhost:* ws://127.0.0.1:* wss://localhost:* wss://127.0.0.1:*'} https://api.stripe.com https://api.mercadopago.com https://api.nowpayments.io https://api.anthropic.com https://*.supabase.co https://*.sentry.io`,
+  `connect-src 'self'${isProduction ? '' : ' ws://localhost:* ws://127.0.0.1:* wss://localhost:* wss://127.0.0.1:*'} https://api.stripe.com https://api.nowpayments.io https://api.anthropic.com https://*.supabase.co https://*.sentry.io`,
   "worker-src 'self' blob:",
-  "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.mercadopago.com https://sdk.mercadopago.com",
-  "form-action 'self' https://checkout.stripe.com https://www.mercadopago.com",
+  "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
+  "form-action 'self' https://checkout.stripe.com",
   'upgrade-insecure-requests',
 ]
 

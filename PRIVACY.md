@@ -47,4 +47,4 @@ This policy may be updated periodically. Material changes will be communicated i
 
 ## 10. Contact
 
-Privacy and data requests: `support@playfunded.com`
+Privacy and data requests: `support@playfunded.lat`

@@ -3,12 +3,20 @@ import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
-import { BalanceChart } from "@/components/dashboard/BalanceChart";
+import dynamic from "next/dynamic";
 import type { BalancePoint } from "@/components/dashboard/BalanceChart";
-import { WinRateChart } from "@/components/dashboard/WinRateChart";
 import type { WinRateEntry } from "@/components/dashboard/WinRateChart";
-import { PicksTable } from "@/components/dashboard/PicksTable";
 import type { PickRow } from "@/components/dashboard/PicksTable";
+
+const BalanceChart = dynamic(() =>
+  import("@/components/dashboard/BalanceChart").then((m) => m.BalanceChart),
+);
+const WinRateChart = dynamic(() =>
+  import("@/components/dashboard/WinRateChart").then((m) => m.WinRateChart),
+);
+const PicksTable = dynamic(() =>
+  import("@/components/dashboard/PicksTable").then((m) => m.PicksTable),
+);
 import { MetricBar } from "@/components/dashboard/MetricBar";
 import type { Metadata } from "next";
 

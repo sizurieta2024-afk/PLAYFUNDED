@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+function resolveSafeNextPath(value: string | null) {
+  if (!value) return "/";
+  if (!value.startsWith("/")) return "/";
+  if (value.startsWith("//")) return "/";
+  return value;
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ code: string }> },
@@ -26,7 +33,8 @@ export async function GET(
     }),
   ]);
 
-  const response = NextResponse.redirect(new URL("/", req.url));
+  const nextPath = resolveSafeNextPath(req.nextUrl.searchParams.get("next"));
+  const response = NextResponse.redirect(new URL(nextPath, req.url));
   response.cookies.set("pf_ref", code, {
     maxAge: 60 * 60 * 24 * 30, // 30 days
     path: "/",

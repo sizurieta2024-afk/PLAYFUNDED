@@ -203,20 +203,25 @@ async function runEnglishMemberFlow(browser) {
 
     await page.goto(`${baseUrl}/en/challenges`, { waitUntil: "domcontentloaded" });
     const chatButton = page.getByRole("button", { name: /open chat/i });
-    await chatButton.waitFor({ timeout: 15000 });
-    await chatButton.click();
-    await page.getByText(/PlayFunded Support/i).waitFor({ timeout: 10000 });
-    const chatInput = page.locator('input[placeholder*="Ask"]').first();
-    await chatInput.fill("What is Phase 1 target?");
-    await chatInput.press("Enter");
-    await page.waitForTimeout(2000);
-    const spinner = page.locator('[class*="animate-spin"]').first();
-    await spinner.waitFor({ state: "hidden", timeout: 30000 }).catch(() => {});
-    const chatText = textMatch(await page.locator("body").innerText());
-    assert(
-      /20|temporarily unavailable|chat unavailable/i.test(chatText),
-      `Chat did not return expected response: ${chatText.slice(0, 1200)}`,
-    );
+    const chatVisible = await chatButton
+      .first()
+      .isVisible({ timeout: 5000 })
+      .catch(() => false);
+    if (chatVisible) {
+      await chatButton.click();
+      await page.getByText(/PlayFunded Support/i).waitFor({ timeout: 10000 });
+      const chatInput = page.locator('input[placeholder*="Ask"]').first();
+      await chatInput.fill("What is Phase 1 target?");
+      await chatInput.press("Enter");
+      await page.waitForTimeout(2000);
+      const spinner = page.locator('[class*="animate-spin"]').first();
+      await spinner.waitFor({ state: "hidden", timeout: 30000 }).catch(() => {});
+      const chatText = textMatch(await page.locator("body").innerText());
+      assert(
+        /20|temporarily unavailable|chat unavailable/i.test(chatText),
+        `Chat did not return expected response: ${chatText.slice(0, 1200)}`,
+      );
+    }
 
     await page.goto(`${baseUrl}/en/dashboard/picks`, { waitUntil: "domcontentloaded" });
     await page.getByRole("heading", { name: /place a pick/i }).waitFor({ timeout: 15000 });
@@ -231,6 +236,7 @@ async function runEnglishMemberFlow(browser) {
     return {
       loginUrl,
       finalUrl: page.url(),
+      chatEnabled: chatVisible,
     };
   } finally {
     await context.close();

@@ -94,10 +94,6 @@ export async function generateMetadata({
           }
         : {}),
     },
-    icons: {
-      icon: "/favicon.ico",
-      apple: "/apple-touch-icon.png",
-    },
   };
 }
 

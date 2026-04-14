@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 
 // Sentry → GitHub Codex autofix bridge.
 //
@@ -10,7 +10,7 @@ import { createHmac } from "crypto";
 // Required env vars:
 //   SENTRY_WEBHOOK_SECRET  — client secret from Sentry Internal Integration
 //   GH_DISPATCH_TOKEN      — GitHub PAT with repo scope (for repository_dispatch)
-//   GITHUB_REPO            — e.g. "yourorg/playfunded"
+//   PF_GITHUB_REPO         — e.g. "yourorg/playfunded"
 
 function extractStackTrace(entries: unknown[]): string {
   if (!Array.isArray(entries)) return "";
@@ -85,12 +85,14 @@ function extractEnvironments(
 
 function isProductionIssue(environments: string[]) {
   if (environments.length === 0) return true;
-  return environments.some((value) =>
-    /(prod|production|live)/i.test(value),
-  );
+  return environments.some((value) => /(prod|production|live)/i.test(value));
 }
 
-function shouldSkipAutofix(errorTitle: string, culprit: string, stackTrace: string) {
+function shouldSkipAutofix(
+  errorTitle: string,
+  culprit: string,
+  stackTrace: string,
+) {
   const haystack = `${errorTitle}\n${culprit}\n${stackTrace}`.toLowerCase();
   const expectedNoise = [
     "payment_method_disabled",
@@ -130,7 +132,10 @@ async function hasOpenAutofixPr(
 
   if (!response.ok) {
     const text = await response.text();
-    console.warn("[sentry-webhook] Failed to query existing autofix PRs:", text);
+    console.warn(
+      "[sentry-webhook] Failed to query existing autofix PRs:",
+      text,
+    );
     return false;
   }
 
@@ -150,7 +155,9 @@ export async function POST(request: NextRequest) {
 
   const sentrySignature = request.headers.get("sentry-hook-signature") ?? "";
   const expected = createHmac("sha256", secret).update(body).digest("hex");
-  if (sentrySignature !== expected) {
+  const sigBuf = Buffer.from(sentrySignature);
+  const expBuf = Buffer.from(expected);
+  if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
     console.warn("[sentry-webhook] Invalid signature");
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
@@ -200,10 +207,12 @@ export async function POST(request: NextRequest) {
 
   // ── Trigger GitHub repository_dispatch ──────────────────────────────────
   const ghToken = process.env.GH_DISPATCH_TOKEN;
-  const ghRepo = process.env.GITHUB_REPO; // e.g. "yourorg/playfunded"
+  const ghRepo = process.env.PF_GITHUB_REPO; // e.g. "yourorg/playfunded"
 
   if (!ghToken || !ghRepo) {
-    console.error("[sentry-webhook] GH_DISPATCH_TOKEN or GITHUB_REPO not set");
+    console.error(
+      "[sentry-webhook] GH_DISPATCH_TOKEN or PF_GITHUB_REPO not set",
+    );
     return NextResponse.json({ error: "Misconfigured" }, { status: 500 });
   }
 

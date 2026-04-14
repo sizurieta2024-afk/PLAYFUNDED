@@ -9,14 +9,18 @@ import { recordOpsEvent } from "@/lib/ops-events";
 import { withRouteMetric } from "@/lib/ops-observability";
 import { payoutPaidEmail, payoutRejectedEmail, sendEmail } from "@/lib/email";
 
+import { isCronAuthorized } from "@/lib/auth-cron";
+
 function isAuthorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  return req.headers.get("authorization") === `Bearer ${secret}`;
+  return isCronAuthorized(req);
 }
 
 function extractRequestedProfitAmount(providerData: unknown): number | null {
-  if (!providerData || typeof providerData !== "object" || Array.isArray(providerData)) {
+  if (
+    !providerData ||
+    typeof providerData !== "object" ||
+    Array.isArray(providerData)
+  ) {
     return null;
   }
   const value = (providerData as Record<string, unknown>).requestedProfitAmount;
@@ -43,7 +47,9 @@ async function restoreChallengeBalance(payout: {
   providerData: unknown;
 }) {
   if (!payout.challengeId) return;
-  const requestedProfitAmount = extractRequestedProfitAmount(payout.providerData);
+  const requestedProfitAmount = extractRequestedProfitAmount(
+    payout.providerData,
+  );
   if (requestedProfitAmount === null) return;
   await prisma.challenge.update({
     where: { id: payout.challengeId },
@@ -104,7 +110,9 @@ async function runPayoutSync(req: NextRequest) {
 
   for (const payout of payouts) {
     try {
-      const provider = await getNowPaymentsPayoutStatus(payout.providerPayoutId!);
+      const provider = await getNowPaymentsPayoutStatus(
+        payout.providerPayoutId!,
+      );
       const mapped = mapNowPaymentsPayoutStatus(provider.status);
       if (mapped === "failed") {
         await restoreChallengeBalance(payout);

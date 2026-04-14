@@ -4,6 +4,7 @@ import { Footer } from "@/components/layout/Footer";
 import { ChatWidget } from "@/components/chat/ChatWidget";
 import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
+import { isChatConfigured } from "@/lib/chat-config";
 
 export default async function MainLayout({
   children,
@@ -16,6 +17,7 @@ export default async function MainLayout({
     error: authError,
   } = await supabase.auth.getUser();
   const isAuthenticated = !authError && !!authUser;
+  const chatEnabled = isChatConfigured();
 
   let userContext:
     | {
@@ -67,7 +69,7 @@ export default async function MainLayout({
       <Navbar isAuthenticated={isAuthenticated} />
       <main className="flex-1">{children}</main>
       <Footer />
-      <ChatWidget userContext={userContext} />
+      {chatEnabled ? <ChatWidget userContext={userContext} /> : null}
     </div>
   );
 }

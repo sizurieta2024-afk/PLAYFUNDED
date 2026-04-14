@@ -2,20 +2,26 @@ import {
   createBrowserClient,
   createServerClient as createSsrServerClient,
   type CookieOptions,
-} from '@supabase/ssr'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
+} from "@supabase/ssr";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required env var: ${name}`);
+  return value;
+}
+
+const supabaseUrl = requireEnv("NEXT_PUBLIC_SUPABASE_URL");
+const supabaseAnonKey = requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+const supabaseServiceKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
 
 // ------------------------------------------------------------
 // Browser / client-side client
 // Use in Client Components ('use client')
 // ------------------------------------------------------------
 export function createClient() {
-  return createBrowserClient(supabaseUrl, supabaseAnonKey)
+  return createBrowserClient(supabaseUrl, supabaseAnonKey);
 }
 
 // ------------------------------------------------------------
@@ -25,36 +31,36 @@ export function createClient() {
 // ------------------------------------------------------------
 export async function createServerClient() {
   const cookieStore = (await cookies()) as unknown as {
-    get(name: string): { value: string } | undefined
+    get(name: string): { value: string } | undefined;
     set(
       cookie: {
-        name: string
-        value: string
-      } & CookieOptions
-    ): void
-  }
+        name: string;
+        value: string;
+      } & CookieOptions,
+    ): void;
+  };
 
   return createSsrServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       get(name: string) {
-        return cookieStore.get(name)?.value
+        return cookieStore.get(name)?.value;
       },
       set(name: string, value: string, options: CookieOptions) {
         try {
-          cookieStore.set({ name, value, ...options })
+          cookieStore.set({ name, value, ...options });
         } catch {
           // Cannot set cookies in Server Components — ignore
         }
       },
       remove(name: string, options: CookieOptions) {
         try {
-          cookieStore.set({ name, value: '', ...options })
+          cookieStore.set({ name, value: "", ...options });
         } catch {
           // Cannot remove cookies in Server Components — ignore
         }
       },
     },
-  })
+  });
 }
 
 // ------------------------------------------------------------
@@ -68,5 +74,5 @@ export function createServiceClient() {
       autoRefreshToken: false,
       persistSession: false,
     },
-  })
+  });
 }

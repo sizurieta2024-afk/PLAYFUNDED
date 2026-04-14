@@ -5,8 +5,7 @@ import { PLATFORM_POLICY, getPayoutWindowLabel } from "@/lib/platform-policy";
 import { createServerClient } from "@/lib/supabase";
 import { withRouteMetric } from "@/lib/ops-observability";
 import { z } from "zod";
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+import { isChatConfigured } from "@/lib/chat-config";
 
 const SYSTEM_PROMPT = `You are PlayFunded's support assistant.
 
@@ -47,8 +46,8 @@ KEY RULES:
 - Entry fees are ${PLATFORM_POLICY.commercial.entryFeesRefundable ? "refundable" : "non-refundable"}
 
 PARTNER CODES:
-- PlayFunded has a public affiliate page and application flow
-- Only approved affiliates get referral codes, dashboard tools, and conversion stats
+- Partner and influencer codes are managed internally by PlayFunded
+- There is no public affiliate signup page or user-facing affiliate dashboard in the live product
 - Valid codes can apply a checkout discount
 - Support should not promise instant approval or dashboard access before review
 
@@ -136,10 +135,10 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      if (!process.env.ANTHROPIC_API_KEY) {
+      if (!isChatConfigured()) {
         return NextResponse.json(
-          { error: "Chat not configured" },
-          { status: 500 },
+          { error: "Chat unavailable", code: "CHAT_UNAVAILABLE" },
+          { status: 503 },
         );
       }
 
@@ -157,6 +156,9 @@ export async function POST(req: NextRequest) {
       const trimmed = messages.slice(-10);
 
       try {
+        const client = new Anthropic({
+          apiKey: process.env.ANTHROPIC_API_KEY,
+        });
         const response = await client.messages.create({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 512,
@@ -171,8 +173,8 @@ export async function POST(req: NextRequest) {
       } catch (err) {
         console.error("[chat] Anthropic error:", err);
         return NextResponse.json(
-          { error: "Chat unavailable" },
-          { status: 500 },
+          { error: "Chat unavailable", code: "CHAT_UNAVAILABLE" },
+          { status: 503 },
         );
       }
     },

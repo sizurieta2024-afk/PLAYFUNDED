@@ -32,8 +32,9 @@ jobs:
       NOWPAYMENTS_IPN_SECRET: ${{ secrets.NOWPAYMENTS_IPN_SECRET }}
       ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
       API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
-      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-      RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+      SMTP_FROM: ${{ secrets.SMTP_FROM }}
       NEXT_PUBLIC_APP_URL: http://localhost:3004
       SUPPORT_EMAIL: ${{ secrets.SUPPORT_EMAIL }}
       PF_BASE_URL: http://localhost:3004

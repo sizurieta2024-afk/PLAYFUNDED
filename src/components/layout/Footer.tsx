@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { LanguageToggle } from "./LanguageToggle";
-import { TrendingUp } from "lucide-react";
 import { getDiscordInviteUrl } from "@/lib/public-links";
 
 export function Footer() {
@@ -54,14 +53,8 @@ export function Footer() {
         <div className="py-12 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand column */}
           <div className="space-y-4">
-            <Link href="/" className="flex items-center gap-2 group w-fit">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-pf-brand/10 group-hover:bg-pf-brand/20 transition-colors">
-                <TrendingUp
-                  className="w-4 h-4 text-pf-brand"
-                  strokeWidth={2.5}
-                />
-              </div>
-              <span className="text-base font-bold tracking-tight text-foreground">
+            <Link href="/" className="group w-fit">
+              <span className="font-display font-bold text-base tracking-[0.15em] uppercase text-pf-brand transition-colors duration-200 group-hover:text-pf-gold-light">
                 {tn("brand")}
               </span>
             </Link>

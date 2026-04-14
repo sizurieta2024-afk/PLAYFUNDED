@@ -27,8 +27,9 @@ const requiredRuntime =
         "NOWPAYMENTS_PAYOUT_PASSWORD",
         "ODDS_API_KEY",
         "API_FOOTBALL_KEY",
-        "RESEND_API_KEY",
-        "RESEND_FROM_EMAIL",
+        "SMTP_USER",
+        "SMTP_APP_PASSWORD",
+        "SMTP_FROM",
         "NEXT_PUBLIC_APP_URL",
         "SUPPORT_EMAIL",
       ];

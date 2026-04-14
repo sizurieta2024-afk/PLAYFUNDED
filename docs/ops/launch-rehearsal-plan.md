@@ -67,8 +67,8 @@ Record:
 
 ### Step 6. Public Copy Check
 
-- affiliate page is live in all 3 locales
-- FAQ does not reintroduce affiliate discovery drift
+- affiliate routes redirect away and are not visible as a public launch surface
+- FAQ does not reintroduce public affiliate discovery drift
 - no public Mercado Pago copy remains
 - browser console is clean on core public pages
 

@@ -43,8 +43,8 @@ Pass criteria:
 - forgot-password shows a generic success state and the reset link works
 - logout works
 - landing page copy is clean in `/`, `/en`, `/pt-BR`
-- affiliate page exists in `/affiliate`, `/en/affiliate`, `/pt-BR/affiliate`
-- FAQ does not advertise affiliate discovery beyond the public affiliate page
+- affiliate routes redirect away and are not presented as a public launch surface
+- FAQ does not advertise public affiliate discovery
 
 ## 4. Payments And Availability
 
@@ -74,7 +74,7 @@ Pass criteria:
 ## 7. Public Claims Check
 
 - no public Mercado Pago claim remains
-- affiliate is public but softly launched
+- affiliate is admin-only in the live product
 - sitemap excludes affiliate
 - browser console is clean on core public pages
 

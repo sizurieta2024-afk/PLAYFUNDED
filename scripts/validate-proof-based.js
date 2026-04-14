@@ -516,12 +516,12 @@ const sourceCases = [
     file: "src/app/api/settle/route.ts",
     checks: [
       {
-        description: "CRON secret is loaded from environment",
-        matcher: /CRON_SECRET/,
+        description: "Shared cron auth helper is used",
+        matcher: /isCronAuthorized/,
       },
       {
-        description: "Authorization header is checked",
-        matcher: /authorization/,
+        description: "Authorization check delegates to the helper",
+        matcher: /return isCronAuthorized\(req\);/,
       },
       {
         description: "Unauthorized requests are rejected",

@@ -28,10 +28,10 @@ import { describeExternalReadFailure } from "@/lib/net/external-read";
 import { settlePendingPick } from "@/lib/settlement/settle-service";
 import { settlePendingParlay } from "@/lib/settlement/settle-parlay";
 
+import { isCronAuthorized } from "@/lib/auth-cron";
+
 function isAuthorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  return req.headers.get("authorization") === `Bearer ${secret}`;
+  return isCronAuthorized(req);
 }
 
 function getLeagueConfig(sport: string, league: string): LeagueConfig | null {
@@ -333,11 +333,11 @@ async function runSettle(req: NextRequest) {
       const parlayEventIds = new Set(parlay.parlayLegs.map((l) => l.event));
 
       // Collect the leagues for fetching scores
-    const parlayLeagueGroups = new Map<
+      const parlayLeagueGroups = new Map<
         string,
         { config: ReturnType<typeof getLeagueConfig>; eventIds: Set<string> }
-    >();
-    const parlayGroupFailures = new Map<string, string>();
+      >();
+      const parlayGroupFailures = new Map<string, string>();
       for (const leg of parlay.parlayLegs) {
         const cfg = getLeagueConfig(leg.sport, leg.league);
         if (!cfg) continue;
@@ -395,7 +395,8 @@ async function runSettle(req: NextRequest) {
           status: "pending",
           outcome: "skipped",
           reason:
-            providerFailureReason ?? "Not all parlay leg scores are available yet",
+            providerFailureReason ??
+            "Not all parlay leg scores are available yet",
         });
         skipped++;
         continue;

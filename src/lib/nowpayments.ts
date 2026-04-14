@@ -39,7 +39,8 @@ export async function createCryptoInvoice({
   locale,
 }: CreateInvoiceParams): Promise<CryptoInvoice> {
   const apiKey = getApiKey();
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!baseUrl) throw new Error("NEXT_PUBLIC_APP_URL is not configured");
   const localePath = locale === "es-419" ? "" : `/${locale}`;
 
   const res = await fetchWithTimeout(

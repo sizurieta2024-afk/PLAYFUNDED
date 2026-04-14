@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { resolveAffiliateDiscountCode } from "@/lib/affiliate/codes";
+import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
   tierId: z.string().uuid(),
@@ -9,6 +10,13 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const limit = await enforceRateLimit(request, "api:discounts:validate", {
+    windowMs: 60_000,
+    max: 10,
+  });
+  if (!limit.allowed) {
+    return rateLimitExceededResponse("Too many requests", limit);
+  }
   let body: z.infer<typeof bodySchema>;
   try {
     body = bodySchema.parse(await request.json());
@@ -30,10 +38,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const discount = await resolveAffiliateDiscountCode(prisma, tier.fee, body.code);
+  const discount = await resolveAffiliateDiscountCode(
+    prisma,
+    tier.fee,
+    body.code,
+  );
   if (!discount) {
     return NextResponse.json(
-      { error: "Discount code is invalid or inactive.", code: "INVALID_DISCOUNT_CODE" },
+      {
+        error: "Discount code is invalid or inactive.",
+        code: "INVALID_DISCOUNT_CODE",
+      },
       { status: 404 },
     );
   }

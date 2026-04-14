@@ -8,7 +8,7 @@ Security fixes are applied to the `dev` branch.
 
 If you discover a security issue, please do not open a public GitHub issue.
 
-Send a report to: `support@playfunded.com`
+Send a report to: `support@playfunded.lat`
 
 Include:
 

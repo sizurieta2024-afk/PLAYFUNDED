@@ -10,8 +10,6 @@ import {
   Wallet,
   Settings,
   ChevronRight,
-  TrendingUp,
-  Users,
 } from "lucide-react";
 
 interface NavItem {
@@ -22,11 +20,7 @@ interface NavItem {
   exact?: boolean;
 }
 
-export function DashboardSidebar({
-  isAffiliate = false,
-}: {
-  isAffiliate?: boolean;
-}) {
+export function DashboardSidebar() {
   const pathname = usePathname();
   const locale = useLocale();
   const t = useTranslations("dashboard");
@@ -57,16 +51,6 @@ export function DashboardSidebar({
       label: t("navPayouts"),
       mobileLabel: t("navPayoutsShort"),
     },
-    ...(isAffiliate
-      ? [
-          {
-            href: "/dashboard/affiliate",
-            icon: Users,
-            label: t("navAffiliate"),
-            mobileLabel: t("navAffiliateShort"),
-          },
-        ]
-      : []),
     {
       href: "/dashboard/settings",
       icon: Settings,
@@ -86,12 +70,6 @@ export function DashboardSidebar({
       <aside className="hidden md:flex flex-col w-[220px] shrink-0 border-r border-border bg-card min-h-[calc(100vh-64px)] sticky top-16 self-start">
         {/* Brand mark inside sidebar */}
         <div className="flex items-center gap-2 px-4 py-4 border-b border-border">
-          <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-pf-brand/15">
-            <TrendingUp
-              className="w-3.5 h-3.5 text-pf-brand"
-              strokeWidth={2.5}
-            />
-          </div>
           <span className="text-xs font-bold text-muted-foreground tracking-widest uppercase">
             PlayFunded
           </span>

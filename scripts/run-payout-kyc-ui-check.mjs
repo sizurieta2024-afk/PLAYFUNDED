@@ -190,9 +190,12 @@ async function expectEligibleState(browser, email, password) {
     return {
       route: "/en/dashboard/payouts",
       uploadButtonsVisible: await uploadButtons.count(),
-      promptVisible: await page.getByText(
-        "Before your first payout, you must verify your identity. This is required by our compliance policy.",
-      ).isVisible(),
+      promptVisible: await page
+        .getByText(
+          "Before your first payout, you must verify your identity. This is required by our compliance policy.",
+        )
+        .first()
+        .isVisible(),
     };
   } finally {
     await context.close();

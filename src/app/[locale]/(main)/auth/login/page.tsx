@@ -6,6 +6,7 @@ import NextLink from "next/link";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { signInWithEmail } from "@/app/actions/auth";
+import { AuthHashSessionHandler } from "@/components/auth/AuthHashSessionHandler";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,6 +58,7 @@ function LoginForm() {
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center p-4">
+      <AuthHashSessionHandler />
       <div className="w-full max-w-sm space-y-6">
         {/* Logo */}
         <div className="text-center space-y-1">

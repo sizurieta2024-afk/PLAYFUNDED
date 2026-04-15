@@ -1,6 +1,5 @@
 import { DM_Serif_Display, Syne, Manrope, DM_Mono } from "next/font/google";
 import localFont from "next/font/local";
-import { AuthHashSessionHandler } from "@/components/auth/AuthHashSessionHandler";
 import "./globals.css";
 
 const dmSerifDisplay = DM_Serif_Display({
@@ -49,7 +48,6 @@ export default function RootLayout({
       <body
         className={`${dmSerifDisplay.variable} ${syne.variable} ${manrope.variable} ${dmMono.variable} ${geistMono.variable} font-sans antialiased`}
       >
-        <AuthHashSessionHandler />
         {children}
       </body>
     </html>

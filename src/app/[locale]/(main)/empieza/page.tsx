@@ -18,7 +18,9 @@ const COPY: Record<
     eyebrow: string;
     heading: string;
     body: string;
+    labelLess: string;
     winLess: string;
+    labelMore: string;
     winMore: string;
     note: string;
   }
@@ -29,9 +31,10 @@ const COPY: Record<
       "Pagina de captura para trafico social antes del lanzamiento completo.",
     eyebrow: "Antes del lanzamiento",
     heading: "La unica manera de ganar es con cuentas fondeadas",
-    body:
-      "Miralo asi: si pierdes, pierdes mucho menos de lo que perderias normalmente. Y si ganas, puedes ganar mucho mas al acceder a cuentas de hasta $25,000 dolares.",
+    body: "Miralo asi: si pierdes, pierdes mucho menos de lo que perderias normalmente. Y si ganas, puedes ganar mucho mas al acceder a cuentas de hasta $25,000 dolares.",
+    labelLess: "Menos riesgo",
     winLess: "Si pierdes, pierdes menos",
+    labelMore: "Más techo",
     winMore: "Si ganas, puedes ganar mucho mas",
     note: "Es un ganar ganar. Dejanos tu pais y tu email.",
   },
@@ -40,9 +43,10 @@ const COPY: Record<
     description: "Social bio capture page before full launch.",
     eyebrow: "Before launch",
     heading: "The only way to win is with funded accounts",
-    body:
-      "Think about it this way: if you lose, you lose much less than you normally would. And if you win, you can win much more by accessing accounts of up to $25,000.",
+    body: "Think about it this way: if you lose, you lose much less than you normally would. And if you win, you can win much more by accessing accounts of up to $25,000.",
+    labelLess: "Less risk",
     winLess: "If you lose, you lose less",
+    labelMore: "Higher ceiling",
     winMore: "If you win, you can win more",
     note: "It is a win-win. Leave your country and email.",
   },
@@ -51,9 +55,10 @@ const COPY: Record<
     description: "Pagina de captura social antes do lancamento completo.",
     eyebrow: "Antes do lancamento",
     heading: "A unica forma de ganhar e com contas fondeadas",
-    body:
-      "Pense assim: se voce perde, perde muito menos do que perderia normalmente. E se ganha, pode ganhar muito mais ao acessar contas de ate $25,000.",
+    body: "Pense assim: se voce perde, perde muito menos do que perderia normalmente. E se ganha, pode ganhar muito mais ao acessar contas de ate $25,000.",
+    labelLess: "Menos risco",
     winLess: "Se perder, perde menos",
+    labelMore: "Mais teto",
     winMore: "Se ganhar, pode ganhar mais",
     note: "E um ganha-ganha. Deixe seu pais e seu email.",
   },
@@ -119,7 +124,7 @@ export default async function BioStartPage({
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <div className="rounded-[1.6rem] border border-white/12 bg-white/5 p-5 backdrop-blur">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#d7f062]">
-                Menos riesgo
+                {copy.labelLess}
               </p>
               <p className="mt-3 text-2xl font-black uppercase leading-none text-white">
                 {copy.winLess}
@@ -127,7 +132,7 @@ export default async function BioStartPage({
             </div>
             <div className="rounded-[1.6rem] border border-white/12 bg-white/5 p-5 backdrop-blur">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#d7f062]">
-                Mas techo
+                {copy.labelMore}
               </p>
               <p className="mt-3 text-2xl font-black uppercase leading-none text-white">
                 {copy.winMore}

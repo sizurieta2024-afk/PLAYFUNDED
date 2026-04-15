@@ -16,11 +16,21 @@ export interface OpsHealthSummary {
   }>;
 }
 
+function parseOptionalBoolean(value: string | undefined): boolean | null {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return null;
+}
+
 export async function getOpsHealthSummary(): Promise<OpsHealthSummary> {
   const now = new Date();
   const cronSince = new Date(now.getTime() - 30 * 60 * 1000);
   const errorSince = new Date(now.getTime() - 15 * 60 * 1000);
   const duplicateSince = new Date(now.getTime() - 15 * 60 * 1000);
+  const payoutSyncRequired =
+    parseOptionalBoolean(process.env.PF_REQUIRE_PAYOUT_SYNC_FOR_HEALTH) ?? false;
 
   const [
     latestOddsSyncSuccess,
@@ -91,9 +101,11 @@ export async function getOpsHealthSummary(): Promise<OpsHealthSummary> {
     {
       key: "payout_sync_recent",
       ok:
-        !!latestPayoutSyncSuccess &&
-        latestPayoutSyncSuccess.createdAt >= cronSince,
-      message: "Payout sync has succeeded recently.",
+        !payoutSyncRequired ||
+        (!!latestPayoutSyncSuccess && latestPayoutSyncSuccess.createdAt >= cronSince),
+      message: payoutSyncRequired
+        ? "Payout sync has succeeded recently."
+        : "Payout sync is not required for health in this environment.",
       value: latestPayoutSyncSuccess?.createdAt.toISOString() ?? null,
     },
     {

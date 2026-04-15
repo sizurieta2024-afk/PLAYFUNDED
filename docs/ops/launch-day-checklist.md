@@ -73,6 +73,7 @@ Pass criteria:
 - `/api/odds/sync` returns `200` with `CRON_SECRET`
 - `/api/settle` returns `200` with `CRON_SECRET`
 - `/api/ops/health` is green after fresh sync and settle
+- keep `PF_REQUIRE_PAYOUT_SYNC_FOR_HEALTH=false` until payout sync is truly live and expected
 - GitHub CI is green on the final launch commit
 - GitHub workflow `Deploy Production` is green on the final `main` commit
 - GitHub cron workflows are green
@@ -106,6 +107,7 @@ Go only if:
 - live smokes pass
 - manual Google login works
 - ops health is green after fresh sync/settle
+- payout sync is only treated as a health requirement after you intentionally enable `PF_REQUIRE_PAYOUT_SYNC_FOR_HEALTH=true`
 - the odds plans are active
 - no public copy contradicts current launch reality
 

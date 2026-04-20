@@ -1,18 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient as createSsrClient } from "@supabase/ssr";
-import { ALLOWED_FORWARDED_HOSTS } from "@/lib/allowed-hosts";
+import { resolvePublicOrigin } from "@/lib/public-origin";
 
 function buildCallbackBase(request: NextRequest) {
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const forwardedProto = request.headers.get("x-forwarded-proto");
-  const requestOrigin = new URL(request.url).origin;
-
-  // Only trust x-forwarded-host if it matches our known production hostnames
-  if (forwardedHost && ALLOWED_FORWARDED_HOSTS.includes(forwardedHost)) {
-    return `${forwardedProto ?? "https"}://${forwardedHost}`;
-  }
-
-  return process.env.NEXT_PUBLIC_APP_URL?.trim() || requestOrigin;
+  return resolvePublicOrigin(request);
 }
 
 export async function GET(request: NextRequest) {

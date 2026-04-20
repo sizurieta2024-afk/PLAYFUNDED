@@ -1,8 +1,8 @@
 import nodemailer from "nodemailer";
+import { getCanonicalAppUrl } from "@/lib/public-origin";
 
 const FROM = process.env.SMTP_FROM ?? "noreply@playfunded.lat";
-// Use a dedicated server-side var so emails never link to localhost in dev
-const APP_URL = process.env.APP_CANONICAL_URL ?? "https://playfunded.lat";
+const APP_URL = getCanonicalAppUrl();
 
 // next-intl uses localePrefix:"as-needed" — the default locale (es-419) has no
 // prefix at all. Other locales get their code prepended.

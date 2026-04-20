@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
+import { getCanonicalAppUrl } from "@/lib/public-origin";
 
 export const PENDING_VERIFICATION_COOKIE = "pf_pending_verification";
 export const PENDING_VERIFICATION_MAX_AGE_SECONDS = 20 * 60;
@@ -58,19 +59,13 @@ export function buildResetPasswordPath(locale: string): string {
 }
 
 export function buildVerificationRedirectUrl(locale: string): string {
-  const appUrl =
-    process.env.APP_CANONICAL_URL ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    "https://playfunded.lat";
+  const appUrl = getCanonicalAppUrl();
   const next = buildDashboardPath(locale);
   return `${appUrl.replace(/\/$/, "")}/auth/callback?next=${encodeURIComponent(next)}`;
 }
 
 export function buildPasswordResetRedirectUrl(locale: string): string {
-  const appUrl =
-    process.env.APP_CANONICAL_URL ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    "https://playfunded.lat";
+  const appUrl = getCanonicalAppUrl();
   const next = buildResetPasswordPath(locale);
   return `${appUrl.replace(/\/$/, "")}/auth/callback?next=${encodeURIComponent(next)}`;
 }

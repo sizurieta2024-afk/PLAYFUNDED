@@ -9,6 +9,7 @@ import { recordOpsEvent } from "@/lib/ops-events";
 import { withRouteMetric } from "@/lib/ops-observability";
 import { PLATFORM_POLICY } from "@/lib/platform-policy";
 import { resolveAffiliateDiscountCode } from "@/lib/affiliate/codes";
+import { resolvePublicOrigin } from "@/lib/public-origin";
 import { z } from "zod";
 
 const bodySchema = z.object({
@@ -176,6 +177,7 @@ export async function POST(req: NextRequest) {
         }
 
         const checkoutUrl = await createCheckoutSession({
+          appBaseUrl: resolvePublicOrigin(req),
           tierId: tier.id,
           tierName: tier.name,
           feeInCents: discount?.discountedAmount ?? tier.fee,

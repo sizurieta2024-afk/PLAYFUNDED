@@ -9,6 +9,7 @@ import { recordOpsEvent } from "@/lib/ops-events";
 import { withRouteMetric } from "@/lib/ops-observability";
 import { PLATFORM_POLICY } from "@/lib/platform-policy";
 import { resolveAffiliateDiscountCode } from "@/lib/affiliate/codes";
+import { resolvePublicOrigin } from "@/lib/public-origin";
 import { z } from "zod";
 
 const VALID_CURRENCIES: CryptoCurrency[] = ["usdttrc20", "usdcerc20", "btc"];
@@ -157,6 +158,7 @@ export async function POST(request: NextRequest) {
         }
 
         const invoice = await createCryptoInvoice({
+          appBaseUrl: resolvePublicOrigin(request),
           tierId: tier.id,
           tierName: tier.name,
           feeInCents: discount?.discountedAmount ?? tier.fee,

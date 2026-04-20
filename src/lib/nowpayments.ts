@@ -21,6 +21,7 @@ export interface CryptoInvoice {
 }
 
 interface CreateInvoiceParams {
+  appBaseUrl: string;
   tierId: string;
   tierName: string;
   feeInCents: number;
@@ -31,6 +32,7 @@ interface CreateInvoiceParams {
 }
 
 export async function createCryptoInvoice({
+  appBaseUrl,
   tierId,
   tierName,
   feeInCents,
@@ -39,8 +41,6 @@ export async function createCryptoInvoice({
   locale,
 }: CreateInvoiceParams): Promise<CryptoInvoice> {
   const apiKey = getApiKey();
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!baseUrl) throw new Error("NEXT_PUBLIC_APP_URL is not configured");
   const localePath = locale === "es-419" ? "" : `/${locale}`;
 
   const res = await fetchWithTimeout(
@@ -57,9 +57,9 @@ export async function createCryptoInvoice({
         pay_currency: currency,
         order_id: `${tierId}:${userId}:${Date.now()}`,
         order_description: `PlayFunded — ${tierName}`,
-        ipn_callback_url: `${baseUrl}/api/webhooks/nowpayments`,
-        success_url: `${baseUrl}${localePath}/checkout/success`,
-        cancel_url: `${baseUrl}${localePath}/checkout/cancel`,
+        ipn_callback_url: `${appBaseUrl}/api/webhooks/nowpayments`,
+        success_url: `${appBaseUrl}${localePath}/checkout/success`,
+        cancel_url: `${appBaseUrl}${localePath}/checkout/cancel`,
       }),
     },
     10_000,

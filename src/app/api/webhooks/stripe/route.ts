@@ -12,6 +12,7 @@ import { recordOpsEvent } from "@/lib/ops-events";
 import { withRouteMetric } from "@/lib/ops-observability";
 import { withWebhookLock } from "@/lib/payments/webhook-lock";
 import { attributeAffiliatePurchase } from "@/lib/affiliate/attribution";
+import { ALLOWED_FORWARDED_HOSTS } from "@/lib/allowed-hosts";
 
 function parseMetadataInt(value: unknown, fallback: number) {
   const parsed =
@@ -226,9 +227,23 @@ export async function POST(req: NextRequest) {
         return rateLimitExceededResponse("Too many webhook calls", limit);
       }
 
-      if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
+      if (!webhookSecret) {
         return NextResponse.json(
           { error: "Webhook secret not configured" },
+          { status: 500 },
+        );
+      }
+      const liveHost = ALLOWED_FORWARDED_HOSTS.includes(new URL(req.url).hostname);
+      if (
+        (process.env.VERCEL_ENV === "production" || liveHost) &&
+        !webhookSecret.startsWith("whsec_")
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Stripe webhook secret is not configured with a real whsec_ value on the live host.",
+          },
           { status: 500 },
         );
       }
@@ -248,7 +263,7 @@ export async function POST(req: NextRequest) {
         event = stripe.webhooks.constructEvent(
           body,
           sig,
-          process.env.STRIPE_WEBHOOK_SECRET,
+          webhookSecret,
         );
       } catch (err) {
         console.error("[webhook/stripe] Signature verification failed:", err);

@@ -239,13 +239,19 @@ async function runAllowedFlows(browser, tier) {
         /^https:\/\/checkout\.stripe\.com\//,
         `Unexpected Stripe card checkout URL: ${card.json?.url}`,
       );
+      const stripeUrl = card.json.url;
       const afterCard = await countUserState(user.id);
       assert.equal(afterCard.challengeCount, before.challengeCount);
       assert.equal(afterCard.paymentCount, before.paymentCount);
       return {
         ok: true,
         status: card.status,
-        domain: new URL(card.json.url).hostname,
+        domain: new URL(stripeUrl).hostname,
+        mode: stripeUrl.includes("cs_live_")
+          ? "live"
+          : stripeUrl.includes("cs_test_")
+            ? "test"
+            : "unknown",
       };
     });
 
@@ -299,13 +305,19 @@ async function runAllowedFlows(browser, tier) {
         /^https:\/\/checkout\.stripe\.com\//,
         `Unexpected Stripe Pix checkout URL: ${pix.json?.url}`,
       );
+      const stripeUrl = pix.json.url;
       const afterPix = await countUserState(user.id);
       assert.equal(afterPix.challengeCount, before.challengeCount);
       assert.equal(afterPix.paymentCount, before.paymentCount);
       return {
         ok: true,
         status: pix.status,
-        domain: new URL(pix.json.url).hostname,
+        domain: new URL(stripeUrl).hostname,
+        mode: stripeUrl.includes("cs_live_")
+          ? "live"
+          : stripeUrl.includes("cs_test_")
+            ? "test"
+            : "unknown",
       };
     });
 

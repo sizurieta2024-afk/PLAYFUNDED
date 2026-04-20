@@ -1,11 +1,35 @@
 import Stripe from "stripe";
 import { fetchWithTimeout } from "@/lib/net/fetch-with-timeout";
+import { ALLOWED_FORWARDED_HOSTS } from "@/lib/allowed-hosts";
 
 function getStripeSecretKey(): string {
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error("STRIPE_SECRET_KEY is not set");
   }
   return process.env.STRIPE_SECRET_KEY;
+}
+
+function isTrustedLiveHost(appBaseUrl: string): boolean {
+  try {
+    const host = new URL(appBaseUrl).hostname;
+    return ALLOWED_FORWARDED_HOSTS.includes(host);
+  } catch {
+    return false;
+  }
+}
+
+function assertStripeCheckoutConfig(appBaseUrl: string) {
+  const secretKey = getStripeSecretKey();
+  const requiresLiveStripe =
+    process.env.VERCEL_ENV === "production" ||
+    process.env.APP_ENV === "production" ||
+    isTrustedLiveHost(appBaseUrl);
+
+  if (requiresLiveStripe && secretKey.startsWith("sk_test_")) {
+    throw new Error(
+      "Stripe is configured with test secret keys on the live host. Replace production Stripe credentials before launch.",
+    );
+  }
 }
 
 function getStripeClient(): Stripe {
@@ -140,6 +164,7 @@ async function createCheckoutSessionViaRest(input: {
 }
 
 interface CreateCheckoutSessionParams {
+  appBaseUrl: string;
   tierId: string;
   tierName: string;
   feeInCents: number;
@@ -159,6 +184,7 @@ interface CreateCheckoutSessionParams {
 }
 
 export async function createCheckoutSession({
+  appBaseUrl,
   tierId,
   tierName,
   feeInCents,
@@ -176,8 +202,7 @@ export async function createCheckoutSession({
   discountAmount = 0,
   discountPct = 0,
 }: CreateCheckoutSessionParams): Promise<string> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!baseUrl) throw new Error("NEXT_PUBLIC_APP_URL is not configured");
+  assertStripeCheckoutConfig(appBaseUrl);
   const localePath =
     locale === "en" ? "/en" : locale === "pt-BR" ? "/pt-BR" : "";
 
@@ -243,8 +268,8 @@ export async function createCheckoutSession({
     processingFeeAmount,
     processingFeeLabel,
     userEmail,
-    successUrl: `${baseUrl}${localePath}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancelUrl: `${baseUrl}${localePath}/checkout/cancel`,
+    successUrl: `${appBaseUrl}${localePath}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancelUrl: `${appBaseUrl}${localePath}/checkout/cancel`,
     metadata: {
       tierId,
       userId,

@@ -17,7 +17,7 @@ export interface PendingVerificationState {
 }
 
 function getCipherKey() {
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!secret) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for auth verification");
   }

@@ -3,10 +3,11 @@ import { fetchWithTimeout } from "@/lib/net/fetch-with-timeout";
 import { ALLOWED_FORWARDED_HOSTS } from "@/lib/allowed-hosts";
 
 function getStripeSecretKey(): string {
-  if (!process.env.STRIPE_SECRET_KEY) {
+  const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
+  if (!secretKey) {
     throw new Error("STRIPE_SECRET_KEY is not set");
   }
-  return process.env.STRIPE_SECRET_KEY;
+  return secretKey;
 }
 
 function isTrustedLiveHost(appBaseUrl: string): boolean {

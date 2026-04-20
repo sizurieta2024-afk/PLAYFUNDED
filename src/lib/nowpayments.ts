@@ -4,7 +4,7 @@ import { fetchWithTimeout } from "@/lib/net/fetch-with-timeout";
 const BASE_URL = "https://api.nowpayments.io/v1";
 
 function getApiKey(): string {
-  const key = process.env.NOWPAYMENTS_API_KEY;
+  const key = process.env.NOWPAYMENTS_API_KEY?.trim();
   if (!key) throw new Error("NOWPAYMENTS_API_KEY not set");
   return key;
 }
@@ -96,7 +96,7 @@ export async function verifyNowPaymentsSignature(
   body: string,
   signature: string,
 ): Promise<boolean> {
-  const secret = process.env.NOWPAYMENTS_IPN_SECRET;
+  const secret = process.env.NOWPAYMENTS_IPN_SECRET?.trim();
   if (!secret) {
     console.error(
       "[NOWPayments webhook] NOWPAYMENTS_IPN_SECRET is not configured — rejecting all IPN requests",

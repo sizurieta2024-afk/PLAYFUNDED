@@ -64,6 +64,7 @@ Pass criteria:
 - `NEXT_PUBLIC_APP_URL` and `APP_CANONICAL_URL` resolve to `https://playfunded.lat`, not localhost
 - Stripe card checkout initializes successfully
 - Stripe checkout URLs are `live`, not `test` / sandbox
+- Stripe live dashboard is fully activated / business verification completed, not stuck on onboarding or test-only mode
 - Stripe Pix initializes successfully for Brazil-allowed paths
 - NOWPayments initializes successfully
 - Mercado Pago still returns the explicit disabled response

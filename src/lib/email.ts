@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import { getCanonicalAppUrl } from "@/lib/public-origin";
 
-const FROM = process.env.SMTP_FROM ?? "noreply@playfunded.lat";
+const FROM = process.env.SMTP_FROM?.trim() || "noreply@playfunded.lat";
 const APP_URL = getCanonicalAppUrl();
 
 // next-intl uses localePrefix:"as-needed" — the default locale (es-419) has no
@@ -62,8 +62,8 @@ function header(title: string, sub?: string) {
 
 // ── SMTP transporter (lazy-initialized) ──────────────────────────────────────
 function createTransporter() {
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_APP_PASSWORD;
+  const user = process.env.SMTP_USER?.trim();
+  const pass = process.env.SMTP_APP_PASSWORD?.trim();
   if (!user || !pass) return null;
   return nodemailer.createTransport({
     host: "smtp.gmail.com",

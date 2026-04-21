@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
-import { createCheckoutSession } from "@/lib/stripe";
+import { createCheckoutSession, isStripeCheckoutEnabled } from "@/lib/stripe";
 import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
 import { resolveCountry, type CheckoutMethod } from "@/lib/country-policy";
 import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
@@ -138,6 +138,17 @@ export async function POST(req: NextRequest) {
               code: "PAYMENT_METHOD_UNAVAILABLE",
             },
             { status: 403 },
+          );
+        }
+
+        if (!isStripeCheckoutEnabled()) {
+          return NextResponse.json(
+            {
+              error:
+                "Card and Pix checkout are temporarily unavailable while Stripe live activation is still pending.",
+              code: "PAYMENT_METHOD_DISABLED",
+            },
+            { status: 503 },
           );
         }
 

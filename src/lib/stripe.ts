@@ -2,12 +2,51 @@ import Stripe from "stripe";
 import { fetchWithTimeout } from "@/lib/net/fetch-with-timeout";
 import { ALLOWED_FORWARDED_HOSTS } from "@/lib/allowed-hosts";
 
+function readTrimmedEnv(name: string): string | null {
+  const value = process.env[name]?.trim();
+  return value || null;
+}
+
 function getStripeSecretKey(): string {
-  const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
+  const secretKey = readTrimmedEnv("STRIPE_SECRET_KEY");
   if (!secretKey) {
     throw new Error("STRIPE_SECRET_KEY is not set");
   }
   return secretKey;
+}
+
+function getStripePublishableKey(): string | null {
+  return readTrimmedEnv("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY");
+}
+
+function getStripeWebhookSecret(): string | null {
+  return readTrimmedEnv("STRIPE_WEBHOOK_SECRET");
+}
+
+export function isStripeCheckoutEnabled(): boolean {
+  const secretKey = readTrimmedEnv("STRIPE_SECRET_KEY");
+  if (!secretKey) {
+    return false;
+  }
+
+  const requiresLiveStripe =
+    process.env.VERCEL_ENV === "production" ||
+    process.env.APP_ENV === "production";
+
+  if (!requiresLiveStripe) {
+    return true;
+  }
+
+  const publishableKey = getStripePublishableKey();
+  const webhookSecret = getStripeWebhookSecret();
+
+  return Boolean(
+    publishableKey &&
+      webhookSecret &&
+      !secretKey.startsWith("sk_test_") &&
+      !publishableKey.startsWith("pk_test_") &&
+      webhookSecret.startsWith("whsec_"),
+  );
 }
 
 function isTrustedLiveHost(appBaseUrl: string): boolean {
@@ -20,15 +59,15 @@ function isTrustedLiveHost(appBaseUrl: string): boolean {
 }
 
 function assertStripeCheckoutConfig(appBaseUrl: string) {
-  const secretKey = getStripeSecretKey();
+  getStripeSecretKey();
   const requiresLiveStripe =
     process.env.VERCEL_ENV === "production" ||
     process.env.APP_ENV === "production" ||
     isTrustedLiveHost(appBaseUrl);
 
-  if (requiresLiveStripe && secretKey.startsWith("sk_test_")) {
+  if (requiresLiveStripe && !isStripeCheckoutEnabled()) {
     throw new Error(
-      "Stripe is configured with test secret keys on the live host. Replace production Stripe credentials before launch.",
+      "Stripe is not fully configured for live checkout on the live host. Complete Stripe activation and replace production credentials before launch.",
     );
   }
 }

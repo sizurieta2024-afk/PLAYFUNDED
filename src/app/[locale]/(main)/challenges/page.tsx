@@ -5,6 +5,7 @@ import { formatLocalPrice, getCurrencyForCountry } from "@/lib/exchangerates";
 import { resolveCountry } from "@/lib/country-policy";
 import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
 import { getActiveTiers } from "@/lib/catalog";
+import { isStripeCheckoutEnabled } from "@/lib/stripe";
 import { TierCard } from "@/components/challenges/TierCard";
 import type { Metadata } from "next";
 
@@ -43,11 +44,13 @@ export default async function ChallengesPage({
       headersList.get("cf-ipcountry"),
     ) ?? undefined;
   const countryPolicy = await getResolvedCountryPolicy(country);
+  const stripeCheckoutEnabled = isStripeCheckoutEnabled();
   const availablePaymentMethods = countryPolicy.checkoutMethods.reduce<
     Array<"stripe" | "crypto" | "pix">
   >((methods, method) => {
-    if (method === "card") methods.push("stripe");
-    if (method === "crypto" || method === "pix") methods.push(method);
+    if (method === "card" && stripeCheckoutEnabled) methods.push("stripe");
+    if (method === "pix" && stripeCheckoutEnabled) methods.push("pix");
+    if (method === "crypto") methods.push(method);
     return methods;
   }, []);
   const reviewNotice = countryPolicy.requiresReviewNotice

@@ -64,7 +64,9 @@ Sessions 1–18 substantially complete. Platform is live at playfunded.lat with 
 - Security: CSP, HSTS, X-Frame-Options, proper robots.txt, sitemap with hreflang
 
 ### Remaining Gaps
+- **Affiliate dashboard locked** — route redirects to /dashboard; components are built, flip when ready
 - **Mercado Pago disabled** ("disabled for launch") — enable when processor approval is complete
+- **Payout health opt-in** — PF_REQUIRE_PAYOUT_SYNC_FOR_HEALTH=false until payouts go live
 
 ### Dev Environment
 - Dev server: PORT 3001 — `tmux new-session -d -s playfunded "node_modules/.bin/next dev -p 3001"`

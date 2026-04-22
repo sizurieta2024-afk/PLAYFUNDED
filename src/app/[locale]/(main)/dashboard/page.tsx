@@ -5,6 +5,7 @@ import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { ChallengeCard } from "@/components/dashboard/ChallengeCard";
 import type { Metadata } from "next";
+import { buildLoginPath } from "@/i18n/navigation";
 
 export async function generateMetadata({
   params,
@@ -30,7 +31,7 @@ export default async function DashboardPage({
   } = await supabase.auth.getUser();
 
   if (authError || !authUser) {
-    redirect("/auth/login");
+    redirect(buildLoginPath(locale));
   }
 
   const t = await getTranslations({ locale, namespace: "dashboard" });
@@ -39,7 +40,7 @@ export default async function DashboardPage({
     where: { supabaseId: authUser.id },
   });
 
-  if (!user) redirect("/auth/login");
+  if (!user) redirect(buildLoginPath(locale));
 
   // Fetch all active/funded challenges with tier + picks
   const challenges = await prisma.challenge.findMany({

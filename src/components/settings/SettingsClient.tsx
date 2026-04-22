@@ -3,6 +3,7 @@
 import { useLocale } from "next-intl";
 import { useTranslations } from "next-intl";
 import { createBrowserClient } from "@supabase/ssr";
+import { buildLoginPath } from "@/i18n/navigation";
 
 interface Props {
   email: string;
@@ -19,7 +20,7 @@ export function SettingsClient({ email, name }: Props) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     );
     await supabase.auth.signOut();
-    window.location.href = `/${locale}/auth/login`;
+    window.location.href = buildLoginPath(locale);
   }
 
   return (

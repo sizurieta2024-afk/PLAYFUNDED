@@ -19,6 +19,7 @@ const PicksTable = dynamic(() =>
 );
 import { MetricBar } from "@/components/dashboard/MetricBar";
 import type { Metadata } from "next";
+import { buildLoginPath } from "@/i18n/navigation";
 
 export async function generateMetadata({
   params,
@@ -135,12 +136,12 @@ export default async function ChallengeDetailPage({
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !authUser) redirect("/auth/login");
+  if (authError || !authUser) redirect(buildLoginPath(locale));
 
   const user = await prisma.user.findFirst({
     where: { supabaseId: authUser.id },
   });
-  if (!user) redirect("/auth/login");
+  if (!user) redirect(buildLoginPath(locale));
 
   const challenge = await prisma.challenge.findFirst({
     where: { id, userId: user.id },

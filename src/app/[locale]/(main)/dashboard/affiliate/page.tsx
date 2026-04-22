@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { buildDashboardPath } from "@/i18n/navigation";
 
 export async function generateMetadata({
   params,
@@ -18,5 +19,5 @@ export default async function AffiliateDashboardPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  redirect(`/${locale}/dashboard`);
+  redirect(buildDashboardPath(locale));
 }

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import dynamic from "next/dynamic";
 import type { WinRateEntry } from "@/components/dashboard/WinRateChart";
 import type { PickRow } from "@/components/dashboard/PicksTable";
+import { buildLoginPath } from "@/i18n/navigation";
 
 const WinRateChart = dynamic(() =>
   import("@/components/dashboard/WinRateChart").then((m) => m.WinRateChart),
@@ -69,12 +70,12 @@ export default async function AnalyticsPage({
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !authUser) redirect("/auth/login");
+  if (authError || !authUser) redirect(buildLoginPath(locale));
 
   const user = await prisma.user.findFirst({
     where: { supabaseId: authUser.id },
   });
-  if (!user) redirect("/auth/login");
+  if (!user) redirect(buildLoginPath(locale));
 
   const t = await getTranslations({ locale, namespace: "analytics" });
   const tDash = await getTranslations({ locale, namespace: "dashboard" });

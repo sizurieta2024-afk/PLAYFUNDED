@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useLocale } from 'next-intl'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { buildLocalePath, usePathname } from '@/i18n/navigation'
+import { useSearchParams } from 'next/navigation'
 import { Globe, ChevronDown } from 'lucide-react'
 
 const LOCALES = [
@@ -31,27 +32,17 @@ export function LanguageToggle() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  function stripLocalePrefix(pathname: string) {
-    const stripped = pathname.replace(/^\/(es-419|pt-BR|en)(?=\/|$)/, '')
-    return stripped || '/'
-  }
-
-  function buildLocalizedPath(pathname: string, code: string) {
-    const pathWithoutLocale = stripLocalePrefix(pathname)
-    const prefix = code === 'es-419' ? '' : `/${code}`
-    if (pathWithoutLocale === '/') {
-      return prefix || '/'
-    }
-    return `${prefix}${pathWithoutLocale}`
-  }
-
-  function persistLocale(code: string) {
-    if (typeof window === 'undefined') return
-    document.cookie = `NEXT_LOCALE=${encodeURIComponent(code)}; path=/; max-age=31536000; samesite=lax`
-  }
-
   const query = searchParams?.toString()
   const currentPath = pathname || '/'
+
+  function buildTargetHref(targetLocale: string) {
+    const targetPath = buildLocalePath(targetLocale, currentPath)
+    return `${targetPath}${query ? `?${query}` : ''}`
+  }
+
+  function persistLocale(targetLocale: string) {
+    document.cookie = `NEXT_LOCALE=${targetLocale}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`
+  }
 
   return (
     <div ref={ref} className="relative">
@@ -70,9 +61,12 @@ export function LanguageToggle() {
           {LOCALES.map((l) => (
             <a
               key={l.code}
-              href={`${buildLocalizedPath(currentPath, l.code)}${query ? `?${query}` : ''}`}
+              href={buildTargetHref(l.code)}
               onMouseDown={() => persistLocale(l.code)}
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                persistLocale(l.code)
+                setOpen(false)
+              }}
               className={`flex items-center gap-2 w-full px-3 py-2 text-xs transition-colors text-left ${
                 l.code === locale
                   ? 'bg-pf-brand/10 text-pf-brand font-semibold'

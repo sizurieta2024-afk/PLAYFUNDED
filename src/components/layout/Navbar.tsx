@@ -1,12 +1,13 @@
 "use client";
 
 import { useTranslations, useLocale } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import { Link, buildLoginPath } from "@/i18n/navigation";
 import { ThemeToggle } from "./ThemeToggle";
 import { LanguageToggle } from "./LanguageToggle";
 import { Menu, X, LogOut } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import { createBrowserClient } from "@supabase/ssr";
 
 interface NavbarProps {
@@ -24,7 +25,7 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     );
     await supabase.auth.signOut();
-    window.location.href = `/${locale}/auth/login`;
+    window.location.href = buildLoginPath(locale);
   }
 
   const navLinks = [
@@ -38,7 +39,15 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
       <div className="mx-auto max-w-[1200px] px-6 lg:px-16">
         <div className="flex h-14 items-center justify-between gap-4">
           {/* ── Brand ─────────────────────────────────────────────── */}
-          <Link href="/" className="shrink-0">
+          <Link href="/" className="shrink-0 flex items-center gap-2">
+            <Image
+              src="/brand/logo-mark.svg"
+              alt="PlayFunded"
+              width={28}
+              height={28}
+              className="w-7 h-7"
+              priority
+            />
             <span className="font-display font-bold text-sm tracking-[0.15em] uppercase text-pf-brand hover:text-pf-gold-light transition-colors duration-200">
               {t("brand")}
             </span>

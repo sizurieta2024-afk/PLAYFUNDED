@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { buildLocalePath } from "@/i18n/navigation";
 
 export async function generateMetadata({
   params,
@@ -18,5 +19,5 @@ export default async function AffiliatePage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  redirect(`/${locale}/challenges`);
+  redirect(buildLocalePath(locale, "/challenges"));
 }

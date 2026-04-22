@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { buildLoginPath, inferLocaleFromPath } from "@/i18n/navigation";
 import {
   LayoutDashboard,
   Users,
@@ -52,7 +53,7 @@ export function AdminSidebar() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     );
     await supabase.auth.signOut();
-    window.location.href = "/en/auth/login";
+    window.location.href = buildLoginPath(inferLocaleFromPath(pathname));
   }
 
   return (

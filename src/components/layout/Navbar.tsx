@@ -41,11 +41,11 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
           {/* ── Brand ─────────────────────────────────────────────── */}
           <Link href="/" className="shrink-0 flex items-center gap-2">
             <Image
-              src="/brand/logo-mark.svg"
+              src="/logo.png"
               alt=""
-              width={34}
-              height={34}
-              className="h-8 w-8 object-contain"
+              width={40}
+              height={40}
+              className="h-9 w-9 object-contain"
               priority
             />
             <span className="font-display font-bold text-sm tracking-[0.15em] uppercase text-pf-brand hover:text-pf-gold-light transition-colors duration-200">

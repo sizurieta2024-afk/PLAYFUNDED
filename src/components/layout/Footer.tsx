@@ -56,11 +56,11 @@ export function Footer() {
           <div className="space-y-4">
             <Link href="/" className="group flex w-fit items-center gap-2.5">
               <Image
-                src="/brand/logo-mark.svg"
+                src="/logo.png"
                 alt=""
-                width={34}
-                height={34}
-                className="h-8 w-8 object-contain"
+                width={40}
+                height={40}
+                className="h-9 w-9 object-contain"
               />
               <span className="font-display font-bold text-base tracking-[0.15em] uppercase text-pf-brand transition-colors duration-200 group-hover:text-pf-gold-light">
                 {tn("brand")}

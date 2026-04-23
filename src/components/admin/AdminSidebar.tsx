@@ -61,11 +61,11 @@ export function AdminSidebar() {
     <aside className="w-56 shrink-0 border-r border-border bg-card min-h-screen sticky top-0 flex flex-col">
       <div className="flex items-center gap-2.5 px-4 py-5 border-b border-border">
         <Image
-          src="/brand/logo-mark.svg"
+          src="/logo.png"
           alt=""
-          width={34}
-          height={34}
-          className="h-8 w-8 object-contain"
+          width={40}
+          height={40}
+          className="h-9 w-9 object-contain"
           priority
         />
         <div>

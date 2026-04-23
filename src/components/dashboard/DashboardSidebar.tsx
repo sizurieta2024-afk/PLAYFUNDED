@@ -72,11 +72,11 @@ export function DashboardSidebar() {
         {/* Brand mark inside sidebar */}
         <div className="flex items-center gap-2 px-4 py-4 border-b border-border">
           <Image
-            src="/brand/logo-mark.svg"
+            src="/logo.png"
             alt=""
-            width={30}
-            height={30}
-            className="h-7 w-7 object-contain"
+            width={36}
+            height={36}
+            className="h-8 w-8 object-contain"
           />
           <span className="text-xs font-bold text-muted-foreground tracking-widest uppercase">
             PlayFunded

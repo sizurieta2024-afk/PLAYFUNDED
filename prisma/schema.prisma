@@ -584,6 +584,32 @@ model RateLimitBucket {
 }
 
 // ============================================================
+// BIO LEAD (pre-launch social waitlist)
+// ============================================================
+
+model BioLead {
+  id              String   @id @default(uuid())
+  email           String   @unique
+  country         String
+  locale          String   @default("es-419")
+  ref             String?
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  utmContent      String?
+  utmTerm         String?
+  submissionCount Int      @default(1)
+  lastSubmittedAt DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([country])
+  @@index([createdAt])
+  @@index([lastSubmittedAt])
+  @@index([utmSource, utmCampaign])
+}
+
+// ============================================================
 // MARKET REQUEST
 // ============================================================
 

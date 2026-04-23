@@ -16,6 +16,15 @@ type Copy = {
   error: string;
 };
 
+type Attribution = {
+  ref?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+};
+
 const COPY: Record<LocaleKey, Copy> = {
   "es-419": {
     emailLabel: "Email",
@@ -77,11 +86,11 @@ function getCopy(locale: string): Copy {
 
 export function BioLeadCapture({
   locale,
-  refCode,
+  attribution,
   supportEmail,
 }: {
   locale: string;
-  refCode?: string;
+  attribution?: Attribution;
   supportEmail: string;
 }) {
   const copy = useMemo(() => getCopy(locale), [locale]);
@@ -99,7 +108,17 @@ export function BioLeadCapture({
       const response = await fetch("/api/bio-leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, country, locale, ref: refCode ?? "" }),
+        body: JSON.stringify({
+          email,
+          country,
+          locale,
+          ref: attribution?.ref ?? "",
+          utmSource: attribution?.utmSource ?? "",
+          utmMedium: attribution?.utmMedium ?? "",
+          utmCampaign: attribution?.utmCampaign ?? "",
+          utmContent: attribution?.utmContent ?? "",
+          utmTerm: attribution?.utmTerm ?? "",
+        }),
       });
       if (!response.ok) throw new Error("submit_failed");
       setSuccess(true);

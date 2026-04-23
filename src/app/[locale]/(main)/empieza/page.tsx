@@ -104,10 +104,24 @@ export default async function BioStartPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ ref?: string }>;
+  searchParams: Promise<{
+    ref?: string;
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+    utm_content?: string;
+    utm_term?: string;
+  }>;
 }) {
   const { locale } = await params;
-  const { ref } = await searchParams;
+  const {
+    ref,
+    utm_source: utmSource,
+    utm_medium: utmMedium,
+    utm_campaign: utmCampaign,
+    utm_content: utmContent,
+    utm_term: utmTerm,
+  } = await searchParams;
   const copy = getCopy(locale);
   const supportEmail = process.env.SUPPORT_EMAIL ?? "support@playfunded.lat";
 
@@ -182,7 +196,14 @@ export default async function BioStartPage({
             <div className="absolute -inset-8 bg-[radial-gradient(ellipse,rgba(201,168,76,0.06)_0%,transparent_70%)] pointer-events-none" />
             <BioLeadCapture
               locale={locale}
-              refCode={ref}
+              attribution={{
+                ref,
+                utmSource,
+                utmMedium,
+                utmCampaign,
+                utmContent,
+                utmTerm,
+              }}
               supportEmail={supportEmail}
             />
           </div>

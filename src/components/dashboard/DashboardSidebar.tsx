@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import {
@@ -70,6 +71,13 @@ export function DashboardSidebar() {
       <aside className="hidden md:flex flex-col w-[220px] shrink-0 border-r border-border bg-card min-h-[calc(100vh-64px)] sticky top-16 self-start">
         {/* Brand mark inside sidebar */}
         <div className="flex items-center gap-2 px-4 py-4 border-b border-border">
+          <Image
+            src="/logo.png"
+            alt=""
+            width={36}
+            height={36}
+            className="h-8 w-8 object-contain"
+          />
           <span className="text-xs font-bold text-muted-foreground tracking-widest uppercase">
             PlayFunded
           </span>

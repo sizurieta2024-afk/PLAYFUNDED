@@ -32,6 +32,13 @@ type ActionResult = {
   email?: string;
 } | null;
 
+type VerificationState = {
+  email: string;
+  password: string;
+  name?: string | null;
+  locale: string;
+};
+
 function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();
 }
@@ -118,7 +125,7 @@ async function clearPendingVerificationCookie() {
   });
 }
 
-async function enforceSignupGuard(email: string): Promise<ActionResult> {
+async function getRequestClientKey(scope: string, email: string) {
   const headersList = await headers();
   const forwarded = headersList.get("x-forwarded-for");
   const ip =
@@ -128,7 +135,16 @@ async function enforceSignupGuard(email: string): Promise<ActionResult> {
     headersList.get("x-vercel-forwarded-for") ||
     "unknown";
   const userAgent = (headersList.get("user-agent") ?? "unknown").slice(0, 120);
-  const bucketKey = `signup:${ip}:${userAgent}:${email}`;
+  return `${scope}:${ip}:${userAgent}:${email}`;
+}
+
+async function enforceRateLimit(
+  email: string,
+  scope: string,
+  routeKey: string,
+  unavailableCode: string,
+): Promise<ActionResult> {
+  const bucketKey = await getRequestClientKey(scope, email);
   const now = new Date();
   const resetAt = new Date(now.getTime() + 10 * 60 * 1000);
 
@@ -146,7 +162,7 @@ async function enforceSignupGuard(email: string): Promise<ActionResult> {
     )
     VALUES (
       ${bucketKey},
-      ${"action:auth:signup"},
+      ${routeKey},
       ${bucketKey},
       1,
       ${resetAt},
@@ -169,7 +185,7 @@ async function enforceSignupGuard(email: string): Promise<ActionResult> {
 
   const bucket = rows[0];
   if (!bucket) {
-    return { code: "SIGNUP_UNAVAILABLE" };
+    return { code: unavailableCode };
   }
 
   if (bucket.count > 5) {
@@ -179,65 +195,49 @@ async function enforceSignupGuard(email: string): Promise<ActionResult> {
   return null;
 }
 
+async function enforceSignupGuard(email: string): Promise<ActionResult> {
+  return enforceRateLimit(
+    email,
+    "signup",
+    "action:auth:signup",
+    "SIGNUP_UNAVAILABLE",
+  );
+}
+
 async function enforcePasswordResetGuard(email: string): Promise<ActionResult> {
-  const headersList = await headers();
-  const forwarded = headersList.get("x-forwarded-for");
-  const ip =
-    forwarded?.split(",")[0]?.trim() ||
-    headersList.get("x-real-ip") ||
-    headersList.get("cf-connecting-ip") ||
-    headersList.get("x-vercel-forwarded-for") ||
-    "unknown";
-  const userAgent = (headersList.get("user-agent") ?? "unknown").slice(0, 120);
-  const bucketKey = `password-reset:${ip}:${userAgent}:${email}`;
-  const now = new Date();
-  const resetAt = new Date(now.getTime() + 10 * 60 * 1000);
+  return enforceRateLimit(
+    email,
+    "password-reset",
+    "action:auth:password-reset",
+    "PASSWORD_RESET_UNAVAILABLE",
+  );
+}
 
-  const rows = await prisma.$queryRaw<
-    Array<{ count: number; resetAt: Date }>
-  >(Prisma.sql`
-    INSERT INTO "RateLimitBucket" (
-      "key",
-      "routeKey",
-      "clientKey",
-      "count",
-      "resetAt",
-      "createdAt",
-      "updatedAt"
-    )
-    VALUES (
-      ${bucketKey},
-      ${"action:auth:password-reset"},
-      ${bucketKey},
-      1,
-      ${resetAt},
-      ${now},
-      ${now}
-    )
-    ON CONFLICT ("key") DO UPDATE
-    SET
-      "count" = CASE
-        WHEN "RateLimitBucket"."resetAt" <= ${now} THEN 1
-        ELSE "RateLimitBucket"."count" + 1
-      END,
-      "resetAt" = CASE
-        WHEN "RateLimitBucket"."resetAt" <= ${now} THEN ${resetAt}
-        ELSE "RateLimitBucket"."resetAt"
-      END,
-      "updatedAt" = ${now}
-    RETURNING "count", "resetAt"
-  `);
+async function generateVerificationSignupLink(
+  adminSupabase: ReturnType<typeof createServiceClient>,
+  state: VerificationState,
+) {
+  return adminSupabase.auth.admin.generateLink({
+    type: "signup",
+    email: state.email,
+    password: state.password,
+    options: {
+      redirectTo: buildVerificationRedirectUrl(state.locale),
+      ...(state.name ? { data: { full_name: state.name } } : {}),
+    },
+  });
+}
 
-  const bucket = rows[0];
-  if (!bucket) {
-    return { code: "PASSWORD_RESET_UNAVAILABLE" };
-  }
-
-  if (bucket.count > 5) {
-    return { code: "RATE_LIMITED" };
-  }
-
-  return null;
+async function sendVerificationEmailForState(
+  state: VerificationState,
+  actionLink: string,
+) {
+  const { subject, html } = verificationEmail(
+    state.name ?? null,
+    actionLink,
+    state.locale,
+  );
+  await sendRequiredEmail(state.email, subject, html);
 }
 
 export async function signInWithEmail(
@@ -297,9 +297,13 @@ export async function signUpWithEmail(
 ): Promise<ActionResult> {
   const locale = await resolveActionLocale();
   const t = await getTranslations({ locale, namespace: "auth.signup" });
-  const email = normalizeEmail((formData.get("email") as string) ?? "");
-  const password = formData.get("password") as string;
-  const name = (formData.get("name") as string | null) || undefined;
+  const signupState: VerificationState = {
+    email: normalizeEmail((formData.get("email") as string) ?? ""),
+    password: formData.get("password") as string,
+    name: (formData.get("name") as string | null) || undefined,
+    locale,
+  };
+  const { email, password } = signupState;
 
   if (!email || !password) {
     return {
@@ -331,15 +335,10 @@ export async function signUpWithEmail(
   }
 
   const adminSupabase = createServiceClient();
-  const { data, error } = await adminSupabase.auth.admin.generateLink({
-    type: "signup",
-    email,
-    password,
-    options: {
-      redirectTo: buildVerificationRedirectUrl(locale),
-      ...(name ? { data: { full_name: name } } : {}),
-    },
-  });
+  const { data, error } = await generateVerificationSignupLink(
+    adminSupabase,
+    signupState,
+  );
 
   if (error) {
     if (isDuplicateAuthError(error.message)) {
@@ -358,12 +357,7 @@ export async function signUpWithEmail(
   }
 
   try {
-    const { subject, html } = verificationEmail(
-      name ?? null,
-      data.properties.action_link,
-      locale,
-    );
-    await sendRequiredEmail(email, subject, html);
+    await sendVerificationEmailForState(signupState, data.properties.action_link);
   } catch (sendError) {
     console.error("[auth/signup] verification email failed:", sendError);
     await adminSupabase.auth.admin.deleteUser(data.user.id).catch(() => {});
@@ -373,12 +367,7 @@ export async function signUpWithEmail(
     };
   }
 
-  await writePendingVerificationCookie({
-    email,
-    password,
-    name,
-    locale,
-  });
+  await writePendingVerificationCookie(signupState);
 
   return {
     success: true,
@@ -403,17 +392,16 @@ export async function resendVerificationEmail(): Promise<ActionResult> {
   }
 
   const adminSupabase = createServiceClient();
-  const { data, error } = await adminSupabase.auth.admin.generateLink({
-    type: "signup",
+  const verificationState: VerificationState = {
     email: pendingState.email,
     password: pendingState.password,
-    options: {
-      redirectTo: buildVerificationRedirectUrl(pendingState.locale),
-      ...(pendingState.name
-        ? { data: { full_name: pendingState.name } }
-        : {}),
-    },
-  });
+    name: pendingState.name,
+    locale: pendingState.locale,
+  };
+  const { data, error } = await generateVerificationSignupLink(
+    adminSupabase,
+    verificationState,
+  );
 
   if (error || !data?.properties?.action_link) {
     console.error("[auth/signup] resend verification failed:", error);
@@ -425,12 +413,10 @@ export async function resendVerificationEmail(): Promise<ActionResult> {
   }
 
   try {
-    const { subject, html } = verificationEmail(
-      pendingState.name ?? null,
+    await sendVerificationEmailForState(
+      verificationState,
       data.properties.action_link,
-      pendingState.locale,
     );
-    await sendRequiredEmail(pendingState.email, subject, html);
   } catch (sendError) {
     console.error("[auth/signup] resend email delivery failed:", sendError);
     return {
@@ -440,12 +426,7 @@ export async function resendVerificationEmail(): Promise<ActionResult> {
     };
   }
 
-  await writePendingVerificationCookie({
-    email: pendingState.email,
-    password: pendingState.password,
-    name: pendingState.name,
-    locale: pendingState.locale,
-  });
+  await writePendingVerificationCookie(verificationState);
 
   return {
     success: true,

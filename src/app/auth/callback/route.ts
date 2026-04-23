@@ -3,13 +3,15 @@ import { createServerClient as createSsrClient } from "@supabase/ssr";
 import { ALLOWED_FORWARDED_HOSTS } from "@/lib/allowed-hosts";
 import { PENDING_VERIFICATION_COOKIE } from "@/lib/auth-verification";
 import { syncAppUserFromAuthUser } from "@/lib/auth-user-sync";
+import {
+  buildDashboardPath,
+  buildLoginPath,
+  inferLocaleFromPath,
+  normalizeLocale,
+} from "@/i18n/navigation";
 
 function loginPathForNext(next: string) {
-  const [, maybeLocale] = next.split("/");
-  if (maybeLocale === "en" || maybeLocale === "pt-BR") {
-    return `/${maybeLocale}/auth/login`;
-  }
-  return "/auth/login";
+  return buildLoginPath(inferLocaleFromPath(next));
 }
 
 export async function GET(request: NextRequest) {
@@ -17,12 +19,15 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   // Validate redirect target — must be a same-origin relative path to prevent open redirect
   const rawNext = searchParams.get("next") ?? "";
+  const fallbackLocale = normalizeLocale(
+    request.cookies.get("NEXT_LOCALE")?.value,
+  );
   const next =
     rawNext.startsWith("/") &&
     !rawNext.startsWith("//") &&
     !rawNext.includes("://")
       ? rawNext
-      : "/en/dashboard";
+      : buildDashboardPath(fallbackLocale);
 
   if (!code) {
     const fallbackTarget = `${origin}${loginPathForNext(next)}?redirectTo=${encodeURIComponent(next)}`;

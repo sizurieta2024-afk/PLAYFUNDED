@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="pf-mark-title pf-mark-desc">
+  <title id="pf-mark-title">PlayFunded logo mark</title>
+  <desc id="pf-mark-desc">A faceted P mark in gold, ivory, and a small pink accent.</desc>
+  <defs>
+    <linearGradient id="pfGoldMain" x1="20%" y1="8%" x2="82%" y2="92%">
+      <stop offset="0%" stop-color="#FFEAB1"/>
+      <stop offset="42%" stop-color="#D8B85F"/>
+      <stop offset="100%" stop-color="#9D7525"/>
+    </linearGradient>
+    <linearGradient id="pfGoldLight" x1="8%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#FFF2C8"/>
+      <stop offset="52%" stop-color="#E9CD79"/>
+      <stop offset="100%" stop-color="#C29637"/>
+    </linearGradient>
+    <linearGradient id="pfGoldDeep" x1="0%" y1="18%" x2="100%" y2="88%">
+      <stop offset="0%" stop-color="#F4D675"/>
+      <stop offset="100%" stop-color="#8C681E"/>
+    </linearGradient>
+    <linearGradient id="pfIvory" x1="14%" y1="0%" x2="88%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="62%" stop-color="#EEE5D5"/>
+      <stop offset="100%" stop-color="#CFC2AA"/>
+    </linearGradient>
+    <linearGradient id="pfIvoryWarm" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF7E8"/>
+      <stop offset="100%" stop-color="#D9C8A9"/>
+    </linearGradient>
+    <linearGradient id="pfPink" x1="15%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#FF6BA7"/>
+      <stop offset="55%" stop-color="#F6267F"/>
+      <stop offset="100%" stop-color="#C91463"/>
+    </linearGradient>
+    <linearGradient id="pfEdge" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#11100F" stop-opacity="0.78"/>
+      <stop offset="100%" stop-color="#050505" stop-opacity="0.96"/>
+    </linearGradient>
+    <filter id="pfDrop" x="-18%" y="-10%" width="136%" height="128%">
+      <feDropShadow dx="0" dy="18" stdDeviation="16" flood-color="#000000" flood-opacity="0.38"/>
+      <feDropShadow dx="7" dy="8" stdDeviation="5" flood-color="#000000" flood-opacity="0.24"/>
+    </filter>
+    <filter id="pfInset" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="1.6" flood-color="#FFFFFF" flood-opacity="0.28"/>
+      <feDropShadow dx="3" dy="5" stdDeviation="2.2" flood-color="#000000" flood-opacity="0.26"/>
+    </filter>
+    <filter id="pfGrain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="2" seed="11" result="grain"/>
+      <feColorMatrix in="grain" type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.08"/>
+      </feComponentTransfer>
+    </filter>
+  </defs>
+
+  <g filter="url(#pfDrop)" transform="translate(24 14)">
+    <path d="M252 220 L585 48 L531 430 L410 714 L270 972 Q254 1000 235 979 L229 254 Q229 231 252 220 Z" fill="url(#pfGoldMain)" filter="url(#pfInset)"/>
+    <path d="M281 246 L543 98 L504 416 L415 645 L286 889 Z" fill="#FFE9A6" opacity="0.45"/>
+    <path d="M249 220 L585 48 L558 77 L270 237 L237 256 Z" fill="#FFF2C1" opacity="0.55"/>
+    <path d="M236 259 L270 972 Q254 1000 235 979 Z" fill="#C99735" opacity="0.52"/>
+
+    <path d="M596 53 L774 402 L548 285 Z" fill="url(#pfPink)" filter="url(#pfInset)"/>
+    <path d="M596 53 L624 80 L570 278 L548 285 Z" fill="#FF8FBD" opacity="0.38"/>
+    <path d="M548 285 L774 402 L790 426 L540 300 Z" fill="#090807" opacity="0.72"/>
+
+    <path d="M624 51 L934 256 L791 402 L774 402 Z" fill="url(#pfIvory)" filter="url(#pfInset)"/>
+    <path d="M652 76 L904 252 L795 366 Z" fill="#FFFFFF" opacity="0.36"/>
+    <path d="M774 402 L934 256 L946 273 L791 421 Z" fill="#050505" opacity="0.7"/>
+
+    <path d="M596 536 L943 300 L948 546 L594 790 Z" fill="url(#pfGoldLight)" filter="url(#pfInset)"/>
+    <path d="M664 548 L920 369 L921 525 L664 704 Z" fill="#FFEAA7" opacity="0.34"/>
+    <path d="M773 418 L943 300 L596 536 L574 523 Z" fill="#090807" opacity="0.82"/>
+    <path d="M948 546 L594 790 L594 704 L948 462 Z" fill="url(#pfGoldDeep)" opacity="0.48"/>
+
+    <path d="M391 644 L586 538 L586 826 L266 976 Z" fill="url(#pfIvoryWarm)" filter="url(#pfInset)"/>
+    <path d="M421 656 L568 576 L566 802 L306 924 Z" fill="#FFFFFF" opacity="0.28"/>
+    <path d="M586 538 L596 536 L594 790 L586 826 Z" fill="#272018" opacity="0.35"/>
+    <path d="M391 644 L266 976 L246 958 L372 630 Z" fill="#070706" opacity="0.58"/>
+
+    <path d="M530 305 L574 323 L464 637 L391 644 Z" fill="url(#pfEdge)" opacity="0.96"/>
+    <path d="M548 285 L596 536 L574 523 L530 305 Z" fill="#10100E" opacity="0.88"/>
+    <path d="M594 790 L586 826 L266 976 L286 939 Z" fill="#0B0A09" opacity="0.16"/>
+
+    <g filter="url(#pfGrain)" opacity="0.5">
+      <path d="M252 220 L585 48 L531 430 L410 714 L270 972 Q254 1000 235 979 L229 254 Q229 231 252 220 Z" fill="#FFFFFF"/>
+      <path d="M596 536 L943 300 L948 546 L594 790 Z" fill="#FFFFFF"/>
+      <path d="M391 644 L586 538 L586 826 L266 976 Z" fill="#FFFFFF"/>
+    </g>
+  </g>
+</svg>

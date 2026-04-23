@@ -1,8 +1,13 @@
 "use client";
 
 import { useState, useTransition, use } from "react";
-import { useTranslations } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import {
+  buildDashboardPath,
+  buildLocalePath,
+  buildLoginPath,
+  useRouter,
+} from "@/i18n/navigation";
 import { redeemGift } from "@/app/actions/gift";
 
 export default function RedeemPage({
@@ -12,6 +17,7 @@ export default function RedeemPage({
 }) {
   const { token } = use(params);
   const t = useTranslations("gift");
+  const locale = useLocale();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -23,13 +29,17 @@ export default function RedeemPage({
       const result = await redeemGift(token);
       if (result.error) {
         if (result.error === "auth_required") {
-          router.push(`/auth/login?next=/redeem/${token}`);
+          router.push(
+            `${buildLoginPath(locale)}?next=${encodeURIComponent(
+              buildLocalePath(locale, `/redeem/${token}`),
+            )}`,
+          );
         } else {
           setError(result.error);
         }
       } else {
         setDone(true);
-        setTimeout(() => router.push("/dashboard"), 2000);
+        setTimeout(() => router.push(buildDashboardPath(locale)), 2000);
       }
     });
   }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getDiscordInviteUrl } from "@/lib/public-links";
+import { withBrandMetadata } from "@/lib/metadata";
 
 type LocaleKey = "es-419" | "en" | "pt-BR";
 
@@ -54,7 +55,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const copy = getCopy(locale);
-  return {
+  return withBrandMetadata({
     title: `${copy.title} | PlayFunded`,
     description: copy.subtitle,
     openGraph: {
@@ -63,7 +64,7 @@ export async function generateMetadata({
       type: "website",
       url: "https://playfunded.lat/contact",
     },
-  };
+  });
 }
 
 export default async function ContactPage({

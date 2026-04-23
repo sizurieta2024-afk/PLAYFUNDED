@@ -56,4 +56,15 @@ __pycache__/
 # build artifacts
 /output/
 /.tmp/
-/public/brand/
+/public/brand/*
+!/public/brand/logo-mark.svg
+!/public/brand/logo-mark.png
+!/public/brand/logo-full.svg
+!/public/brand/logo-full-dark.svg
+!/public/brand/playfunded-logo-light.svg
+!/public/brand/playfunded-logo-dark.svg
+!/public/brand/playfunded-logo-v2.svg
+!/public/brand/playfunded-mark.svg
+!/public/brand/playfunded-mark-v2.svg
+!/public/brand/playfunded-019-lockup.svg
+!/public/brand/playfunded-019-symbol-vector.svg

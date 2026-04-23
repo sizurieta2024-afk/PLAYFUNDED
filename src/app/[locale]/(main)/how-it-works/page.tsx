@@ -5,6 +5,7 @@ import { resolveCountry } from "@/lib/country-policy";
 import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
 import { PLATFORM_POLICY, getPayoutWindowLabel } from "@/lib/platform-policy";
 import type { Metadata } from "next";
+import { withBrandMetadata } from "@/lib/metadata";
 
 export async function generateMetadata({
   params,
@@ -13,7 +14,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "howItWorks" });
-  return {
+  return withBrandMetadata({
     title: `${t("pageTitle")} | PlayFunded`,
     description: t("pageSubtitle"),
     openGraph: {
@@ -22,7 +23,7 @@ export async function generateMetadata({
       type: "website",
       url: "https://playfunded.lat/how-it-works",
     },
-  };
+  });
 }
 
 export default async function HowItWorksPage({

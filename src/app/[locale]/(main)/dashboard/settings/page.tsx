@@ -4,6 +4,7 @@ import { createServerClient } from "@/lib/supabase";
 import { getSettings } from "@/app/actions/settings";
 import { SettingsClient } from "@/components/settings/SettingsClient";
 import type { Metadata } from "next";
+import { buildLoginPath } from "@/i18n/navigation";
 
 export async function generateMetadata({
   params,
@@ -32,7 +33,7 @@ export default async function SettingsPage({
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !authUser) redirect("/auth/login");
+  if (authError || !authUser) redirect(buildLoginPath(locale));
 
   const settings = await getSettings();
 

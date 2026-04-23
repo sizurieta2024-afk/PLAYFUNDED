@@ -4,7 +4,7 @@ import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { PicksClient } from "@/components/challenge/PicksClient";
 import type { Metadata } from "next";
-import { Link } from "@/i18n/navigation";
+import { Link, buildLoginPath } from "@/i18n/navigation";
 
 export async function generateMetadata({
   params,
@@ -30,7 +30,7 @@ export default async function PicksPage({
   } = await supabase.auth.getUser();
 
   if (authError || !authUser) {
-    redirect("/auth/login");
+    redirect(buildLoginPath(locale));
   }
 
   const t = await getTranslations({ locale, namespace: "picks" });
@@ -41,7 +41,7 @@ export default async function PicksPage({
   });
 
   if (!user) {
-    redirect("/auth/login");
+    redirect(buildLoginPath(locale));
   }
 
   // Get the most recent active challenge with tier info

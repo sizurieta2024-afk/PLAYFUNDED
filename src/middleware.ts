@@ -4,6 +4,11 @@ import createIntlMiddleware from "next-intl/middleware";
 import { lookupCountryByIp } from "@/lib/geo";
 import { getCountryPolicy, resolveCountry } from "@/lib/country-policy";
 import { routing } from "@/i18n/routing";
+import {
+  buildDashboardPath,
+  buildLoginPath,
+  inferLocaleFromPath,
+} from "@/i18n/navigation";
 
 const intlMiddleware = createIntlMiddleware(routing);
 
@@ -47,6 +52,7 @@ function isCrawler(ua: string | null): boolean {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const requestLocale = inferLocaleFromPath(pathname);
 
   // ── 1. Webhooks bypass everything ────────────────────────────────────
   if (pathname.startsWith(WEBHOOK_PREFIX)) {
@@ -165,7 +171,7 @@ export async function middleware(request: NextRequest) {
 
   // ── 7. Unauthenticated → protected route ─────────────────────────────
   if (isProtected && !isAuthenticated) {
-    const loginUrl = new URL("/auth/login", request.url);
+    const loginUrl = new URL(buildLoginPath(requestLocale), request.url);
     loginUrl.searchParams.set("redirectTo", pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -179,7 +185,9 @@ export async function middleware(request: NextRequest) {
       .single();
 
     if (!user || user.role !== "admin") {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      return NextResponse.redirect(
+        new URL(buildDashboardPath(requestLocale), request.url),
+      );
     }
   }
 
@@ -189,7 +197,9 @@ export async function middleware(request: NextRequest) {
     (cleanPath.startsWith("/auth/login") ||
       cleanPath.startsWith("/auth/signup"))
   ) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(
+      new URL(buildDashboardPath(requestLocale), request.url),
+    );
   }
 
   return response;

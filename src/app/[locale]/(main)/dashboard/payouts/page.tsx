@@ -10,6 +10,7 @@ import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
 import { PLATFORM_POLICY, getPayoutWindowLabel } from "@/lib/platform-policy";
 import { evaluateKycPayoutEligibility } from "@/lib/kyc/eligibility";
 import type { Metadata } from "next";
+import { buildLoginPath } from "@/i18n/navigation";
 
 export async function generateMetadata({
   params,
@@ -33,13 +34,13 @@ export default async function PayoutsPage({
     data: { user: authUser },
     error: authError,
   } = await supabase.auth.getUser();
-  if (authError || !authUser) redirect("/auth/login");
+  if (authError || !authUser) redirect(buildLoginPath(locale));
 
   const user = await prisma.user.findFirst({
     where: { supabaseId: authUser.id },
     include: { kycSubmission: true },
   });
-  if (!user) redirect("/auth/login");
+  if (!user) redirect(buildLoginPath(locale));
 
   const t = await getTranslations({ locale, namespace: "payouts" });
   const tKyc = await getTranslations({ locale, namespace: "kyc" });

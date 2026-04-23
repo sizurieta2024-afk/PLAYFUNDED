@@ -7,23 +7,27 @@ export const metadata: Metadata = {
 import { createServerClient } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { buildDashboardPath, buildLoginPath } from "@/i18n/navigation";
 
 export default async function AdminLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: Promise<{ locale: string }>;
 }) {
+  const { locale } = await params;
   const supabase = await createServerClient();
   const {
     data: { user: authUser },
     error: authError,
   } = await supabase.auth.getUser();
-  if (authError || !authUser) redirect("/auth/login");
+  if (authError || !authUser) redirect(buildLoginPath(locale));
 
   const user = await prisma.user.findFirst({
     where: { supabaseId: authUser.id },
   });
-  if (!user || user.role !== "admin") redirect("/dashboard");
+  if (!user || user.role !== "admin") redirect(buildDashboardPath(locale));
 
   return (
     <div className="flex min-h-screen">

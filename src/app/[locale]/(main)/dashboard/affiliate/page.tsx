@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { buildDashboardPath } from "@/i18n/navigation";
 
 export async function generateMetadata({
   params,
@@ -8,7 +9,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   return {
-    title: locale === "en" ? "Dashboard | PlayFunded" : "Dashboard | PlayFunded",
+    title:
+      locale === "en" ? "Dashboard | PlayFunded" : "Dashboard | PlayFunded",
   };
 }
 
@@ -18,5 +20,5 @@ export default async function AffiliateDashboardPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  redirect(`/${locale}/dashboard`);
+  redirect(buildDashboardPath(locale));
 }

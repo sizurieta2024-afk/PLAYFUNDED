@@ -5,6 +5,7 @@ export const alt =
   "PlayFunded — La plataforma de trading deportivo para América Latina";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+const LOGO_URL = "https://playfunded.lat/logo.png";
 
 export default function Image() {
   return new ImageResponse(
@@ -48,13 +49,18 @@ export default function Image() {
         }}
       />
 
-      {/* Gold rule */}
-      <div
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={LOGO_URL}
+        alt=""
+        width={104}
+        height={104}
         style={{
-          width: 64,
-          height: 2,
-          backgroundColor: "#C9A84C",
+          width: 104,
+          height: 104,
+          objectFit: "contain",
           marginBottom: 28,
+          filter: "drop-shadow(0 18px 42px rgba(0,0,0,0.45))",
         }}
       />
 

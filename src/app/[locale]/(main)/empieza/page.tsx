@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import { BioLeadCapture } from "@/components/landing/BioLeadCapture";
+import { withBrandMetadata } from "@/lib/metadata";
+import { Spotlight } from "@/components/landing/Spotlight";
+import { GrainOverlay } from "@/components/landing/GrainOverlay";
+import { ArrowRight, TrendingDown, TrendingUp } from "lucide-react";
 
 type LocaleKey = "es-419" | "en" | "pt-BR";
 
@@ -17,6 +21,7 @@ const COPY: Record<
     description: string;
     eyebrow: string;
     heading: string;
+    headingAccent: string;
     body: string;
     labelLess: string;
     winLess: string;
@@ -27,40 +32,42 @@ const COPY: Record<
 > = {
   "es-419": {
     title: "Empieza con dinero fondeado | PlayFunded",
-    description:
-      "Pagina de captura para trafico social antes del lanzamiento completo.",
-    eyebrow: "Antes del lanzamiento",
-    heading: "La unica manera de ganar es con cuentas fondeadas",
-    body: "Miralo asi: si pierdes, pierdes mucho menos de lo que perderias normalmente. Y si ganas, puedes ganar mucho mas al acceder a cuentas de hasta $25,000 dolares.",
+    description: "Accede a cuentas de hasta $25,000. Menos riesgo, más techo.",
+    eyebrow: "Acceso anticipado",
+    heading: "La única manera",
+    headingAccent: "de ganar en serio.",
+    body: "Si pierdes, pierdes mucho menos de lo que perderías normalmente. Si ganas, puedes ganar mucho más con cuentas de hasta $25,000.",
     labelLess: "Menos riesgo",
     winLess: "Si pierdes, pierdes menos",
     labelMore: "Más techo",
-    winMore: "Si ganas, puedes ganar mucho mas",
-    note: "Es un ganar ganar. Dejanos tu pais y tu email.",
+    winMore: "Si ganas, ganas mucho más",
+    note: "Deja tu email y te avisamos con un descuento en tu primera cuenta.",
   },
   en: {
     title: "Start with funded capital | PlayFunded",
-    description: "Social bio capture page before full launch.",
-    eyebrow: "Before launch",
-    heading: "The only way to win is with funded accounts",
-    body: "Think about it this way: if you lose, you lose much less than you normally would. And if you win, you can win much more by accessing accounts of up to $25,000.",
+    description: "Access accounts up to $25,000. Less risk, higher ceiling.",
+    eyebrow: "Early access",
+    heading: "The only way",
+    headingAccent: "to win for real.",
+    body: "If you lose, you lose much less than you normally would. If you win, you can win much more with accounts up to $25,000.",
     labelLess: "Less risk",
     winLess: "If you lose, you lose less",
     labelMore: "Higher ceiling",
-    winMore: "If you win, you can win more",
-    note: "It is a win-win. Leave your country and email.",
+    winMore: "If you win, you win more",
+    note: "Leave your email and we'll notify you with a discount on your first account.",
   },
   "pt-BR": {
     title: "Comece com capital fondeado | PlayFunded",
-    description: "Pagina de captura social antes do lancamento completo.",
-    eyebrow: "Antes do lancamento",
-    heading: "A unica forma de ganhar e com contas fondeadas",
-    body: "Pense assim: se voce perde, perde muito menos do que perderia normalmente. E se ganha, pode ganhar muito mais ao acessar contas de ate $25,000.",
+    description: "Acesse contas de até $25,000. Menos risco, mais teto.",
+    eyebrow: "Acesso antecipado",
+    heading: "A única forma",
+    headingAccent: "de ganhar de verdade.",
+    body: "Se você perde, perde muito menos do que perderia normalmente. Se ganha, pode ganhar muito mais com contas de até $25,000.",
     labelLess: "Menos risco",
     winLess: "Se perder, perde menos",
     labelMore: "Mais teto",
-    winMore: "Se ganhar, pode ganhar mais",
-    note: "E um ganha-ganha. Deixe seu pais e seu email.",
+    winMore: "Se ganhar, ganha muito mais",
+    note: "Deixe seu e-mail e avisamos com desconto na sua primeira conta.",
   },
 };
 
@@ -80,7 +87,7 @@ export async function generateMetadata({
   const copy = getCopy(locale);
   const prefix = LOCALE_PREFIX[locale] ?? "";
 
-  return {
+  return withBrandMetadata({
     title: copy.title,
     description: copy.description,
     openGraph: {
@@ -89,7 +96,7 @@ export async function generateMetadata({
       type: "website",
       url: `${BASE_URL}${prefix}/empieza`,
     },
-  };
+  });
 }
 
 export default async function BioStartPage({
@@ -105,52 +112,80 @@ export default async function BioStartPage({
   const supportEmail = process.env.SUPPORT_EMAIL ?? "support@playfunded.lat";
 
   return (
-    <div className="relative overflow-hidden bg-[#0d130f]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(215,240,98,0.18),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(98,255,186,0.12),transparent_24%)]" />
-      <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.07)_1px,transparent_1px)] [background-size:38px_38px]" />
+    <div className="relative overflow-hidden bg-background">
+      <Spotlight />
+      <GrainOverlay opacity={0.032} />
 
-      <div className="relative mx-auto flex min-h-[calc(100vh-160px)] max-w-6xl flex-col justify-center gap-10 px-4 py-12 sm:px-6 lg:flex-row lg:items-center lg:gap-14 lg:py-20">
-        <section className="max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.34em] text-[#d7f062]">
-            {copy.eyebrow}
-          </p>
-          <h1 className="mt-4 max-w-xl text-[clamp(3rem,7vw,5.6rem)] font-black uppercase leading-[0.92] tracking-[-0.05em] text-white">
-            {copy.heading}
-          </h1>
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/76 sm:text-xl">
-            {copy.body}
-          </p>
+      {/* Radial glows matching homepage */}
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-[radial-gradient(ellipse,rgba(201,168,76,0.07)_0%,transparent_65%)] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[radial-gradient(ellipse,rgba(255,45,120,0.04)_0%,transparent_70%)] pointer-events-none" />
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-[1.6rem] border border-white/12 bg-white/5 p-5 backdrop-blur">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#d7f062]">
-                {copy.labelLess}
-              </p>
-              <p className="mt-3 text-2xl font-black uppercase leading-none text-white">
-                {copy.winLess}
-              </p>
+      <div className="relative mx-auto max-w-[1200px] px-6 lg:px-16">
+        <div className="grid grid-cols-1 lg:grid-cols-[55fr_45fr] gap-12 xl:gap-20 items-center min-h-[calc(100vh-56px)] py-20">
+          {/* ── LEFT COLUMN ─────────────────────────────── */}
+          <div>
+            {/* Eyebrow */}
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-7 h-px bg-pf-brand flex-shrink-0" />
+              <span className="font-mono text-[10px] text-pf-brand uppercase tracking-[0.12em]">
+                {copy.eyebrow}
+              </span>
             </div>
-            <div className="rounded-[1.6rem] border border-white/12 bg-white/5 p-5 backdrop-blur">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#d7f062]">
-                {copy.labelMore}
-              </p>
-              <p className="mt-3 text-2xl font-black uppercase leading-none text-white">
-                {copy.winMore}
-              </p>
+
+            {/* Heading */}
+            <h1 className="font-serif italic text-[clamp(2.8rem,5vw,5rem)] leading-[1.05] text-foreground">
+              {copy.heading}{" "}
+              <span className="text-gradient-animated">
+                {copy.headingAccent}
+              </span>
+            </h1>
+
+            {/* Body */}
+            <p className="text-[clamp(14px,1.5vw,16px)] text-muted-foreground leading-relaxed max-w-[420px] mt-6">
+              {copy.body}
+            </p>
+
+            {/* Stat cards */}
+            <div className="grid grid-cols-2 gap-3 mt-8 max-w-[420px]">
+              <div className="group p-4 rounded-xl border border-border hover:border-pf-brand/30 bg-card transition-all duration-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingDown className="w-3.5 h-3.5 text-pf-brand" />
+                  <span className="font-mono text-[9px] text-pf-brand uppercase tracking-[0.12em]">
+                    {copy.labelLess}
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-foreground leading-snug">
+                  {copy.winLess}
+                </p>
+              </div>
+              <div className="group p-4 rounded-xl border border-pf-pink/20 hover:border-pf-pink/40 bg-card transition-all duration-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="w-3.5 h-3.5 text-pf-pink" />
+                  <span className="font-mono text-[9px] text-pf-pink uppercase tracking-[0.12em]">
+                    {copy.labelMore}
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-foreground leading-snug">
+                  {copy.winMore}
+                </p>
+              </div>
             </div>
+
+            {/* Note */}
+            <p className="mt-6 max-w-[380px] text-[12px] text-muted-foreground leading-relaxed">
+              {copy.note}
+            </p>
           </div>
 
-          <p className="mt-6 max-w-lg text-sm font-medium uppercase tracking-[0.2em] text-white/58">
-            {copy.note}
-          </p>
-        </section>
-
-        <div className="w-full max-w-xl">
-          <BioLeadCapture
-            locale={locale}
-            refCode={ref}
-            supportEmail={supportEmail}
-          />
+          {/* ── RIGHT COLUMN — Lead capture form ────────── */}
+          <div className="relative">
+            <div className="absolute -inset-8 bg-[radial-gradient(ellipse,rgba(201,168,76,0.06)_0%,transparent_70%)] pointer-events-none" />
+            <BioLeadCapture
+              locale={locale}
+              refCode={ref}
+              supportEmail={supportEmail}
+            />
+          </div>
         </div>
       </div>
     </div>

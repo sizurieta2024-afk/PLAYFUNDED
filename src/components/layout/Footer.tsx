@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { LanguageToggle } from "./LanguageToggle";
 import { getDiscordInviteUrl } from "@/lib/public-links";
@@ -53,7 +54,14 @@ export function Footer() {
         <div className="py-12 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand column */}
           <div className="space-y-4">
-            <Link href="/" className="group w-fit">
+            <Link href="/" className="group flex w-fit items-center gap-2.5">
+              <Image
+                src="/logo.png"
+                alt=""
+                width={40}
+                height={40}
+                className="h-9 w-9 object-contain"
+              />
               <span className="font-display font-bold text-base tracking-[0.15em] uppercase text-pf-brand transition-colors duration-200 group-hover:text-pf-gold-light">
                 {tn("brand")}
               </span>

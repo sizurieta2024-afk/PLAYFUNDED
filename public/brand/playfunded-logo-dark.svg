@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="520" viewBox="0 0 2200 520" role="img" aria-labelledby="pf-full-title pf-full-desc">
+  <title id="pf-full-title">PlayFunded logo lockup</title>
+  <desc id="pf-full-desc">PlayFunded faceted P mark with PLAY in gold and FUNDED in warm ivory on dark surfaces.</desc>
+  <defs>
+    <linearGradient id="playGold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F0D680"/>
+      <stop offset="100%" stop-color="#C9A84C"/>
+    </linearGradient>
+  </defs>
+  <rect width="2200" height="520" rx="0" fill="#050504"/>
+  <image href="logo-mark.svg" x="58" y="16" width="404" height="404" preserveAspectRatio="xMidYMid meet"/>
+  <text x="520" y="322"
+        font-family="'Syne', 'Avenir Next', 'Montserrat', system-ui, sans-serif"
+        font-size="168"
+        font-weight="600"
+        letter-spacing="26"
+        fill="url(#playGold)">PLAY</text>
+  <text x="1092" y="322"
+        font-family="'Syne', 'Avenir Next', 'Montserrat', system-ui, sans-serif"
+        font-size="168"
+        font-weight="600"
+        letter-spacing="26"
+        fill="#F3EFE7">FUNDED</text>
+</svg>

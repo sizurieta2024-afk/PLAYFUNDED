@@ -38,6 +38,7 @@ import {
 import type { Metadata } from "next";
 import { websiteSchema, homeFaqSchema } from "@/lib/schema";
 import { routing } from "@/i18n/routing";
+import { withBrandMetadata } from "@/lib/metadata";
 
 const BASE_URL = "https://playfunded.lat";
 const LOCALE_PREFIX: Record<string, string> = {
@@ -139,7 +140,7 @@ export async function generateMetadata({
   const prefix = LOCALE_PREFIX[locale] ?? "";
   const canonicalUrl = `${BASE_URL}${prefix}`;
 
-  return {
+  return withBrandMetadata({
     title: { absolute: t("meta_title") },
     description: t("meta_description"),
     alternates: {
@@ -161,7 +162,7 @@ export async function generateMetadata({
       title: t("meta_title"),
       description: t("meta_description"),
     },
-  };
+  });
 }
 
 export default async function HomePage({

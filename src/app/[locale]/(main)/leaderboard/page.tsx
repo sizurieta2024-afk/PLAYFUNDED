@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { getNonFixtureChallengeWhere } from "@/lib/fixture-data";
 import type { Metadata } from "next";
+import { withBrandMetadata } from "@/lib/metadata";
 
 export async function generateMetadata({
   params,
@@ -10,7 +11,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "leaderboard" });
-  return {
+  return withBrandMetadata({
     title: `${t("pageTitle")} | PlayFunded`,
     description: t("pageSubtitle"),
     openGraph: {
@@ -19,7 +20,7 @@ export async function generateMetadata({
       type: "website",
       url: "https://playfunded.lat/leaderboard",
     },
-  };
+  });
 }
 
 export default async function LeaderboardPage({

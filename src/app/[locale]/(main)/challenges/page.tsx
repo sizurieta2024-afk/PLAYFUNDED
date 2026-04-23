@@ -8,6 +8,7 @@ import { getActiveTiers } from "@/lib/catalog";
 import { isStripeCheckoutEnabled } from "@/lib/stripe";
 import { TierCard } from "@/components/challenges/TierCard";
 import type { Metadata } from "next";
+import { withBrandMetadata } from "@/lib/metadata";
 
 export async function generateMetadata({
   params,
@@ -16,7 +17,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "challenges" });
-  return {
+  return withBrandMetadata({
     title: `${t("pageTitle")} | PlayFunded`,
     description: t("pageSubtitle"),
     openGraph: {
@@ -25,7 +26,7 @@ export async function generateMetadata({
       type: "website",
       url: "https://playfunded.lat/challenges",
     },
-  };
+  });
 }
 
 export default async function ChallengesPage({

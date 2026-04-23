@@ -79,10 +79,26 @@ export async function generateMetadata({
       siteName: "PlayFunded",
       type: "website",
       locale: LOCALE_OG[locale] ?? "es_LA",
+      images: [
+        {
+          url: "/opengraph-image",
+          width: 1200,
+          height: 630,
+          alt: "PlayFunded",
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       site: "@playfunded",
+      images: ["/opengraph-image"],
+    },
+    icons: {
+      icon: [
+        { url: "/favicon.ico" },
+        { url: "/favicon.png", type: "image/png" },
+      ],
+      apple: [{ url: "/apple-touch-icon.png" }],
     },
     verification: {
       ...(GOOGLE_SITE_VERIFICATION ? { google: GOOGLE_SITE_VERIFICATION } : {}),

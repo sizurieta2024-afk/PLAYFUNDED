@@ -7,6 +7,7 @@ import { PLATFORM_POLICY, getPayoutWindowLabel } from "@/lib/platform-policy";
 import { getDiscordInviteUrl } from "@/lib/public-links";
 import type { Metadata } from "next";
 import { faqPageSchema } from "@/lib/schema";
+import { withBrandMetadata } from "@/lib/metadata";
 
 export async function generateMetadata({
   params,
@@ -15,7 +16,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "faq" });
-  return {
+  return withBrandMetadata({
     title: `${t("pageTitle")} | PlayFunded`,
     description: t("pageSubtitle"),
     openGraph: {
@@ -24,7 +25,7 @@ export async function generateMetadata({
       type: "website",
       url: "https://playfunded.lat/faq",
     },
-  };
+  });
 }
 
 export default async function FaqPage({

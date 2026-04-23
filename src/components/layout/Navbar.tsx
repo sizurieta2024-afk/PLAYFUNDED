@@ -42,10 +42,10 @@ export function Navbar({ isAuthenticated = false }: NavbarProps) {
           <Link href="/" className="shrink-0 flex items-center gap-2">
             <Image
               src="/brand/logo-mark.svg"
-              alt="PlayFunded"
-              width={28}
-              height={28}
-              className="w-7 h-7"
+              alt=""
+              width={34}
+              height={34}
+              className="h-8 w-8 object-contain"
               priority
             />
             <span className="font-display font-bold text-sm tracking-[0.15em] uppercase text-pf-brand hover:text-pf-gold-light transition-colors duration-200">

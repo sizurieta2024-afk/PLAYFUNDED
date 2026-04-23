@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { BioLeadCapture } from "@/components/landing/BioLeadCapture";
+import { withBrandMetadata } from "@/lib/metadata";
 
 type LocaleKey = "es-419" | "en" | "pt-BR";
 
@@ -80,7 +81,7 @@ export async function generateMetadata({
   const copy = getCopy(locale);
   const prefix = LOCALE_PREFIX[locale] ?? "";
 
-  return {
+  return withBrandMetadata({
     title: copy.title,
     description: copy.description,
     openGraph: {
@@ -89,7 +90,7 @@ export async function generateMetadata({
       type: "website",
       url: `${BASE_URL}${prefix}/empieza`,
     },
-  };
+  });
 }
 
 export default async function BioStartPage({

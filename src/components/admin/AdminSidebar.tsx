@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { buildLoginPath, inferLocaleFromPath } from "@/i18n/navigation";
 import {
@@ -58,11 +59,23 @@ export function AdminSidebar() {
 
   return (
     <aside className="w-56 shrink-0 border-r border-border bg-card min-h-screen sticky top-0 flex flex-col">
-      <div className="px-4 py-5 border-b border-border">
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-          Admin Panel
-        </p>
-        <p className="text-sm font-bold text-foreground mt-0.5">PlayFunded</p>
+      <div className="flex items-center gap-2.5 px-4 py-5 border-b border-border">
+        <Image
+          src="/brand/logo-mark.svg"
+          alt=""
+          width={34}
+          height={34}
+          className="h-8 w-8 object-contain"
+          priority
+        />
+        <div>
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+            Admin Panel
+          </p>
+          <p className="text-sm font-bold text-foreground mt-0.5">
+            PlayFunded
+          </p>
+        </div>
       </div>
 
       <nav className="p-3 space-y-0.5 flex-1 overflow-y-auto">

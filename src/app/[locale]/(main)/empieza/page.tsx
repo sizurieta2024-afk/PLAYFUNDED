@@ -3,7 +3,7 @@ import { BioLeadCapture } from "@/components/landing/BioLeadCapture";
 import { withBrandMetadata } from "@/lib/metadata";
 import { Spotlight } from "@/components/landing/Spotlight";
 import { GrainOverlay } from "@/components/landing/GrainOverlay";
-import { ArrowRight, TrendingDown, TrendingUp } from "lucide-react";
+import { TrendingDown, TrendingUp } from "lucide-react";
 
 type LocaleKey = "es-419" | "en" | "pt-BR";
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ArrowRight, Check } from "lucide-react";
 
 type LocaleKey = "es-419" | "en" | "pt-BR";
 
@@ -18,55 +19,56 @@ type Copy = {
 const COPY: Record<LocaleKey, Copy> = {
   "es-419": {
     emailLabel: "Email",
-    countryLabel: "Pais",
-    button: "Haz click aqui para conseguir un descuento en tu primera cuenta fondeada",
+    countryLabel: "País",
+    button: "Conseguir descuento en mi primera cuenta",
     loading: "Enviando...",
     supportLabel: "Dudas",
-    successTitle: "Gracias",
+    successTitle: "¡Listo!",
     successBody:
-      "Apenas este lista la pagina te contactaremos para que la uses con tu descuento.",
+      "Te contactaremos con tu descuento en cuanto la plataforma esté lista.",
     error:
-      "No pudimos enviar tu registro ahora mismo. Intentalo otra vez en un momento.",
+      "No pudimos enviar tu registro ahora mismo. Inténtalo otra vez en un momento.",
   },
   en: {
     emailLabel: "Email",
     countryLabel: "Country",
-    button: "Click here to get a discount on your first funded account",
+    button: "Get a discount on my first account",
     loading: "Sending...",
     supportLabel: "Questions",
-    successTitle: "Thank you",
+    successTitle: "You're in!",
     successBody:
-      "As soon as the page is ready, we will contact you so you can use it with your discount.",
-    error: "We could not submit your request right now. Please try again shortly.",
+      "We'll contact you with your discount as soon as the platform is ready.",
+    error:
+      "We could not submit your request right now. Please try again shortly.",
   },
   "pt-BR": {
     emailLabel: "E-mail",
-    countryLabel: "Pais",
-    button: "Clique aqui para conseguir desconto na sua primeira conta fondeada",
+    countryLabel: "País",
+    button: "Conseguir desconto na minha primeira conta",
     loading: "Enviando...",
-    supportLabel: "Duvidas",
-    successTitle: "Obrigado",
+    supportLabel: "Dúvidas",
+    successTitle: "Pronto!",
     successBody:
-      "Assim que a pagina estiver pronta, entraremos em contato para que voce use com seu desconto.",
-    error: "Nao foi possivel enviar agora. Tente novamente em instantes.",
+      "Entraremos em contato com seu desconto assim que a plataforma estiver pronta.",
+    error: "Não foi possível enviar agora. Tente novamente em instantes.",
   },
 };
 
 const COUNTRY_OPTIONS = [
-  { value: "MX", label: "Mexico" },
+  { value: "MX", label: "México" },
   { value: "AR", label: "Argentina" },
   { value: "CO", label: "Colombia" },
   { value: "CL", label: "Chile" },
-  { value: "PE", label: "Peru" },
+  { value: "PE", label: "Perú" },
   { value: "EC", label: "Ecuador" },
   { value: "UY", label: "Uruguay" },
   { value: "PY", label: "Paraguay" },
-  { value: "ES", label: "Espana" },
+  { value: "ES", label: "España" },
   { value: "BR", label: "Brasil" },
   { value: "OTRO", label: "Otro" },
 ];
 
-function getCopy(locale: string) {
+function getCopy(locale: string): Copy {
   if (locale === "en" || locale === "pt-BR" || locale === "es-419") {
     return COPY[locale];
   }
@@ -93,23 +95,13 @@ export function BioLeadCapture({
     event.preventDefault();
     setLoading(true);
     setError("");
-
     try {
       const response = await fetch("/api/bio-leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          country,
-          locale,
-          ref: refCode ?? "",
-        }),
+        body: JSON.stringify({ email, country, locale, ref: refCode ?? "" }),
       });
-
-      if (!response.ok) {
-        throw new Error("submit_failed");
-      }
-
+      if (!response.ok) throw new Error("submit_failed");
       setSuccess(true);
     } catch {
       setError(copy.error);
@@ -120,16 +112,22 @@ export function BioLeadCapture({
 
   if (success) {
     return (
-      <div className="rounded-[2rem] border border-white/15 bg-black/35 p-6 sm:p-8 text-left shadow-2xl backdrop-blur">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#d7f062]">
+      <div className="animate-float rounded-lg border border-pf-brand/30 bg-card shadow-[0_2px_8px_rgba(0,0,0,0.4),0_8px_32px_rgba(0,0,0,0.3)] p-8">
+        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-pf-brand/10 border border-pf-brand/20 mb-5">
+          <Check className="w-5 h-5 text-pf-brand" />
+        </div>
+        <p className="font-mono text-[10px] text-pf-brand uppercase tracking-[0.1em] mb-2">
           {copy.successTitle}
         </p>
-        <h2 className="mt-3 text-3xl font-black uppercase tracking-[-0.03em] text-white sm:text-4xl">
+        <p className="text-foreground font-semibold text-lg leading-snug mb-4">
           {copy.successBody}
-        </h2>
-        <p className="mt-4 text-sm font-medium text-white/75">
+        </p>
+        <p className="text-[11px] text-muted-foreground">
           {copy.supportLabel}:{" "}
-          <a className="text-[#d7f062] underline-offset-4 hover:underline" href={`mailto:${supportEmail}`}>
+          <a
+            href={`mailto:${supportEmail}`}
+            className="text-pf-brand hover:text-pf-gold-light transition-colors"
+          >
             {supportEmail}
           </a>
         </p>
@@ -140,56 +138,77 @@ export function BioLeadCapture({
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-[2rem] border border-white/15 bg-black/35 p-6 sm:p-8 shadow-2xl backdrop-blur"
+      className="animate-float rounded-lg border border-pf-brand/20 bg-card shadow-[0_2px_8px_rgba(0,0,0,0.4),0_8px_32px_rgba(0,0,0,0.3)] p-7"
     >
+      {/* Card header */}
+      <div className="flex items-center justify-between mb-6">
+        <span className="font-mono text-[10px] text-pf-brand uppercase tracking-[0.1em]">
+          Early access
+        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="w-[5px] h-[5px] rounded-full bg-pf-pink animate-pulse" />
+          <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.08em]">
+            Descuento disponible
+          </span>
+        </div>
+      </div>
+
       <div className="space-y-4">
+        {/* Country */}
         <div>
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-white/70">
+          <label className="block font-mono text-[9px] text-muted-foreground uppercase tracking-[0.1em] mb-2">
             {copy.countryLabel}
           </label>
           <select
             value={country}
-            onChange={(event) => setCountry(event.target.value)}
-            className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-4 text-base font-medium text-white outline-none transition focus:border-[#d7f062]"
+            onChange={(e) => setCountry(e.target.value)}
+            className="w-full rounded bg-secondary border border-border px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-pf-brand/50 focus:ring-1 focus:ring-pf-brand/20"
           >
-            {COUNTRY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value} className="text-black">
-                {option.label}
+            {COUNTRY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
               </option>
             ))}
           </select>
         </div>
 
+        {/* Email */}
         <div>
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-white/70">
+          <label className="block font-mono text-[9px] text-muted-foreground uppercase tracking-[0.1em] mb-2">
             {copy.emailLabel}
           </label>
           <input
             type="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(e) => setEmail(e.target.value)}
             required
             placeholder="tu@email.com"
-            className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-4 text-base font-medium text-white placeholder:text-white/35 outline-none transition focus:border-[#d7f062]"
+            className="w-full rounded bg-secondary border border-border px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none transition focus:border-pf-brand/50 focus:ring-1 focus:ring-pf-brand/20"
           />
         </div>
 
+        {/* CTA */}
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-2xl bg-[#d7f062] px-5 py-4 text-sm font-black uppercase tracking-[0.08em] text-[#1b2413] transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70"
+          className="press group relative w-full overflow-hidden rounded bg-pf-pink hover:bg-pf-pink-dark text-white font-semibold text-[13px] py-3 px-5 transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
+          <span className="pointer-events-none absolute inset-0 -skew-x-12 translate-x-[-150%] group-hover:translate-x-[150%] transition-transform duration-500 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
           {loading ? copy.loading : copy.button}
+          {!loading && <ArrowRight className="w-3.5 h-3.5 shrink-0" />}
         </button>
 
-        <p className="text-xs leading-relaxed text-white/55">
+        {error && <p className="text-xs text-red-400 font-medium">{error}</p>}
+
+        <p className="text-[11px] text-muted-foreground text-center">
           {copy.supportLabel}:{" "}
-          <a className="text-[#d7f062] underline-offset-4 hover:underline" href={`mailto:${supportEmail}`}>
+          <a
+            href={`mailto:${supportEmail}`}
+            className="text-pf-brand hover:text-pf-gold-light transition-colors"
+          >
             {supportEmail}
           </a>
         </p>
-
-        {error ? <p className="text-sm font-medium text-red-300">{error}</p> : null}
       </div>
     </form>
   );

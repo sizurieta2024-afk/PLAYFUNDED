@@ -12,11 +12,11 @@ const cspDirectives = [
   // NOTE: 'unsafe-inline' is required while JSON-LD script tags and Stripe
   // inject inline scripts. Migrate to nonce-based CSP once those integrations
   // support it.
-  `script-src 'self' 'unsafe-inline'${isProduction ? '' : " 'unsafe-eval'"} https://js.stripe.com`,
+  `script-src 'self' 'unsafe-inline'${isProduction ? '' : " 'unsafe-eval'"} https://js.stripe.com https://eu-assets.i.posthog.com`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  `connect-src 'self'${isProduction ? '' : ' ws://localhost:* ws://127.0.0.1:* wss://localhost:* wss://127.0.0.1:*'} https://api.stripe.com https://api.nowpayments.io https://api.anthropic.com https://*.supabase.co https://*.sentry.io`,
+  `connect-src 'self'${isProduction ? '' : ' ws://localhost:* ws://127.0.0.1:* wss://localhost:* wss://127.0.0.1:*'} https://api.stripe.com https://api.nowpayments.io https://api.anthropic.com https://*.supabase.co https://*.sentry.io https://eu.i.posthog.com https://eu-assets.i.posthog.com`,
   "worker-src 'self' blob:",
   "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
   "form-action 'self' https://checkout.stripe.com",

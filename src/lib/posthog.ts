@@ -4,7 +4,7 @@ export const POSTHOG_TOKEN =
   "";
 
 export const POSTHOG_HOST =
-  process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
+  process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://eu.i.posthog.com";
 
 export function isPostHogConfigured() {
   return POSTHOG_TOKEN.length > 0;

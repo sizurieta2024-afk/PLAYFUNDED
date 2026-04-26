@@ -93,11 +93,19 @@ export async function generateMetadata({
       site: "@playfunded",
       images: ["/opengraph-image"],
     },
+    manifest: "/site.webmanifest",
     icons: {
       icon: [
-        { url: "/favicon.ico" },
-        { url: "/favicon.png", type: "image/png" },
+        { url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" },
+        { url: "/favicon-96x96.png", sizes: "96x96", type: "image/png" },
+        {
+          url: "/favicon-192x192.png",
+          sizes: "192x192",
+          type: "image/png",
+        },
+        { url: "/favicon.ico", sizes: "any", type: "image/x-icon" },
       ],
+      shortcut: [{ url: "/favicon.ico" }],
       apple: [{ url: "/apple-touch-icon.png" }],
     },
     verification: {

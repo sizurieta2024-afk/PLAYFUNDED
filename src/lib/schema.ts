@@ -8,6 +8,12 @@ export function organizationSchema() {
     name: "PlayFunded",
     legalName: "PlayFunded",
     url: BASE_URL,
+    logo: {
+      "@type": "ImageObject",
+      url: `${BASE_URL}/logo.png`,
+      width: 512,
+      height: 512,
+    },
     image: `${BASE_URL}/logo.png`,
     description:
       "PlayFunded es la primera prop firm de trading deportivo de América Latina. Los traders pagan una tarifa única de entrada, completan dos fases de evaluación con fondos simulados y obtienen una cuenta financiada con hasta 80% de reparto de ganancias.",

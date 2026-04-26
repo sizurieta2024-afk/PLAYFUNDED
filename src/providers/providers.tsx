@@ -1,7 +1,9 @@
 "use client";
 
+import { Suspense } from "react";
 import { ThemeProvider } from "next-themes";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
+import { PostHogAnalytics } from "@/components/analytics/PostHogAnalytics";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -17,6 +19,9 @@ export function Providers({ children, locale, messages }: ProvidersProps) {
         defaultTheme="dark"
         disableTransitionOnChange
       >
+        <Suspense fallback={null}>
+          <PostHogAnalytics />
+        </Suspense>
         {children}
       </ThemeProvider>
     </NextIntlClientProvider>

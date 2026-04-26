@@ -105,6 +105,8 @@ for (const key of ["PF_ALERT_WEBHOOK_URL", "PF_ALERT_WEBHOOK_KIND"]) {
 
 const workflowRequired = [...workflowSecrets].sort();
 const recommendedRuntime = [
+  "NEXT_PUBLIC_POSTHOG_TOKEN",
+  "NEXT_PUBLIC_POSTHOG_HOST",
   "KYC_SCAN_MODE",
   "CLAMAV_HOST",
   "CLAMAV_PORT",

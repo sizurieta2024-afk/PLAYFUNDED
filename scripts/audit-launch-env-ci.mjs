@@ -37,6 +37,8 @@ const requiredRuntime =
 const requiredWorkflow =
   scope === "launch_smokes" ? [] : ["PF_BASE_URL", "PF_CRON_SECRET"];
 const recommendedRuntime = [
+  "NEXT_PUBLIC_POSTHOG_TOKEN",
+  "NEXT_PUBLIC_POSTHOG_HOST",
   "KYC_SCAN_MODE",
   "CLAMAV_HOST",
   "CLAMAV_PORT",

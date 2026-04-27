@@ -25,7 +25,7 @@ if (isPostHogConfigured()) {
   posthog.init(POSTHOG_TOKEN, {
     api_host: POSTHOG_HOST,
     defaults: "2026-01-30",
-    capture_pageview: false,
+    capture_pageview: true,
     capture_pageleave: true,
     disable_session_recording:
       process.env.NEXT_PUBLIC_POSTHOG_SESSION_REPLAY !== "true",

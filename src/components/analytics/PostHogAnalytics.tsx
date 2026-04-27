@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { useLocale } from "next-intl";
-import { usePathname, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import posthog from "posthog-js";
 import { isPostHogConfigured } from "@/lib/posthog";
@@ -16,23 +15,6 @@ function identifyUser(
   posthog.identify(user.id, {
     locale,
   });
-}
-
-function PostHogPageView() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    if (!isPostHogConfigured()) return;
-
-    posthog.capture("$pageview", {
-      $current_url: window.location.href,
-      pathname,
-      search: searchParams.toString(),
-    });
-  }, [pathname, searchParams]);
-
-  return null;
 }
 
 function PostHogUserIdentity() {
@@ -74,10 +56,5 @@ function PostHogUserIdentity() {
 export function PostHogAnalytics() {
   if (!isPostHogConfigured()) return null;
 
-  return (
-    <>
-      <PostHogPageView />
-      <PostHogUserIdentity />
-    </>
-  );
+  return <PostHogUserIdentity />;
 }

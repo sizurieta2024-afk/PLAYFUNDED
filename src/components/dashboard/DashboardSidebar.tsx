@@ -11,6 +11,7 @@ import {
   Wallet,
   Settings,
   ChevronRight,
+  Users,
 } from "lucide-react";
 
 interface NavItem {
@@ -45,6 +46,12 @@ export function DashboardSidebar() {
       icon: BarChart2,
       label: t("navAnalytics"),
       mobileLabel: t("navAnalyticsShort"),
+    },
+    {
+      href: "/dashboard/groups",
+      icon: Users,
+      label: t("navGroups"),
+      mobileLabel: t("navGroupsShort"),
     },
     {
       href: "/dashboard/payouts",

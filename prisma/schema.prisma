@@ -123,6 +123,11 @@ enum OpsLevel {
   error
 }
 
+enum TradingGroupRole {
+  owner
+  member
+}
+
 // ============================================================
 // USER
 // ============================================================
@@ -159,6 +164,8 @@ model User {
   payoutProfile    PayoutProfile?
   followedTraders  Follow[]          @relation("follower")
   followers        Follow[]          @relation("following")
+  ownedTradingGroup TradingGroup?
+  tradingGroupMembership TradingGroupMember?
   auditLogs        AuditLog[]
 
   @@index([email])
@@ -717,6 +724,46 @@ model Follow {
   @@unique([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
+}
+
+// ============================================================
+// TRADING GROUP (private friend groups)
+// ============================================================
+
+model TradingGroup {
+  id      String @id @default(uuid())
+  ownerId String @unique
+  name    String
+  code    String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner   User                 @relation(fields: [ownerId], references: [id])
+  members TradingGroupMember[]
+
+  @@index([code])
+  @@index([createdAt])
+}
+
+model TradingGroupMember {
+  id               String           @id @default(uuid())
+  groupId          String
+  userId           String           @unique
+  role             TradingGroupRole @default(member)
+  showStakeAmounts Boolean          @default(false)
+
+  joinedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  group TradingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User         @relation(fields: [userId], references: [id])
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@index([role])
+  @@index([joinedAt])
 }
 
 // ============================================================

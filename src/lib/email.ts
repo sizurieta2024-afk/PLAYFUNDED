@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { getCanonicalAppUrl } from "@/lib/public-origin";
+import { getSupportEmail } from "@/lib/support-email";
 
 const FROM = process.env.SMTP_FROM?.trim() || "noreply@playfunded.lat";
 const APP_URL = getCanonicalAppUrl();
@@ -995,7 +996,7 @@ export function payoutRejectedEmail(
         <p>${bodyText}</p>
         ${reason ? `<p><strong>${reasonLabel}:</strong> ${reason}</p>` : ""}
         <p>${desc}</p>
-        <a href="mailto:${process.env.SUPPORT_EMAIL ?? "support@playfunded.lat"}" class="btn">${cta}</a>
+        <a href="mailto:${getSupportEmail()}" class="btn">${cta}</a>
       </div>`,
       locale,
     ),

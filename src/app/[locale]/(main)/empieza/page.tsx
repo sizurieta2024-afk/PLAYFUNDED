@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BioLeadCapture } from "@/components/landing/BioLeadCapture";
 import { withBrandMetadata } from "@/lib/metadata";
+import { getSupportEmail } from "@/lib/support-email";
 import { Spotlight } from "@/components/landing/Spotlight";
 import { GrainOverlay } from "@/components/landing/GrainOverlay";
 import { TrendingDown, TrendingUp } from "lucide-react";
@@ -123,7 +124,7 @@ export default async function BioStartPage({
     utm_term: utmTerm,
   } = await searchParams;
   const copy = getCopy(locale);
-  const supportEmail = process.env.SUPPORT_EMAIL ?? "support@playfunded.lat";
+  const supportEmail = getSupportEmail();
 
   return (
     <div className="relative overflow-hidden bg-background">

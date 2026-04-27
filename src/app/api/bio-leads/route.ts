@@ -3,6 +3,7 @@ import { z } from "zod";
 import { sendEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit";
+import { getSupportEmail } from "@/lib/support-email";
 
 function escapeHtml(str: string): string {
   return str
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     utmContent,
     utmTerm,
   } = parsed.data;
-  const supportEmail = process.env.SUPPORT_EMAIL ?? "support@playfunded.lat";
+  const supportEmail = getSupportEmail();
   const submittedAtDate = new Date();
   const submittedAt = submittedAtDate.toISOString();
   const ip =

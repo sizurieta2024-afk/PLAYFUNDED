@@ -189,16 +189,27 @@ try {
   }
 
   const callbackChecks = [];
+  const callbackContext = await browser.newContext();
+  await callbackContext.addCookies([
+    {
+      name: "NEXT_LOCALE",
+      value: "en",
+      domain: new URL(baseUrl).hostname,
+      path: "/",
+    },
+  ]);
+  const callbackPage = await callbackContext.newPage();
   callbackChecks.push(
-    await assertCallbackRedirect(page, "/auth/callback", {
+    await assertCallbackRedirect(callbackPage, "/auth/callback", {
       mustInclude: ["/auth/login", "redirectTo=%2Fen%2Fdashboard"],
     }),
   );
   callbackChecks.push(
-    await assertCallbackRedirect(page, "/auth/callback?code=definitely-invalid", {
+    await assertCallbackRedirect(callbackPage, "/auth/callback?code=definitely-invalid", {
       mustInclude: ["/auth/login", "error=auth_failed"],
     }),
   );
+  await callbackContext.close();
 
   console.log(
     JSON.stringify(

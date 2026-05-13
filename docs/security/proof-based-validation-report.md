@@ -1,6 +1,6 @@
 # Playfunded Proof-Based Validation Report
 
-Generated: 2026-04-09T06:21:59.496Z
+Generated: 2026-05-13T01:18:02.052Z
 
 This report follows a Shannon-style rule: claims must be backed by executable or source-level proof. Anything not proven is listed as unverified.
 
@@ -17,28 +17,28 @@ Area: auth and session handling
 Claim: Protected routes require a live Supabase session and preserve a redirect target.
 Detail: All required proof points were found in source.
 Evidence:
-- Session is read from Supabase: L157: } = await supabase.auth.getUser();
-- Protected prefixes are declared: L10: const PROTECTED_PREFIXES = ["/dashboard", "/admin"];
-- Redirect target is preserved on login redirect: L169: loginUrl.searchParams.set("redirectTo", pathname);
+- Session is read from Supabase: L163: } = await supabase.auth.getUser();
+- Protected prefixes are declared: L15: const PROTECTED_PREFIXES = ["/dashboard", "/admin"];
+- Redirect target is preserved on login redirect: L175: loginUrl.searchParams.set("redirectTo", pathname);
 
 ### VERIFIED admin.server-role-check
 Area: admin authorization
 Claim: Admin access is enforced with a server-side role lookup.
 Detail: All required proof points were found in source.
 Evidence:
-- Admin role is queried from the User table: L176: .from("User")
-- Role field is selected: L177: .select("role")
-- Non-admin users are redirected away: L181: if (!user || user.role !== "admin") {
+- Admin role is queried from the User table: L182: .from("User")
+- Role field is selected: L183: .select("role")
+- Non-admin users are redirected away: L187: if (!user || user.role !== "admin") {
 
 ### VERIFIED payments.stripe-signature
 Area: payments and webhooks
 Claim: Stripe fulfillment only runs after signature verification and duplicate-safe locking.
 Detail: All required proof points were found in source.
 Evidence:
-- Stripe signature header is required: L236: const sig = req.headers.get("stripe-signature");
-- constructEvent verifies the webhook body: L248: event = stripe.webhooks.constructEvent(
-- Invalid signatures are rejected: L256: { error: "Invalid webhook signature" },
-- Fulfillment is wrapped in a webhook duplicate lock: L61: const fulfillment = await withWebhookLock(
+- Stripe signature header is required: L251: const sig = req.headers.get("stripe-signature");
+- constructEvent verifies the webhook body: L263: event = stripe.webhooks.constructEvent(
+- Invalid signatures are rejected: L271: { error: "Invalid webhook signature" },
+- Fulfillment is wrapped in a webhook duplicate lock: L62: const fulfillment = await withWebhookLock(
 
 ### VERIFIED payments.nowpayments-signature
 Area: payments and webhooks
@@ -204,8 +204,8 @@ Area: geo-blocking and rate limiting
 Claim: Public pages are gated by country policy and redirected to the geo-block screen.
 Detail: All required proof points were found in source.
 Evidence:
-- Country policy is resolved in middleware: L87: const policy = getCountryPolicy(derivedCountry);
-- Blocked countries are redirected: L16: "/auth/geo-blocked",
+- Country policy is resolved in middleware: L93: const policy = getCountryPolicy(derivedCountry);
+- Blocked countries are redirected: L21: "/auth/geo-blocked",
 
 ### VERIFIED rate-limit.webhooks-and-admin-settlement
 Area: geo-blocking and rate limiting
@@ -405,7 +405,7 @@ Area: payments and webhooks
 Claim: A paid purchase with an affiliate code records one conversion row and updates affiliate totals exactly once.
 Detail: Database-backed scenario matched the expected persisted outcome.
 Evidence:
-- Conversion code: PF-8AFC4D
+- Conversion code: PF-370F06
 - Affiliate conversions: 1
 - Affiliate pending payout: 85
 

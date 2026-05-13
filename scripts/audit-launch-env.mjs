@@ -36,6 +36,23 @@ function runText(command, args) {
   });
 }
 
+function runTextReport(command, args) {
+  try {
+    return { ok: true, output: runText(command, args) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const stderr =
+      error && typeof error === "object" && "stderr" in error
+        ? String(error.stderr)
+        : "";
+    return {
+      ok: false,
+      output: "",
+      error: stderr.trim() || message,
+    };
+  }
+}
+
 function parseGithubSecrets(raw) {
   return new Set(
     raw
@@ -71,9 +88,24 @@ function diff(required, actual) {
 
 const localEnv = parseEnvFile(path.join(root, ".env.local"));
 const exampleEnv = parseEnvFile(path.join(root, ".env.example"));
+const pulledVercelEnvPath = path.join(root, ".vercel", ".env.production.local");
+const pulledVercelEnv = fs.existsSync(pulledVercelEnvPath)
+  ? parseEnvFile(pulledVercelEnvPath)
+  : new Set();
 const workflowSecrets = parseWorkflowSecrets(path.join(root, ".github", "workflows"));
-const githubSecrets = parseGithubSecrets(runText("gh", ["secret", "list"]));
-const vercelEnv = parseVercelEnv(runText("npx", ["vercel", "env", "ls"]));
+const githubSecretResult = runTextReport("gh", ["secret", "list"]);
+const vercelEnvResult = runTextReport("npx", ["vercel", "env", "ls"]);
+const githubSecrets = githubSecretResult.ok
+  ? parseGithubSecrets(githubSecretResult.output)
+  : new Set();
+const vercelEnv = vercelEnvResult.ok
+  ? parseVercelEnv(vercelEnvResult.output)
+  : pulledVercelEnv;
+const vercelEnvSource = vercelEnvResult.ok
+  ? "vercel-cli"
+  : pulledVercelEnv.size > 0
+    ? ".vercel/.env.production.local"
+    : "unavailable";
 
 const runtimeRequired = [
   "DATABASE_URL",
@@ -121,18 +153,34 @@ const report = {
   runtimeRequired,
   recommendedRuntime,
   recommendedGithub,
+  connectorErrors: {
+    github: githubSecretResult.ok ? null : githubSecretResult.error,
+    vercel: vercelEnvResult.ok ? null : vercelEnvResult.error,
+  },
+  sources: {
+    github: githubSecretResult.ok ? "gh-secret-list" : "unavailable",
+    vercel: vercelEnvSource,
+  },
   local: {
     missingFromExample: diff(localEnv, exampleEnv),
     missingRequired: diff(new Set(runtimeRequired), localEnv),
     missingRecommended: diff(new Set(recommendedRuntime), localEnv),
   },
   github: {
-    missingRequired: diff(new Set(workflowRequired), githubSecrets),
-    missingRecommended: diff(new Set(recommendedGithub), githubSecrets),
+    missingRequired: githubSecretResult.ok
+      ? diff(new Set(workflowRequired), githubSecrets)
+      : null,
+    missingRecommended: githubSecretResult.ok
+      ? diff(new Set(recommendedGithub), githubSecrets)
+      : null,
   },
   vercel: {
-    missingRequired: diff(new Set(runtimeRequired), vercelEnv),
-    missingRecommended: diff(new Set(recommendedRuntime), vercelEnv),
+    missingRequired: vercelEnvSource !== "unavailable"
+      ? diff(new Set(runtimeRequired), vercelEnv)
+      : null,
+    missingRecommended: vercelEnvSource !== "unavailable"
+      ? diff(new Set(recommendedRuntime), vercelEnv)
+      : null,
   },
 };
 

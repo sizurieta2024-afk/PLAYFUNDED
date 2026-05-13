@@ -1,12 +1,13 @@
 # Launch-Day Checklist
 
-Updated: 2026-03-25
+Updated: 2026-05-13
 
 Scope:
 
 - excludes legal/compliance review items
 - assumes paid odds plans are purchased right before launch
-- treats ClamAV production activation, Apple Sign In, traffic analytics, and community expansion as post-launch work
+- treats Apple Sign In, broader traffic analytics, and community expansion as post-launch work
+- treats ClamAV as required before launch only if live KYC uploads are enabled before launch
 
 ## 1. Before You Start
 
@@ -56,8 +57,9 @@ Pass criteria:
 - forgot-password shows a generic success state and the reset link works
 - logout works
 - landing page copy is clean in `/`, `/en`, `/pt-BR`
-- affiliate routes redirect away and are not presented as a public launch surface
-- FAQ does not advertise public affiliate discovery
+- public affiliate landing/apply flow works
+- only approved affiliates see dashboard/code/conversion tools
+- FAQ and sitemap do not broadly promote affiliate discovery yet
 
 ## 5. Payments And Availability
 
@@ -92,7 +94,8 @@ Pass criteria:
 ## 8. Public Claims Check
 
 - no public Mercado Pago claim remains
-- affiliate is admin-only in the live product
+- affiliate is publicly available as a soft-launch landing/apply flow
+- affiliate dashboard tools remain approved-affiliate-only
 - sitemap excludes affiliate
 - browser console is clean on core public pages
 

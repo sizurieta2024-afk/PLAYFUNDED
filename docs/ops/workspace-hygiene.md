@@ -1,6 +1,6 @@
 # Workspace Hygiene
 
-Updated: 2026-03-26
+Updated: 2026-05-13
 
 This repo is now split into three buckets:
 
@@ -11,7 +11,10 @@ These items were added to `.git/info/exclude`, not `.gitignore`, so the cleanup 
 Hidden locally:
 
 - root-level screenshot exports like `hero*.png`, `final-*.png`, `tier-*.png`
+- `.DS_Store` files
+- `error.log`
 - `design-concepts/`
+- `automation/exports/`
 - `.claude/memory/`
 - local-only Discord/admin helpers:
   - `scripts/discord-server-admin.mjs`
@@ -19,6 +22,7 @@ Hidden locally:
 - local-only email preview/send helpers:
   - `scripts/preview-emails.mjs`
   - `scripts/send-test-emails.mjs`
+- temporary social/browser helper scripts matching `scripts/social/*_tmp.mjs`
 
 Why:
 
@@ -41,6 +45,13 @@ These untracked items look like real product/tooling files and should stay visib
   - real script entrypoints already referenced by `package.json`
 - `scripts/purge-fixture-data.mjs`
   - useful production-safety/ops utility and a good candidate for a proper repo commit
+- `docs/legal/playfunded-business-model-explainer-es.md`
+- `docs/legal/playfunded-business-model-graphic-es.pdf`
+- `docs/legal/playfunded-business-model-graphic-es.png`
+- `docs/legal/playfunded-business-model-graphic-es.svg`
+  - real lawyer-facing deliverables; keep visible until you decide whether they belong in the repo or should be archived externally
+- `docs/ops/launch-status-recap-2026-05-12.md`
+  - real operational recap and likely worth committing if it is still accurate
 - `src/app/[locale]/(main)/empieza/`
 - `src/app/api/bio-leads/`
 - `src/components/landing/BioLeadCapture.tsx`
@@ -56,12 +67,23 @@ Recommended next action for this bucket:
 - `.claude/plans/todo.md`
   - personal planning note; keep out of launch commits unless you intentionally want it versioned
 - `docs/security/proof-based-validation-report.md`
-  - real generated repo doc from the latest proof run; safe to commit when you want docs synced to the latest verification state
+  - real generated repo doc from the latest DB-backed proof run; safe to commit when you want docs synced to the latest verification state
 - `automation/social/queues/slides_queue.json`
 - `scripts/social/README.md`
 - `scripts/social/build_slides.mjs`
-- `src/app/ref/[code]/route.ts`
+- `scripts/social/tiktok_uploader.mjs`
   - tracked work already in motion; do not revert it casually, but keep it out of launch-only commits unless it is intentionally part of the release
+
+## 4. Current launch-hardening files from 2026-05-13
+
+These files are intentional results of the current pass and are safe to review as one focused launch-hardening change set:
+
+- `package.json`
+- `package-lock.json`
+- `scripts/audit-launch-env.mjs`
+- `docs/security/proof-based-validation-report.md`
+- `docs/ops/launch-day-checklist.md`
+- `docs/ops/production-readiness-audit-2026-05-13.md`
 
 ## Working Rule
 

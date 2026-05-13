@@ -69,8 +69,17 @@ async function assertHealthyPage(page, path) {
   page.off("console", onConsole);
   page.off("pageerror", onPageError);
 
-  const h1Count = await page.locator("h1").count();
-  assert(h1Count > 0, `${path} rendered without an h1`);
+  try {
+    await page.locator("h1").first().waitFor({
+      state: "attached",
+      timeout: 15_000,
+    });
+  } catch {
+    const html = await page.content();
+    assert.fail(
+      `${path} rendered without an h1: ${body.slice(0, 500).replace(/\s+/g, " ")} | htmlHasH1=${html.includes("<h1")}`,
+    );
+  }
 
   return {
     path,

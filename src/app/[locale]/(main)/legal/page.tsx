@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { resolveCountry } from "@/lib/country-policy";
+import { resolveCountry, type CheckoutMethod } from "@/lib/country-policy";
 import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
 import { PLATFORM_POLICY, getPayoutWindowLabel } from "@/lib/platform-policy";
 import { withBrandMetadata } from "@/lib/metadata";
@@ -120,6 +120,24 @@ function getCopy(locale: string) {
   return COPY["es-419"];
 }
 
+type LegalCopy = (typeof COPY)[LocaleKey];
+
+function formatCheckoutMethod(
+  method: CheckoutMethod,
+  copy: LegalCopy,
+): string | null {
+  switch (method) {
+    case "card":
+      return copy.cardLabel;
+    case "crypto":
+      return copy.cryptoLabel;
+    case "pix":
+      return "Pix";
+    case "mercadopago":
+      return null;
+  }
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -152,15 +170,9 @@ export default async function LegalPage({
     headersList.get("cf-ipcountry"),
   );
   const policy = await getResolvedCountryPolicy(country);
-  const checkoutMethods = policy.checkoutMethods.map((method) =>
-    method === "card"
-      ? copy.cardLabel
-      : method === "crypto"
-        ? copy.cryptoLabel
-        : method === "pix"
-          ? "Pix"
-          : "Mercado Pago",
-  );
+  const checkoutMethods = policy.checkoutMethods
+    .map((method) => formatCheckoutMethod(method, copy))
+    .filter((method): method is string => Boolean(method));
   const payoutMethods = policy.payoutMethods.map((method) =>
     method === "bank_wire"
       ? copy.bankTransferLabel
@@ -220,7 +232,7 @@ export default async function LegalPage({
           <div>
             <p className="font-medium text-foreground">{copy.purchasesLabel}</p>
             <p>
-              {policy.checkoutMethods.length > 0
+              {checkoutMethods.length > 0
                 ? checkoutMethods.join(", ")
                 : copy.unavailableLabel}
             </p>

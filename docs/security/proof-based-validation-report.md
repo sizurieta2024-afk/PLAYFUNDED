@@ -1,6 +1,6 @@
 # Playfunded Proof-Based Validation Report
 
-Generated: 2026-05-13T01:18:02.052Z
+Generated: 2026-05-13T02:42:07.407Z
 
 This report follows a Shannon-style rule: claims must be backed by executable or source-level proof. Anything not proven is listed as unverified.
 
@@ -405,7 +405,7 @@ Area: payments and webhooks
 Claim: A paid purchase with an affiliate code records one conversion row and updates affiliate totals exactly once.
 Detail: Database-backed scenario matched the expected persisted outcome.
 Evidence:
-- Conversion code: PF-370F06
+- Conversion code: PF-CFC665
 - Affiliate conversions: 1
 - Affiliate pending payout: 85
 

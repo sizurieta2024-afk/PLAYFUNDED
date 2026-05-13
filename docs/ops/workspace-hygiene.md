@@ -34,15 +34,6 @@ Why:
 
 These untracked items look like real product/tooling files and should stay visible until they are reviewed on purpose:
 
-- `public/brand/`
-  - likely brand assets worth committing later if they are the chosen final set
-- `automation/social/config/kai_character.json`
-  - real social automation config
-- `automation/social/config/`
-  - broader social automation config folder that needs a deliberate review pass
-- `scripts/social/build_kai_sora_job.mjs`
-- `scripts/social/render_kai_sora_job.mjs`
-  - real script entrypoints already referenced by `package.json`
 - `scripts/purge-fixture-data.mjs`
   - useful production-safety/ops utility and a good candidate for a proper repo commit
 - `docs/legal/playfunded-business-model-explainer-es.md`
@@ -51,11 +42,9 @@ These untracked items look like real product/tooling files and should stay visib
 - `docs/legal/playfunded-business-model-graphic-es.svg`
   - real lawyer-facing deliverables; keep visible until you decide whether they belong in the repo or should be archived externally
 - `docs/ops/launch-status-recap-2026-05-12.md`
-  - real operational recap and likely worth committing if it is still accurate
-- `src/app/[locale]/(main)/empieza/`
-- `src/app/api/bio-leads/`
-- `src/components/landing/BioLeadCapture.tsx`
-  - launch-adjacent product work that should not be bundled into unrelated deploys
+  - real operational recap; commit separately from app/product changes if it is still accurate
+- `scripts/social/build_reels_from_carousels.mjs`
+  - real social automation helper; keep out of launch-only commits until the social pass is reviewed
 
 Recommended next action for this bucket:
 
@@ -74,13 +63,28 @@ Recommended next action for this bucket:
 
 ## 4. Current launch-hardening files from 2026-05-13
 
-The latest shipped launch-hardening commit was `9700c4c`:
+The latest shipped launch-hardening commits are:
 
-- restored public affiliate landing/apply
-- restored approved-only affiliate dashboard tools
-- fixed localized metadata/canonical/OG URLs
-- kept affiliate out of sitemap discovery
-- deployed to `playfunded.lat` with green CI and launch-smokes
+- `9700c4c`:
+  - restored public affiliate landing/apply
+  - restored approved-only affiliate dashboard tools
+  - fixed localized metadata/canonical/OG URLs
+  - kept affiliate out of sitemap discovery
+- `8b3da64`:
+  - aligned README and ops docs with the current launch posture
+  - added controlled ops-alert workflow inputs
+  - confirmed Vercel/GitHub env audit status
+- `855506d`:
+  - recorded controlled Discord alert proof
+  - confirmed the latest CI and production deploy path
+
+Current verified production state:
+
+- `main` is the GitHub default branch for `sizurieta2024-afk/PLAYFUNDED`
+- Vercel CLI account checks point to `sizurieta2024-4707`
+- `playfunded.lat`, `/en`, `/pt-BR`, and all three affiliate routes returned HTTP 200
+- CI, launch-smokes, and production deploy passed for `855506d`
+- `/api/ops/health` returned green after the latest deploy
 
 ## Working Rule
 

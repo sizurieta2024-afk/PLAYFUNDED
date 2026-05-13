@@ -60,7 +60,7 @@ Updated operational status: 2026-05-13.
 
 - Ops health checking is configured and can run from GitHub Actions today.
 - External incident alerting has GitHub secrets configured for the ops-health workflow.
-- A controlled failing-health alert should still be re-tested before launch to confirm delivery lands in the intended staff-only Discord channel.
+- Controlled failing-health alert delivery to Discord was proven through GitHub Actions run `25776715417`.
 - The `CI` workflow has the secrets needed for `launch-smokes`, and that job is now proven on GitHub for both `workflow_dispatch` and remote branch execution.
 - Production KYC scanning is not active on Vercel because the runtime has no ClamAV connection settings.
 - Production KYC behavior is therefore strict-by-default: if `KYC_SCAN_MODE` stays unset in production, uploads block unless ClamAV is available because the app now defaults production to `require_clean`.
@@ -74,7 +74,7 @@ Updated operational status: 2026-05-13.
 
 ## Recommended Next Actions
 
-1. Run `gh workflow run ops-health-5m.yml -f force_alert=true -f alert_message="Controlled launch alert test"` and confirm the message lands in the staff-only Discord incident channel.
+1. Repeat `gh workflow run ops-health-5m.yml -f force_alert=true -f alert_message="Controlled launch alert test"` during the final launch rehearsal if you want fresh alert proof that day.
 2. Keep production KYC in strict mode unless you intentionally choose `best_effort` as a temporary override.
 3. Let preview/staging/internal environments stay `best_effort` unless you are explicitly testing strict production behavior.
 4. Persist the ClamAV/KYC scan env vars in the real production environments when you are ready to arm upload scanning.

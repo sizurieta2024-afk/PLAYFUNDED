@@ -46,7 +46,7 @@ The DB-backed proof result is strong: 53 verified checks, 0 failed checks, 3 unv
 - Vercel production has `GOOGLE_SITE_VERIFICATION`, `INDEXNOW_KEY`, and PostHog public env keys configured.
 - `BING_SITE_VERIFICATION` was not present in the checked Vercel production env list.
 - Google Search Console and Bing Webmaster Tools still require operational console-side confirmation outside the repo.
-- GitHub alert webhook secrets are present; final Discord delivery should still be re-tested with a controlled failing-health run before launch.
+- GitHub alert webhook secrets are present, and controlled Discord alert delivery was proven through Actions run `25776715417`.
 - Production ClamAV remains a post-launch or pre-launch operational decision. The pulled Vercel env snapshot does not include `CLAMAV_*`, `KYC_SCAN_MODE`, or `KYC_QUARANTINE_BUCKET`. If KYC uploads are enabled at launch, scanner behavior must be explicitly configured and confirmed.
 
 ## Security And Abuse Posture

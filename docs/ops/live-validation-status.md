@@ -30,6 +30,8 @@ Updated: 2026-05-13
   - live deploy returned a real unhealthy `/api/ops/health` response
   - GitHub Actions workflow dispatched successfully
   - temporary receiver captured the real alert body
+  - GitHub Actions has `PF_ALERT_WEBHOOK_URL` and `PF_ALERT_WEBHOOK_KIND`
+  - controlled Discord alert test succeeded on run `25776715417`; the run failed by design after the `Send failure alert` step passed
 - KYC malware quarantine path:
   - real `clamd` daemon scanned uploads
   - authenticated upload returned `file_malware_detected`
@@ -56,10 +58,9 @@ Updated: 2026-05-13
 
 ## Still Not Fully Proven
 
-- Permanent Discord incident alert destination:
-  - public Discord/community access is live
-  - GitHub Actions has `PF_ALERT_WEBHOOK_URL` and `PF_ALERT_WEBHOOK_KIND`
-  - controlled delivery to the final staff-only Discord channel should still be re-tested before launch
+- Public Discord/community access:
+  - public Discord/community link is live
+  - staff-only incident alert delivery is proven through GitHub Actions
 - SEO/search console ownership:
   - Vercel production has `GOOGLE_SITE_VERIFICATION` and `INDEXNOW_KEY`
   - `BING_SITE_VERIFICATION` is not present in the checked Vercel production env list

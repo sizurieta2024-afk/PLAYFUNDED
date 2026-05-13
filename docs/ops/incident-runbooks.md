@@ -140,6 +140,7 @@ Recovery:
 - Reconfigure the alert webhook destination.
 - Re-run the GitHub workflow manually.
 - Verify the alert body contains the actual failing health payload, not just a generic workflow error.
+- For a controlled test, run `gh workflow run ops-health-5m.yml -f force_alert=true -f alert_message="Controlled ops alert test"`.
 
 ## 7. Launch-Smoke CI Failure
 

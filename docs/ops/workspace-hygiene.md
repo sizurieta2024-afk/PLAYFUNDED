@@ -64,10 +64,8 @@ Recommended next action for this bucket:
 
 ## 3. Tracked files still dirty by design
 
-- `.claude/plans/todo.md`
-  - personal planning note; keep out of launch commits unless you intentionally want it versioned
-- `docs/security/proof-based-validation-report.md`
-  - real generated repo doc from the latest DB-backed proof run; safe to commit when you want docs synced to the latest verification state
+- `.env.example`
+  - social/Instagram env documentation work; review with the social automation pass before committing
 - `automation/social/queues/slides_queue.json`
 - `scripts/social/README.md`
 - `scripts/social/build_slides.mjs`
@@ -76,14 +74,13 @@ Recommended next action for this bucket:
 
 ## 4. Current launch-hardening files from 2026-05-13
 
-These files are intentional results of the current pass and are safe to review as one focused launch-hardening change set:
+The latest shipped launch-hardening commit was `9700c4c`:
 
-- `package.json`
-- `package-lock.json`
-- `scripts/audit-launch-env.mjs`
-- `docs/security/proof-based-validation-report.md`
-- `docs/ops/launch-day-checklist.md`
-- `docs/ops/production-readiness-audit-2026-05-13.md`
+- restored public affiliate landing/apply
+- restored approved-only affiliate dashboard tools
+- fixed localized metadata/canonical/OG URLs
+- kept affiliate out of sitemap discovery
+- deployed to `playfunded.lat` with green CI and launch-smokes
 
 ## Working Rule
 

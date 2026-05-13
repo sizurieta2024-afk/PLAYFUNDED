@@ -1,6 +1,6 @@
 # Launch Rehearsal Plan
 
-Updated: 2026-03-25
+Updated: 2026-05-13
 
 This is the final pre-launch dry run for the live production domain.
 
@@ -67,8 +67,10 @@ Record:
 
 ### Step 6. Public Copy Check
 
-- affiliate routes redirect away and are not visible as a public launch surface
-- FAQ does not reintroduce public affiliate discovery drift
+- public affiliate pages render in Spanish, English, and Portuguese
+- non-affiliates can apply and pending applicants see application status
+- only approved affiliates see referral code/dashboard/conversion tools
+- FAQ and sitemap do not broadly promote affiliate discovery yet
 - no public Mercado Pago copy remains
 - browser console is clean on core public pages
 

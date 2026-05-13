@@ -51,11 +51,11 @@ PlayFunded allows sports bettors to prove their skill through paid challenges wi
 ---
 
 ## 2. TECH STACK — NON-NEGOTIABLE
-- **Framework:** Next.js 14 App Router, TypeScript strict (no `any`)
+- **Framework:** Next.js 15 App Router, TypeScript strict (no `any`)
 - **Styling:** Tailwind CSS + shadcn/ui
 - **Database:** Supabase (Postgres) + Prisma ORM
-- **Auth:** Supabase Auth (Google OAuth, Apple Sign-In, email/password)
-- **Payments:** Stripe (international), Mercado Pago (LATAM), NOWPayments (crypto)
+- **Auth:** Supabase Auth (Google OAuth, email/password; Apple Sign-In deferred)
+- **Payments:** Stripe (cards), NOWPayments (crypto); Mercado Pago code is present but disabled for launch
 - **i18n:** next-intl — ALL user-facing strings via t(), never hardcoded
 - **Email:** Resend
 - **AI Chatbot:** Claude API (claude-haiku-4-5)
@@ -86,7 +86,7 @@ UUID PKs. All timestamps UTC. Monetary amounts in integer cents always.
 ---
 
 ## 5. AUTHENTICATION
-Google OAuth (primary), Apple Sign-In (iOS), Email+password (fallback). Supabase Auth JWT.
+Google OAuth and verified email/password. Apple Sign-In is deferred until after launch. Supabase Auth JWT.
 
 **Geo-block USA:** Check IP on signup + every non-auth page load. US → full-page block bilingual. Don't block US IPs already logged in. Cache ipapi.co/json for 1 hour.
 
@@ -124,7 +124,7 @@ Google OAuth (primary), Apple Sign-In (iOS), Email+password (fallback). Supabase
 
 ## 8. PAYMENTS
 
-**Incoming:** Stripe (cards), Mercado Pago (LATAM), NOWPayments (USDT/USDC/BTC TRC-20)
+**Incoming at launch:** Stripe (cards), NOWPayments (USDT/USDC/BTC). Mercado Pago routes remain disabled until a later, approved rollout.
 
 **Currency display:** MXN, ARS, COP, CLP, PEN, EUR, USD. Rates from exchangerate-api.com daily. Format: '$20 USD (~$340 MXN)'. NEVER charge in local currency.
 
@@ -189,7 +189,7 @@ Supabase built-in daily (7-day retention). /scripts/backup.ts exports to Supabas
 
 ## 18. ALL ROUTES
 
-**Public:** /, /challenges, /leaderboard, /how-it-works, /legal, /faq, /blog
+**Public:** /, /challenges, /affiliate, /leaderboard, /how-it-works, /legal, /faq
 
 **Auth:** /auth/login, /auth/signup, /auth/verify
 

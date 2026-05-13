@@ -4,6 +4,17 @@ on:
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
+    inputs:
+      force_alert:
+        description: "Send a controlled test alert and fail this run"
+        required: false
+        default: false
+        type: boolean
+      alert_message:
+        description: "Optional message to include in the controlled test alert"
+        required: false
+        default: "Controlled ops alert test"
+        type: string
 
 concurrency:
   group: ops-health-5m
@@ -33,10 +44,20 @@ jobs:
         env:
           PF_BASE_URL: ${{ secrets.PF_BASE_URL }}
           PF_CRON_SECRET: ${{ secrets.PF_CRON_SECRET }}
+          FORCE_ALERT: ${{ github.event.inputs.force_alert || 'false' }}
+          ALERT_MESSAGE: ${{ github.event.inputs.alert_message || 'Controlled ops alert test' }}
         run: |
           set -uo pipefail
           status=0
           node scripts/check-ops-health.mjs > /tmp/ops-health.out 2>&1 || status=$?
+          if [ "${FORCE_ALERT}" = "true" ]; then
+            {
+              echo ""
+              echo "Controlled alert test requested by workflow_dispatch."
+              echo "Message: ${ALERT_MESSAGE}"
+            } >> /tmp/ops-health.out
+            status=1
+          fi
           cat /tmp/ops-health.out
           {
             echo 'body<<EOF'

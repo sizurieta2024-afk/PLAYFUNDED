@@ -101,8 +101,9 @@ Pass criteria:
 
 ## 9. Optional But Recommended
 
-- configure `PF_ALERT_WEBHOOK_URL`
-- configure `PF_ALERT_WEBHOOK_KIND=discord`
+- confirm `PF_ALERT_WEBHOOK_URL` exists in GitHub Actions secrets
+- confirm `PF_ALERT_WEBHOOK_KIND=discord` exists in GitHub Actions secrets
+- run `gh workflow run ops-health-5m.yml -f force_alert=true -f alert_message="Controlled launch alert test"` and confirm it lands in the staff-only Discord incident channel
 
 This is only needed if you want automated Discord incident alerts before launch. It is separate from the public Discord/community link.
 

@@ -19,7 +19,7 @@ Green checks from this pass:
 - `npx prisma validate`
 - `npm run proof:hardening`
 - `VALIDATE_PROOF_DB=1 ... scripts/validate-proof-based.js`
-- `npm run audit:launch-env` completes with partial connector reporting
+- `npm run audit:launch-env` completes with explicit connector/env reporting
 
 The DB-backed proof result is strong: 53 verified checks, 0 failed checks, 3 unverified external/runtime claims.
 
@@ -32,7 +32,7 @@ The DB-backed proof result is strong: 53 verified checks, 0 failed checks, 3 unv
   - `postcss` to `8.5.14`
   - `posthog-js` to `1.373.4`
   - `@sentry/nextjs` to `10.53.1`
-- Improved `scripts/audit-launch-env.mjs` so it no longer crashes when GitHub or Vercel CLI access is broken. It now returns a partial report with explicit connector errors.
+- Improved `scripts/audit-launch-env.mjs` so it no longer crashes when GitHub or Vercel CLI access is broken. It returns explicit connector errors instead of pretending a live audit happened.
 - Synced the missing GitHub Actions provider/SMTP secrets needed by CI launch smokes and Sentry autofix validation.
 - Added a Vercel env fallback to the audit script. If Vercel CLI is unauthenticated, the script uses `.vercel/.env.production.local` and labels that source clearly instead of pretending it performed a live Vercel API audit.
 - Hid obvious local-only generated clutter from Git status through `.git/info/exclude`, without deleting files or changing shared repo ignore behavior.
@@ -41,9 +41,12 @@ The DB-backed proof result is strong: 53 verified checks, 0 failed checks, 3 unv
 
 - Stripe live account and live checkout keys are pending legal/business approval.
 - Paid odds plans are pending and should be bought immediately before launch validation.
-- Vercel live env listing is still blocked locally because Vercel CLI is not authenticated for this project. The audit now falls back to `.vercel/.env.production.local`; this is useful, but the final launch rehearsal should still authenticate Vercel CLI or run the audit from CI.
+- Vercel CLI is authenticated to the correct production account (`sizurieta2024-4707`) and can list production env keys for this project.
 - GitHub secret audit is clean: required and recommended workflow secrets currently report no missing keys.
-- Google Search Console and Bing tokens/tools remain operational setup unless already completed outside the repo.
+- Vercel production has `GOOGLE_SITE_VERIFICATION`, `INDEXNOW_KEY`, and PostHog public env keys configured.
+- `BING_SITE_VERIFICATION` was not present in the checked Vercel production env list.
+- Google Search Console and Bing Webmaster Tools still require operational console-side confirmation outside the repo.
+- GitHub alert webhook secrets are present; final Discord delivery should still be re-tested with a controlled failing-health run before launch.
 - Production ClamAV remains a post-launch or pre-launch operational decision. The pulled Vercel env snapshot does not include `CLAMAV_*`, `KYC_SCAN_MODE`, or `KYC_QUARANTINE_BUCKET`. If KYC uploads are enabled at launch, scanner behavior must be explicitly configured and confirmed.
 
 ## Security And Abuse Posture
@@ -104,5 +107,5 @@ No-go if:
 - checkout grants challenge access before confirmed payment
 - admin/payment/KYC control-plane smokes fail
 - provider webhooks cannot be verified
-- Vercel production env cannot be audited before the final deploy
+- Vercel production env cannot be audited from either CLI or CI before the final deploy
 - ops health stays red after manual sync/settlement

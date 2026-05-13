@@ -2,7 +2,7 @@
 
 Generated from `node scripts/audit-launch-env.mjs` on 2026-03-11.
 
-Updated operational status: 2026-03-17.
+Updated operational status: 2026-05-13.
 
 ## Scope
 
@@ -35,13 +35,20 @@ Updated operational status: 2026-03-17.
   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
   - `SUPABASE_SERVICE_ROLE_KEY`
   - `CRON_SECRET`
-- Optional alerting secrets: currently absent
+- Optional alerting secrets: present
   - `PF_ALERT_WEBHOOK_URL`
   - `PF_ALERT_WEBHOOK_KIND`
 
 ### Vercel Production
 
 - Required app runtime keys: present
+- Product analytics keys: present
+  - `NEXT_PUBLIC_POSTHOG_HOST`
+  - `NEXT_PUBLIC_POSTHOG_TOKEN`
+- Search ownership keys:
+  - `GOOGLE_SITE_VERIFICATION`: present
+  - `INDEXNOW_KEY`: present
+  - `BING_SITE_VERIFICATION`: absent in the checked Vercel production env list
 - Recommended production scan keys: absent
   - `KYC_SCAN_MODE`
   - `CLAMAV_HOST`
@@ -52,7 +59,8 @@ Updated operational status: 2026-03-17.
 ## Operational Meaning
 
 - Ops health checking is configured and can run from GitHub Actions today.
-- External alerting is not active right now because there is still no permanent Slack/Discord webhook destination configured in GitHub.
+- External incident alerting has GitHub secrets configured for the ops-health workflow.
+- A controlled failing-health alert should still be re-tested before launch to confirm delivery lands in the intended staff-only Discord channel.
 - The `CI` workflow has the secrets needed for `launch-smokes`, and that job is now proven on GitHub for both `workflow_dispatch` and remote branch execution.
 - Production KYC scanning is not active on Vercel because the runtime has no ClamAV connection settings.
 - Production KYC behavior is therefore strict-by-default: if `KYC_SCAN_MODE` stays unset in production, uploads block unless ClamAV is available because the app now defaults production to `require_clean`.
@@ -66,7 +74,7 @@ Updated operational status: 2026-03-17.
 
 ## Recommended Next Actions
 
-1. Set a real `PF_ALERT_WEBHOOK_URL` and `PF_ALERT_WEBHOOK_KIND` in GitHub once you have the permanent Slack/Discord destination.
+1. Run `gh workflow run ops-health-5m.yml -f force_alert=true -f alert_message="Controlled launch alert test"` and confirm the message lands in the staff-only Discord incident channel.
 2. Keep production KYC in strict mode unless you intentionally choose `best_effort` as a temporary override.
 3. Let preview/staging/internal environments stay `best_effort` unless you are explicitly testing strict production behavior.
 4. Persist the ClamAV/KYC scan env vars in the real production environments when you are ready to arm upload scanning.

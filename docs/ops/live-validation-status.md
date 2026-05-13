@@ -1,6 +1,6 @@
 # Live Validation Status
 
-Updated: 2026-03-25
+Updated: 2026-05-13
 
 ## Proven Live
 
@@ -14,10 +14,12 @@ Updated: 2026-03-25
   - payout/KYC smoke passed
   - admin/support smoke passed
 - Public affiliate surface:
-  - `/affiliate`, `/en/affiliate`, and `/pt-BR/affiliate` redirect away from the public product
-  - user dashboard affiliate routes redirect away
+  - `/affiliate`, `/en/affiliate`, and `/pt-BR/affiliate` render the public apply/landing flow
+  - `/dashboard/affiliate` lets non-affiliates apply and pending applicants see status
+  - only active approved affiliates see referral code, dashboard, conversion, and code-management tools
+  - dashboard sidebar shows affiliate only for active approved affiliates
   - affiliate is removed from sitemap discovery
-  - FAQ no longer advertises public affiliate access
+  - FAQ does not broadly promote affiliate discovery yet
 - Public payment claims:
   - Mercado Pago is intentionally disabled for launch
   - no public Mercado Pago claim remained on the checked public pages
@@ -54,9 +56,13 @@ Updated: 2026-03-25
 
 ## Still Not Fully Proven
 
-- Permanent Slack/Discord incident alert destination:
+- Permanent Discord incident alert destination:
   - public Discord/community access is live
-  - GitHub Actions still does not have `PF_ALERT_WEBHOOK_URL` / `PF_ALERT_WEBHOOK_KIND`
+  - GitHub Actions has `PF_ALERT_WEBHOOK_URL` and `PF_ALERT_WEBHOOK_KIND`
+  - controlled delivery to the final staff-only Discord channel should still be re-tested before launch
+- SEO/search console ownership:
+  - Vercel production has `GOOGLE_SITE_VERIFICATION` and `INDEXNOW_KEY`
+  - `BING_SITE_VERIFICATION` is not present in the checked Vercel production env list
 - Paid odds-plan freshness:
   - `/api/odds/sync` works
   - The Odds API account still hits quota/frequency limits until the paid plans are active

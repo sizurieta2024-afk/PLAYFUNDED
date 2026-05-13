@@ -11,16 +11,18 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "leaderboard" });
-  return withBrandMetadata({
-    title: `${t("pageTitle")} | PlayFunded`,
-    description: t("pageSubtitle"),
-    openGraph: {
-      title: `${t("pageTitle")} | PlayFunded`,
+  return withBrandMetadata(
+    {
+      title: t("pageTitle"),
       description: t("pageSubtitle"),
-      type: "website",
-      url: "https://playfunded.lat/leaderboard",
+      openGraph: {
+        title: t("pageTitle"),
+        description: t("pageSubtitle"),
+        type: "website",
+      },
     },
-  });
+    { locale, path: "/leaderboard" },
+  );
 }
 
 export default async function LeaderboardPage({

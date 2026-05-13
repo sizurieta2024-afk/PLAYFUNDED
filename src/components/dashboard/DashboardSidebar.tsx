@@ -12,6 +12,7 @@ import {
   Settings,
   ChevronRight,
   Users,
+  BadgePercent,
 } from "lucide-react";
 
 interface NavItem {
@@ -22,7 +23,11 @@ interface NavItem {
   exact?: boolean;
 }
 
-export function DashboardSidebar() {
+export function DashboardSidebar({
+  showAffiliate = false,
+}: {
+  showAffiliate?: boolean;
+}) {
   const pathname = usePathname();
   const locale = useLocale();
   const t = useTranslations("dashboard");
@@ -59,6 +64,16 @@ export function DashboardSidebar() {
       label: t("navPayouts"),
       mobileLabel: t("navPayoutsShort"),
     },
+    ...(showAffiliate
+      ? [
+          {
+            href: "/dashboard/affiliate",
+            icon: BadgePercent,
+            label: t("navAffiliate"),
+            mobileLabel: t("navAffiliateShort"),
+          },
+        ]
+      : []),
     {
       href: "/dashboard/settings",
       icon: Settings,

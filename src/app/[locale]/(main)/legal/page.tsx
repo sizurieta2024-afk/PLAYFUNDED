@@ -145,16 +145,18 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const copy = getCopy(locale);
-  return withBrandMetadata({
-    title: `${copy.title} | PlayFunded`,
-    description: copy.subtitle,
-    openGraph: {
-      title: `${copy.title} | PlayFunded`,
+  return withBrandMetadata(
+    {
+      title: copy.title,
       description: copy.subtitle,
-      type: "website",
-      url: "https://playfunded.lat/legal",
+      openGraph: {
+        title: copy.title,
+        description: copy.subtitle,
+        type: "website",
+      },
     },
-  });
+    { locale, path: "/legal" },
+  );
 }
 
 export default async function LegalPage({

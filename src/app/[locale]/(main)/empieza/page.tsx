@@ -8,13 +8,6 @@ import { TrendingDown, TrendingUp } from "lucide-react";
 
 type LocaleKey = "es-419" | "en" | "pt-BR";
 
-const BASE_URL = "https://playfunded.lat";
-const LOCALE_PREFIX: Record<string, string> = {
-  "es-419": "",
-  en: "/en",
-  "pt-BR": "/pt-BR",
-};
-
 const COPY: Record<
   LocaleKey,
   {
@@ -86,18 +79,19 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const copy = getCopy(locale);
-  const prefix = LOCALE_PREFIX[locale] ?? "";
 
-  return withBrandMetadata({
-    title: copy.title,
-    description: copy.description,
-    openGraph: {
+  return withBrandMetadata(
+    {
       title: copy.title,
       description: copy.description,
-      type: "website",
-      url: `${BASE_URL}${prefix}/empieza`,
+      openGraph: {
+        title: copy.title,
+        description: copy.description,
+        type: "website",
+      },
     },
-  });
+    { locale, path: "/empieza" },
+  );
 }
 
 export default async function BioStartPage({

@@ -46,8 +46,8 @@ KEY RULES:
 - Entry fees are ${PLATFORM_POLICY.commercial.entryFeesRefundable ? "refundable" : "non-refundable"}
 
 PARTNER CODES:
-- Partner and influencer codes are managed internally by PlayFunded
-- There is no public affiliate signup page or user-facing affiliate dashboard in the live product
+- Users can apply through the public affiliate page, but approval is manual
+- Only approved affiliates get dashboard tools, referral links, code changes, or conversion stats
 - Valid codes can apply a checkout discount
 - Support should not promise instant approval or dashboard access before review
 

@@ -10,6 +10,8 @@ import { resolvePayoutCountry } from "@/lib/payout-options";
 import { PLATFORM_POLICY, isPayoutWindowOpen } from "@/lib/platform-policy";
 import { getResolvedCountryPolicy } from "@/lib/country-policy-store";
 import { createPayoutRequest } from "@/lib/payouts/request-service";
+import { AnalyticsEvents } from "@/lib/analytics/events";
+import { captureServerEvent } from "@/lib/analytics/posthog-server";
 
 async function getAuthenticatedUser() {
   const supabase = await createServerClient();
@@ -95,6 +97,14 @@ export async function requestPayout(
       payoutAmount: decision.payoutAmount,
     },
   });
+  await captureServerEvent(AnalyticsEvents.PAYOUT_REQUESTED, user.supabaseId, {
+    challenge_id: challengeId,
+    method,
+    country: payoutCountry,
+    requested_profit_amount_cents: requestedProfitAmount,
+    payout_amount_cents: decision.payoutAmount,
+    kyc_status: user.kycSubmission?.status ?? null,
+  });
 
   return {};
 }
@@ -148,6 +158,15 @@ export async function rolloverProfits(
       grossProfit,
     },
   });
+  await captureServerEvent(
+    AnalyticsEvents.PAYOUT_ROLLOVER_REQUESTED,
+    user.supabaseId,
+    {
+      challenge_id: challengeId,
+      payout_amount_cents: payoutAmount,
+      gross_profit_cents: grossProfit,
+    },
+  );
 
   return {};
 }

@@ -20,6 +20,8 @@ import {
   sendRequiredEmail,
   verificationEmail,
 } from "@/lib/email";
+import { AnalyticsEvents } from "@/lib/analytics/events";
+import { captureServerEvent } from "@/lib/analytics/posthog-server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
@@ -288,6 +290,10 @@ export async function signInWithEmail(
   }
 
   await clearPendingVerificationCookie();
+  await captureServerEvent(AnalyticsEvents.LOGIN_SUCCEEDED, data.user?.id, {
+    auth_provider: "email",
+    locale,
+  });
   redirect(buildDashboardPath(locale));
 }
 
@@ -368,6 +374,10 @@ export async function signUpWithEmail(
   }
 
   await writePendingVerificationCookie(signupState);
+  await captureServerEvent(AnalyticsEvents.SIGNUP_VERIFICATION_SENT, data.user.id, {
+    auth_provider: "email",
+    locale,
+  });
 
   return {
     success: true,
@@ -427,6 +437,14 @@ export async function resendVerificationEmail(): Promise<ActionResult> {
   }
 
   await writePendingVerificationCookie(verificationState);
+  await captureServerEvent(
+    AnalyticsEvents.SIGNUP_VERIFICATION_RESENT,
+    data.user?.id,
+    {
+      auth_provider: "email",
+      locale: verificationState.locale,
+    },
+  );
 
   return {
     success: true,
@@ -515,6 +533,11 @@ export async function requestPasswordReset(
     };
   }
 
+  await captureServerEvent(AnalyticsEvents.PASSWORD_RESET_REQUESTED, data.user?.id, {
+    auth_provider: "email",
+    locale,
+  });
+
   return {
     success: true,
     code: "RESET_EMAIL_SENT",
@@ -574,6 +597,11 @@ export async function updatePassword(
       code: "PASSWORD_UPDATE_FAILED",
     };
   }
+
+  await captureServerEvent(AnalyticsEvents.PASSWORD_RESET_COMPLETED, user.id, {
+    auth_provider: "email",
+    locale,
+  });
 
   await supabase.auth.signOut();
   await clearPendingVerificationCookie();

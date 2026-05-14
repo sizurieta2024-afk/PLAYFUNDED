@@ -310,6 +310,7 @@ Goal: launch the web app with controlled risk and measurable user acquisition.
    - paid to first pick
    - first pick to active challenge
    - affiliate apply funnel
+   - status: event instrumentation exists; PostHog UI dashboard still needs to be built
 5. Launch-day monitoring:
    - watch payments
    - watch Sentry
@@ -470,6 +471,7 @@ Goal: build acquisition channels that compound instead of relying on one viral p
    - payment success
    - challenge activation
    - first pick
+   - current status: core signup, verification, checkout, payment, first pick, group, affiliate, and payout events are implemented
    - group creation/join
    - affiliate application
 2. Build offer clarity:
@@ -683,6 +685,11 @@ Immediate next work before lawyer response:
    - Created: `docs/ops/mobile-app-store-launch-checklist-2026-05-14.md`
 5. Audit current PostHog event coverage against the launch funnel.
    - Created: `docs/ops/posthog-launch-funnel-audit-2026-05-14.md`
+6. Implement launch-critical PostHog product events.
+   - Added: `src/lib/analytics/events.ts`
+   - Added: `src/lib/analytics/posthog-client.ts`
+   - Added: `src/lib/analytics/posthog-server.ts`
+   - Added proof: `npm run proof:posthog-events`
 
 Work to wait on:
 

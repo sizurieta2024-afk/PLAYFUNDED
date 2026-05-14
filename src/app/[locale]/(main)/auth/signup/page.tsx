@@ -7,6 +7,8 @@ import { Link } from "@/i18n/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { useEffect } from "react";
 import { signUpWithEmail } from "@/app/actions/auth";
+import { AnalyticsEvents } from "@/lib/analytics/events";
+import { trackClientEvent } from "@/lib/analytics/posthog-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,6 +76,11 @@ export default function SignupPage() {
         <NextLink
           href="/api/auth/google"
           locale={false}
+          onClick={() =>
+            trackClientEvent(AnalyticsEvents.SIGNUP_STARTED, {
+              auth_provider: "google",
+            })
+          }
           className="flex items-center justify-center gap-3 w-full px-4 py-2.5 rounded-md border border-border bg-secondary text-foreground text-sm font-medium hover:bg-secondary/80 transition-colors"
         >
           <GoogleIcon />
@@ -88,7 +95,15 @@ export default function SignupPage() {
         </div>
 
         {/* Form */}
-        <form action={action} className="space-y-4">
+        <form
+          action={action}
+          className="space-y-4"
+          onSubmit={() =>
+            trackClientEvent(AnalyticsEvents.SIGNUP_STARTED, {
+              auth_provider: "email",
+            })
+          }
+        >
           <div className="space-y-1.5">
             <Label htmlFor="name" className="text-foreground text-sm">
               {t("nameLabel")}{" "}

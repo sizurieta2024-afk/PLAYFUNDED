@@ -13,6 +13,8 @@ import { withRouteMetric } from "@/lib/ops-observability";
 import { withWebhookLock } from "@/lib/payments/webhook-lock";
 import { attributeAffiliatePurchase } from "@/lib/affiliate/attribution";
 import { ALLOWED_FORWARDED_HOSTS } from "@/lib/allowed-hosts";
+import { AnalyticsEvents } from "@/lib/analytics/events";
+import { captureServerEvent } from "@/lib/analytics/posthog-server";
 
 function parseMetadataInt(value: unknown, fallback: number) {
   const parsed =
@@ -184,9 +186,24 @@ async function handleCheckoutCompleted(
   // Transactional emails
   const buyer = await prisma.user.findUnique({
     where: { id: userId },
-    select: { email: true, name: true },
+    select: { email: true, name: true, supabaseId: true },
   });
   if (buyer) {
+    await captureServerEvent(AnalyticsEvents.PAYMENT_COMPLETED, buyer.supabaseId, {
+      provider: "stripe",
+      tier_id: tier.id,
+      tier_name: tier.name,
+      amount_cents: chargedAmount,
+      list_price_cents: normalizedListPriceAmount,
+      discount_amount_cents: normalizedDiscountAmount,
+      discount_pct: parseMetadataInt(discountPct, 0),
+      discount_code_present: Boolean(affiliateCode),
+      payment_method: paymentMethodKind ?? "card",
+      country: country ?? null,
+      is_gift: isGift === "true",
+      payment_status: "completed",
+    });
+
     if (isGift === "true" && giftRecipientEmail && fulfillment.giftToken) {
       const { subject, html } = giftVoucherEmail(
         giftRecipientEmail,

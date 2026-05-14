@@ -2,6 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { createServerClient } from "@/lib/supabase";
+import { AnalyticsEvents } from "@/lib/analytics/events";
+import { captureServerEvent } from "@/lib/analytics/posthog-server";
 import { z } from "zod";
 
 async function getAuthUser() {
@@ -13,7 +15,7 @@ async function getAuthUser() {
   if (error || !user) throw new Error("Unauthenticated");
   const dbUser = await prisma.user.findUnique({
     where: { supabaseId: user.id },
-    select: { id: true },
+    select: { id: true, supabaseId: true },
   });
   if (!dbUser) throw new Error("User not found");
   return dbUser;
@@ -87,6 +89,18 @@ export async function submitAffiliateApplication(
     },
   });
 
+  await captureServerEvent(
+    AnalyticsEvents.AFFILIATE_APPLICATION_SUBMITTED,
+    user.supabaseId,
+    {
+      country,
+      audience_size: audienceSize ?? null,
+      has_website: Boolean(website),
+      social_channels_count: [tiktok, instagram, twitter, youtube].filter(Boolean)
+        .length,
+    },
+  );
+
   return {};
 }
 
@@ -134,6 +148,14 @@ export async function requestAffiliateCodeChange(
   await prisma.affiliateCodeChangeRequest.create({
     data: { affiliateId: affiliate.id, requestedCode: code },
   });
+
+  await captureServerEvent(
+    AnalyticsEvents.AFFILIATE_CODE_CHANGE_REQUESTED,
+    user.supabaseId,
+    {
+      affiliate_id: affiliate.id,
+    },
+  );
 
   return {};
 }

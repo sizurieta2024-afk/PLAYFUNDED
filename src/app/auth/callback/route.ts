@@ -9,6 +9,8 @@ import {
   inferLocaleFromPath,
   normalizeLocale,
 } from "@/i18n/navigation";
+import { AnalyticsEvents } from "@/lib/analytics/events";
+import { captureServerEvent } from "@/lib/analytics/posthog-server";
 
 function loginPathForNext(next: string) {
   return buildLoginPath(inferLocaleFromPath(next));
@@ -28,6 +30,10 @@ export async function GET(request: NextRequest) {
     !rawNext.includes("://")
       ? rawNext
       : buildDashboardPath(fallbackLocale);
+  const callbackLocale = inferLocaleFromPath(next);
+  const hadPendingVerification = Boolean(
+    request.cookies.get(PENDING_VERIFICATION_COOKIE)?.value,
+  );
 
   if (!code) {
     const fallbackTarget = `${origin}${loginPathForNext(next)}?redirectTo=${encodeURIComponent(next)}`;
@@ -114,6 +120,22 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     console.error("[auth/callback] DB sync error:", err);
   }
+
+  const provider =
+    typeof user.app_metadata?.provider === "string"
+      ? user.app_metadata.provider
+      : "unknown";
+  await captureServerEvent(
+    hadPendingVerification
+      ? AnalyticsEvents.EMAIL_VERIFIED
+      : AnalyticsEvents.LOGIN_SUCCEEDED,
+    user.id,
+    {
+      auth_provider: provider,
+      callback_type: hadPendingVerification ? "email_verification" : "oauth",
+      locale: callbackLocale,
+    },
+  );
 
   return response;
 }

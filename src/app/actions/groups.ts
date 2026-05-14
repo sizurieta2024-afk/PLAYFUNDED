@@ -11,6 +11,8 @@ import {
   MAX_TRADING_GROUP_MEMBERS,
   normalizeTradingGroupCode,
 } from "@/lib/trading-groups";
+import { AnalyticsEvents } from "@/lib/analytics/events";
+import { captureServerEvent } from "@/lib/analytics/posthog-server";
 
 type GroupActionResult = { error?: string };
 
@@ -43,7 +45,7 @@ async function getAuthUser() {
 
   return prisma.user.findUnique({
     where: { supabaseId: authUser.id },
-    select: { id: true },
+    select: { id: true, supabaseId: true },
   });
 }
 
@@ -85,7 +87,7 @@ export async function createTradingGroup(
     try {
       const code = generateTradingGroupCode();
 
-      await prisma.tradingGroup.create({
+      const group = await prisma.tradingGroup.create({
         data: {
           ownerId: user.id,
           name: parsed.data.name,
@@ -97,8 +99,13 @@ export async function createTradingGroup(
             },
           },
         },
+        select: { id: true },
       });
 
+      await captureServerEvent(AnalyticsEvents.GROUP_CREATED, user.supabaseId, {
+        group_id: group.id,
+        max_members: MAX_TRADING_GROUP_MEMBERS,
+      });
       revalidateGroupPages();
       return {};
     } catch (error) {
@@ -160,12 +167,19 @@ export async function joinTradingGroup(
           },
         });
 
-        return {};
+        return { groupId: group.id, memberCountBefore: group._count.members };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
 
-    if (result.error) return result;
+    if ("error" in result && result.error) return result;
+    if ("groupId" in result) {
+      await captureServerEvent(AnalyticsEvents.GROUP_JOINED, user.supabaseId, {
+        group_id: result.groupId,
+        member_count_before: result.memberCountBefore,
+        max_members: MAX_TRADING_GROUP_MEMBERS,
+      });
+    }
   } catch (error) {
     if (isUniqueConflict(error, "userId")) return { error: "already_in_group" };
     console.error("[groups] join failed", error);
@@ -182,7 +196,7 @@ export async function leaveTradingGroup(): Promise<GroupActionResult> {
 
   const membership = await prisma.tradingGroupMember.findUnique({
     where: { userId: user.id },
-    select: { id: true, role: true },
+    select: { id: true, role: true, groupId: true },
   });
 
   if (!membership) return { error: "not_in_group" };
@@ -192,6 +206,9 @@ export async function leaveTradingGroup(): Promise<GroupActionResult> {
     where: { id: membership.id },
   });
 
+  await captureServerEvent(AnalyticsEvents.GROUP_LEFT, user.supabaseId, {
+    group_id: membership.groupId,
+  });
   revalidateGroupPages();
   return {};
 }
@@ -211,6 +228,9 @@ export async function deleteTradingGroup(): Promise<GroupActionResult> {
     where: { id: group.id },
   });
 
+  await captureServerEvent(AnalyticsEvents.GROUP_DELETED, user.supabaseId, {
+    group_id: group.id,
+  });
   revalidateGroupPages();
   return {};
 }

@@ -5,6 +5,8 @@ import { useLocale } from 'next-intl'
 import { buildLocalePath, usePathname } from '@/i18n/navigation'
 import { useSearchParams } from 'next/navigation'
 import { Globe, ChevronDown } from 'lucide-react'
+import { AnalyticsEvents } from '@/lib/analytics/events'
+import { trackClientEvent } from '@/lib/analytics/posthog-client'
 
 const LOCALES = [
   { code: 'es-419', label: 'ES', name: 'Español' },
@@ -65,6 +67,10 @@ export function LanguageToggle() {
               onMouseDown={() => persistLocale(l.code)}
               onClick={() => {
                 persistLocale(l.code)
+                trackClientEvent(AnalyticsEvents.LOCALE_SELECTED, {
+                  from_locale: locale,
+                  to_locale: l.code,
+                })
                 setOpen(false)
               }}
               className={`flex items-center gap-2 w-full px-3 py-2 text-xs transition-colors text-left ${

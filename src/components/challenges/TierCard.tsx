@@ -12,6 +12,8 @@ import {
   X,
 } from "lucide-react";
 import type { Tier } from "@prisma/client";
+import { AnalyticsEvents } from "@/lib/analytics/events";
+import { trackClientEvent } from "@/lib/analytics/posthog-client";
 
 interface TierTranslations {
   fundedBankroll: string;
@@ -170,6 +172,17 @@ export function TierCard({
   const config = TIER_CONFIG[tier.name] ?? DEFAULT_CONFIG;
 
   async function handleBuy() {
+    trackClientEvent(AnalyticsEvents.CHALLENGE_TIER_CTA_CLICKED, {
+      tier_id: tier.id,
+      tier_name: tier.name,
+      tier_fee_cents: tier.fee,
+      funded_bankroll_cents: tier.fundedBankroll,
+      locale,
+      country: country ?? null,
+      is_authenticated: isAuthenticated,
+      available_payment_methods: availablePaymentMethods,
+    });
+
     if (!isAuthenticated) {
       router.push("/auth/login");
       return;
@@ -244,6 +257,19 @@ export function TierCard({
     setError(null);
 
     try {
+      trackClientEvent(AnalyticsEvents.CHECKOUT_STARTED, {
+        tier_id: tier.id,
+        tier_name: tier.name,
+        tier_fee_cents: tier.fee,
+        amount_cents: discountState?.discountedAmount ?? tier.fee,
+        discount_code_present: Boolean(discountState?.code),
+        payment_method: method === "crypto" ? selectedCrypto : method,
+        provider: method === "crypto" ? "nowpayments" : "stripe",
+        locale,
+        country: country ?? null,
+        is_gift: isGift,
+      });
+
       const endpoint =
         method === "crypto"
           ? "/api/checkout/nowpayments"
@@ -285,14 +311,45 @@ export function TierCard({
       };
 
       if (!res.ok) {
+        trackClientEvent(AnalyticsEvents.CHECKOUT_FAILED_CLIENT, {
+          tier_id: tier.id,
+          tier_name: tier.name,
+          status: res.status,
+          error_code: data.code ?? "unknown",
+          payment_method: method === "crypto" ? selectedCrypto : method,
+          provider: method === "crypto" ? "nowpayments" : "stripe",
+          locale,
+          country: country ?? null,
+        });
         setLoading(false);
         setError(data.error ?? "Payment failed. Please try again.");
         return;
       }
 
       if (data.url) {
+        trackClientEvent(AnalyticsEvents.CHECKOUT_CREATED_CLIENT, {
+          tier_id: tier.id,
+          tier_name: tier.name,
+          amount_cents: discountState?.discountedAmount ?? tier.fee,
+          discount_code_present: Boolean(discountState?.code),
+          payment_method: method === "pix" ? "pix" : "card",
+          provider: "stripe",
+          locale,
+          country: country ?? null,
+          is_gift: isGift,
+        });
         window.location.href = data.url;
       } else if (data.address) {
+        trackClientEvent(AnalyticsEvents.CHECKOUT_CREATED_CLIENT, {
+          tier_id: tier.id,
+          tier_name: tier.name,
+          amount_cents: discountState?.discountedAmount ?? tier.fee,
+          discount_code_present: Boolean(discountState?.code),
+          payment_method: selectedCrypto,
+          provider: "nowpayments",
+          locale,
+          country: country ?? null,
+        });
         const params = new URLSearchParams(
           Object.entries(data as Record<string, string>).filter(
             ([, v]) => v != null,
@@ -304,6 +361,15 @@ export function TierCard({
         setError("Unexpected response. Please try again.");
       }
     } catch {
+      trackClientEvent(AnalyticsEvents.CHECKOUT_FAILED_CLIENT, {
+        tier_id: tier.id,
+        tier_name: tier.name,
+        error_code: "NETWORK_ERROR",
+        payment_method: method === "crypto" ? selectedCrypto : method,
+        provider: method === "crypto" ? "nowpayments" : "stripe",
+        locale,
+        country: country ?? null,
+      });
       setLoading(false);
       setError("Network error. Please check your connection.");
     }

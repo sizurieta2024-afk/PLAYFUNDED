@@ -17,6 +17,8 @@ import {
   placeParlayRequest,
   type ParlayLegInput,
 } from "@/lib/picks/place-parlay-service";
+import { AnalyticsEvents } from "@/lib/analytics/events";
+import { captureServerEvent } from "@/lib/analytics/posthog-server";
 
 const parlayLegSchema = z.object({
   sport: z.string().min(1).max(64),
@@ -228,6 +230,24 @@ export async function POST(req: NextRequest) {
               { status: result.status },
             );
           }
+          const userPickCount = await prisma.pick.count({
+            where: { userId: parlayUser.id },
+          });
+          await captureServerEvent(
+            userPickCount === 1
+              ? AnalyticsEvents.FIRST_PICK_PLACED
+              : AnalyticsEvents.PICK_PLACED,
+            authUser.id,
+            {
+              challenge_id: challengeId,
+              is_parlay: true,
+              leg_count: legs.length,
+              stake_cents: stake,
+              odds: result.pick.odds,
+              sport: "parlay",
+              market_type: "parlay",
+            },
+          );
           return NextResponse.json(result, { status: 201 });
         } catch (err) {
           console.error("[api/picks] Failed to place parlay:", err);
@@ -411,6 +431,26 @@ export async function POST(req: NextRequest) {
             { status: result.status },
           );
         }
+
+        const userPickCount = await prisma.pick.count({
+          where: { userId: user.id },
+        });
+        await captureServerEvent(
+          userPickCount === 1
+            ? AnalyticsEvents.FIRST_PICK_PLACED
+            : AnalyticsEvents.PICK_PLACED,
+          authUser.id,
+          {
+            challenge_id: challengeId,
+            is_parlay: false,
+            leg_count: 1,
+            stake_cents: stake,
+            odds: matchedOutcome.odds,
+            sport,
+            league,
+            market_type: marketType,
+          },
+        );
 
         return NextResponse.json(result, { status: 201 });
       } catch (error) {

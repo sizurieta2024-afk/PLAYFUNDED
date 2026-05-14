@@ -1,6 +1,6 @@
 # Playfunded Proof-Based Validation Report
 
-Generated: 2026-05-13T03:13:09.033Z
+Generated: 2026-05-14T10:39:42.005Z
 
 This report follows a Shannon-style rule: claims must be backed by executable or source-level proof. Anything not proven is listed as unverified.
 
@@ -35,21 +35,21 @@ Area: payments and webhooks
 Claim: Stripe fulfillment only runs after signature verification and duplicate-safe locking.
 Detail: All required proof points were found in source.
 Evidence:
-- Stripe signature header is required: L251: const sig = req.headers.get("stripe-signature");
-- constructEvent verifies the webhook body: L263: event = stripe.webhooks.constructEvent(
-- Invalid signatures are rejected: L271: { error: "Invalid webhook signature" },
-- Fulfillment is wrapped in a webhook duplicate lock: L62: const fulfillment = await withWebhookLock(
+- Stripe signature header is required: L268: const sig = req.headers.get("stripe-signature");
+- constructEvent verifies the webhook body: L280: event = stripe.webhooks.constructEvent(
+- Invalid signatures are rejected: L288: { error: "Invalid webhook signature" },
+- Fulfillment is wrapped in a webhook duplicate lock: L64: const fulfillment = await withWebhookLock(
 
 ### VERIFIED payments.nowpayments-signature
 Area: payments and webhooks
 Claim: NOWPayments callbacks require a verified provider signature, reject malformed payloads, and deduplicate fulfillment.
 Detail: All required proof points were found in source.
 Evidence:
-- NOWPayments signature header is read: L30: const signature = request.headers.get("x-nowpayments-sig") ?? "";
-- Signature verifier is called: L34: isValid = await verifyNowPaymentsSignature(body, signature);
-- Invalid signatures are rejected: L40: console.error("[NOWPayments webhook] Invalid signature");
-- Malformed payloads are rejected: L56: data = JSON.parse(body) as typeof data;
-- Fulfillment is delegated to the shared NOWPayments payment service: L90: const outcome = await fulfillNowPaymentsPayment({
+- NOWPayments signature header is read: L32: const signature = request.headers.get("x-nowpayments-sig") ?? "";
+- Signature verifier is called: L36: isValid = await verifyNowPaymentsSignature(body, signature);
+- Invalid signatures are rejected: L42: console.error("[NOWPayments webhook] Invalid signature");
+- Malformed payloads are rejected: L58: data = JSON.parse(body) as typeof data;
+- Fulfillment is delegated to the shared NOWPayments payment service: L92: const outcome = await fulfillNowPaymentsPayment({
 
 ### VERIFIED payments.nowpayments-fulfillment-service
 Area: payments and webhooks
@@ -111,8 +111,8 @@ Area: payout flows
 Claim: Payout eligibility is scoped to the requesting user and funded challenges only.
 Detail: All required proof points were found in source.
 Evidence:
-- Payout flow is delegated to the shared payout service: L56: const decision = await createPayoutRequest({
-- Authenticated user is still required before payout request: L38: const user = await getAuthenticatedUser();
+- Payout flow is delegated to the shared payout service: L58: const decision = await createPayoutRequest({
+- Authenticated user is still required before payout request: L40: const user = await getAuthenticatedUser();
 
 ### VERIFIED admin.payout-audit
 Area: admin authorization
@@ -405,7 +405,7 @@ Area: payments and webhooks
 Claim: A paid purchase with an affiliate code records one conversion row and updates affiliate totals exactly once.
 Detail: Database-backed scenario matched the expected persisted outcome.
 Evidence:
-- Conversion code: PF-E8F6C3
+- Conversion code: PF-564B24
 - Affiliate conversions: 1
 - Affiliate pending payout: 85
 

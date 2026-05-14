@@ -10,6 +10,8 @@ import { withRouteMetric } from "@/lib/ops-observability";
 import { PLATFORM_POLICY } from "@/lib/platform-policy";
 import { resolveAffiliateDiscountCode } from "@/lib/affiliate/codes";
 import { resolvePublicOrigin } from "@/lib/public-origin";
+import { AnalyticsEvents } from "@/lib/analytics/events";
+import { captureServerEvent } from "@/lib/analytics/posthog-server";
 import { z } from "zod";
 
 const VALID_CURRENCIES: CryptoCurrency[] = ["usdttrc20", "usdcerc20", "btc"];
@@ -220,6 +222,19 @@ export async function POST(request: NextRequest) {
             discountCode: discount?.affiliate.code ?? null,
             discountAmount: discount?.discountAmount ?? 0,
           },
+        });
+        await captureServerEvent(AnalyticsEvents.CHECKOUT_CREATED, authUser.id, {
+          provider: "nowpayments",
+          tier_id: tier.id,
+          tier_name: tier.name,
+          list_price_cents: tier.fee,
+          amount_cents: discount?.discountedAmount ?? tier.fee,
+          discount_amount_cents: discount?.discountAmount ?? 0,
+          discount_pct: discount?.affiliate.discountPct ?? 0,
+          discount_code_present: Boolean(discount?.affiliate.code),
+          payment_method: currency,
+          country: checkoutCountry,
+          locale,
         });
 
         return NextResponse.json({

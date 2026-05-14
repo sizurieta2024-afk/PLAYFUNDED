@@ -7,6 +7,8 @@ import { withRouteMetric } from "@/lib/ops-observability";
 import { fulfillNowPaymentsPayment } from "@/lib/payments/nowpayments-fulfillment";
 import { attributeAffiliatePurchase } from "@/lib/affiliate/attribution";
 import { sendEmail, challengePurchasedEmail } from "@/lib/email";
+import { AnalyticsEvents } from "@/lib/analytics/events";
+import { captureServerEvent } from "@/lib/analytics/posthog-server";
 
 // NOWPayments IPN: fires on every status change.
 // We only act on "finished" (fully confirmed) payments.
@@ -134,6 +136,30 @@ export async function POST(request: NextRequest) {
       });
 
       if (outcome.status === "created") {
+        const buyer = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true, name: true, supabaseId: true },
+        });
+
+        await captureServerEvent(
+          AnalyticsEvents.PAYMENT_COMPLETED,
+          buyer?.supabaseId,
+          {
+            provider: "nowpayments",
+            tier_id: tier.id,
+            tier_name: tier.name,
+            amount_cents: Math.round(data.price_amount * 100),
+            list_price_cents:
+              pendingPayment?.listPriceAmount ??
+              Math.round(data.price_amount * 100),
+            discount_amount_cents: pendingPayment?.discountAmount ?? 0,
+            discount_pct: pendingPayment?.discountPct ?? 0,
+            discount_code_present: Boolean(pendingPayment?.discountCode),
+            payment_method: data.pay_currency,
+            payment_status: "completed",
+          },
+        );
+
         void attributeAffiliatePurchase({
           userId,
           paymentId: outcome.paymentId,
@@ -148,24 +174,21 @@ export async function POST(request: NextRequest) {
         );
 
         // Send challenge purchased confirmation email
-        void prisma.user
-          .findUnique({
-            where: { id: userId },
-            select: { email: true, name: true },
-          })
-          .then((buyer) => {
-            if (!buyer) return;
-            const { subject, html } = challengePurchasedEmail(
-              buyer.name,
-              tier.name,
-              tier.fundedBankroll,
-              tier.minPicks,
+        if (buyer) {
+          void Promise.resolve()
+            .then(() => {
+              const { subject, html } = challengePurchasedEmail(
+                buyer.name,
+                tier.name,
+                tier.fundedBankroll,
+                tier.minPicks,
+              );
+              return sendEmail(buyer.email, subject, html);
+            })
+            .catch((err) =>
+              console.error("[NOWPayments webhook] purchase email error", err),
             );
-            return sendEmail(buyer.email, subject, html);
-          })
-          .catch((err) =>
-            console.error("[NOWPayments webhook] purchase email error", err),
-          );
+        }
       }
 
       return NextResponse.json({ ok: true });

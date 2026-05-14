@@ -24,34 +24,40 @@ Current behavior:
 - user identity properties currently include locale only.
 - session recording is disabled unless `NEXT_PUBLIC_POSTHOG_SESSION_REPLAY=true`.
 - text and element attributes are masked.
+- a typed custom event layer now exists for launch-critical funnel events:
+  - `src/lib/analytics/events.ts`
+  - `src/lib/analytics/posthog-client.ts`
+  - `src/lib/analytics/posthog-server.ts`
+- server-side capture uses PostHog's public ingestion endpoint with bounded timeout and sanitized properties.
 
 Current gap:
 
-- there are no custom product funnel events for signup, checkout, payment, first pick, groups, affiliate, or payout behavior.
+- PostHog dashboards still need to be created inside the PostHog UI.
+- broad marketing CTA coverage can still be expanded after the core launch funnel is stable.
 
 ## Launch Funnel To Measure
 
 | Step | Event name | Where it should fire | Status |
 |---|---|---|---|
 | Landing viewed | `$pageview` | Existing PostHog pageview | Present |
-| Locale selected | `locale_selected` | Language toggle | Missing |
-| CTA clicked | `landing_cta_clicked` | Landing/challenges/public affiliate CTA | Missing |
-| Signup started | `signup_started` | Auth signup form submit | Missing |
-| Signup verification sent | `signup_verification_sent` | Signup server action success | Missing |
-| Email verified | `email_verified` | Auth callback verification path | Missing |
-| Login succeeded | `login_succeeded` | Auth login success | Missing |
-| Challenge viewed | `challenge_tier_viewed` | Challenge/pricing cards | Missing |
-| Checkout started | `checkout_started` | Before API checkout call | Missing |
-| Checkout created | `checkout_created_client` | After checkout URL returned | Missing client-side; present server-side as `OpsEventLog` |
-| Payment completed | `payment_completed` | Webhook or safe server-side event bridge | Missing in PostHog; present as `OpsEventLog` |
+| Locale selected | `locale_selected` | Language toggle | Present |
+| CTA clicked | `challenge_tier_cta_clicked` | Challenge tier CTA | Present for purchase CTA; broader marketing CTA expansion deferred |
+| Signup started | `signup_started` | Auth signup form submit / Google signup click | Present |
+| Signup verification sent | `signup_verification_sent` | Signup server action success | Present |
+| Email verified | `email_verified` | Auth callback verification path | Present |
+| Login succeeded | `login_succeeded` | Auth login success / OAuth callback | Present |
+| Challenge viewed | `challenge_tier_viewed` | Challenge/pricing cards | Deferred |
+| Checkout started | `checkout_started` | Before API checkout call | Present |
+| Checkout created | `checkout_created_client` / `checkout_created` | After checkout URL/invoice returned and server route succeeds | Present |
+| Payment completed | `payment_completed` | Stripe/NOWPayments webhook completion | Present |
 | Dashboard viewed after purchase | `paid_dashboard_viewed` | Dashboard with active challenge | Missing |
-| First pick placed | `first_pick_placed` | Pick API success or client success | Missing |
-| Group created | `group_created` | Group create action success | Missing |
-| Group joined | `group_joined` | Group join action success | Missing |
+| First pick placed | `first_pick_placed` | Pick API success | Present |
+| Group created | `group_created` | Group create action success | Present |
+| Group joined | `group_joined` | Group join action success | Present |
 | Affiliate page viewed | `$pageview` | Existing PostHog pageview | Present |
-| Affiliate application submitted | `affiliate_application_submitted` | Affiliate apply action success | Missing |
-| Payout request started | `payout_request_started` | Payout CTA/form | Missing |
-| Payout requested | `payout_requested` | Payout server action success | Missing in PostHog; present as ops event |
+| Affiliate application submitted | `affiliate_application_submitted` | Affiliate apply action success | Present |
+| Payout request started | `payout_request_started` | Payout CTA/form | Deferred |
+| Payout requested | `payout_requested` | Payout server action success | Present |
 
 ## Recommended Event Properties
 
@@ -100,6 +106,11 @@ Use it in:
 - group create/join UI
 - affiliate apply UI
 
+Status: partially implemented as `src/lib/analytics/posthog-client.ts`.
+The launch-critical client events now cover locale selection, signup start,
+challenge tier CTA clicks, checkout start, checkout created, and checkout client
+failure.
+
 ### Second pass: server-confirmed events
 
 Do not rely only on client events for money/payout truth.
@@ -117,6 +128,12 @@ Candidate server-confirmed events:
 - payout requested
 - affiliate application submitted
 - group created/joined
+
+Status: implemented as `src/lib/analytics/posthog-server.ts`.
+Server-confirmed events now cover verification email delivery, email
+verification, login success, password reset, checkout creation, payment
+completion, pick placement, group create/join/leave/delete, affiliate
+application/code-change request, payout request, and rollover request.
 
 ### Third pass: dashboards
 
@@ -165,10 +182,10 @@ Create PostHog dashboard sections:
 
 Before public traffic:
 
-1. add CTA and checkout-start events
-2. add signup/verify/login events
-3. add first-pick and group events
-4. create a launch funnel dashboard
+1. add CTA and checkout-start events - done for challenge purchase CTAs
+2. add signup/verify/login events - done
+3. add first-pick and group events - done
+4. create a launch funnel dashboard - next PostHog UI task
 
 After soft launch:
 
@@ -183,7 +200,7 @@ Go with current PostHog setup only for a very small soft launch.
 
 No-go for broad paid traffic until:
 
-- checkout-start is measured
-- signup-to-verify is measured
-- payment completion can be reconciled with Stripe/admin
-- first-pick activation is measured
+- checkout-start is measured - done
+- signup-to-verify is measured - done
+- payment completion can be reconciled with Stripe/admin - done in event stream; dashboard still needed
+- first-pick activation is measured - done

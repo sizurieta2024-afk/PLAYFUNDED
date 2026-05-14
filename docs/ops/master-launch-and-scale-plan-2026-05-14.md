@@ -676,9 +676,13 @@ Immediate next work before lawyer response:
 
 1. Review and classify the remaining dirty files.
 2. Prepare a legal-to-product wording matrix template.
+   - Created: `docs/legal/legal-to-product-wording-matrix-2026-05-14.md`
 3. Prepare Stripe live rehearsal checklist with exact steps and expected outcomes.
+   - Created: `docs/ops/stripe-live-rehearsal-checklist-2026-05-14.md`
 4. Prepare App Store / Google Play asset and compliance checklist.
+   - Created: `docs/ops/mobile-app-store-launch-checklist-2026-05-14.md`
 5. Audit current PostHog event coverage against the launch funnel.
+   - Created: `docs/ops/posthog-launch-funnel-audit-2026-05-14.md`
 
 Work to wait on:
 

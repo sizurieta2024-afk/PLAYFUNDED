@@ -22,6 +22,13 @@ function assertMatch(relativePath, matcher, message) {
   }
 }
 
+function assertNotMatch(relativePath, matcher, message) {
+  const content = read(relativePath);
+  if (matcher.test(content)) {
+    throw new Error(`${relativePath}: ${message}`);
+  }
+}
+
 function proveSharedRateLimiter() {
   assertMatch(
     "prisma/schema.prisma",
@@ -237,6 +244,26 @@ function proveOpsMonitoringAndDiagnostics() {
     ".github/workflows/ops-health-5m.yml",
     /continue-on-error:\s*true[\s\S]*exit_code=\$\{status\}/,
     "ops health workflow does not preserve failure output for alerts",
+  );
+  assertMatch(
+    "vercel.json",
+    /"path": "\/api\/odds\/sync"[\s\S]*"schedule": "3,13,23,33,43,53 \* \* \* \*"/,
+    "Vercel Cron is not scheduled to run odds sync every 10 minutes",
+  );
+  assertMatch(
+    "vercel.json",
+    /"src\/app\/api\/odds\/sync\/route\.ts"[\s\S]*"maxDuration": 60/,
+    "odds sync route is missing an explicit Vercel maxDuration",
+  );
+  assertMatch(
+    ".github/workflows/odds-sync-10m.yml",
+    /workflow_dispatch:/,
+    "GitHub odds sync workflow should remain available as a manual fallback",
+  );
+  assertNotMatch(
+    ".github/workflows/odds-sync-10m.yml",
+    /^\s*schedule:/m,
+    "GitHub odds sync should not also run on schedule while Vercel Cron owns cadence",
   );
   assertMatch(
     ".env.example",

@@ -1,6 +1,8 @@
 name: Odds Sync (Every 10 Minutes)
 
 on:
+  schedule:
+    - cron: "3,13,23,33,43,53 * * * *"
   workflow_dispatch:
 
 concurrency:

@@ -694,10 +694,10 @@ Immediate next work before lawyer response:
    - Created: `docs/ops/posthog-launch-dashboard-setup-2026-05-14.md`
    - Added setup: `npm run posthog:dashboard:setup`
    - Added proof: `npm run proof:posthog-dashboard`
-8. Move odds-sync cadence to Vercel Cron.
-   - Vercel now calls `/api/odds/sync` at minutes `3,13,23,33,43,53`.
-   - GitHub `Odds Sync` remains available as a manual fallback only.
-   - This avoids unreliable GitHub scheduled drift and duplicate provider calls.
+8. Stabilize odds-sync cadence.
+   - Vercel Hobby cannot run every-10-minute cron jobs, so production stays on GitHub Actions for now.
+   - GitHub `Odds Sync` now runs at minutes `3,13,23,33,43,53` instead of the crowded `*/10` boundary.
+   - Upgrade Vercel to Pro before launch if we want Vercel-owned high-frequency cron.
 
 Work to wait on:
 

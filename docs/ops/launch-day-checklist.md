@@ -79,10 +79,11 @@ Pass criteria:
 - `/api/settle` returns `200` with `CRON_SECRET`
 - `/api/ops/health` is green after fresh sync and settle
 - keep `PF_REQUIRE_PAYOUT_SYNC_FOR_HEALTH=false` until payout sync is truly live and expected
-- Vercel Cron has `/api/odds/sync` scheduled every 10 minutes
+- GitHub `Odds Sync` is scheduled at minutes `3,13,23,33,43,53`
+- Vercel account is upgraded to Pro if we want Vercel-owned high-frequency cron
 - GitHub CI is green on the final launch commit
 - GitHub workflow `Deploy Production` is green on the final `main` commit
-- GitHub fallback cron workflows are green when manually dispatched
+- GitHub cron workflows are green
 
 ## 7. Auth, KYC, And Support Posture
 

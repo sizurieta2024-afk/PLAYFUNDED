@@ -246,24 +246,19 @@ function proveOpsMonitoringAndDiagnostics() {
     "ops health workflow does not preserve failure output for alerts",
   );
   assertMatch(
-    "vercel.json",
-    /"path": "\/api\/odds\/sync"[\s\S]*"schedule": "3,13,23,33,43,53 \* \* \* \*"/,
-    "Vercel Cron is not scheduled to run odds sync every 10 minutes",
-  );
-  assertMatch(
-    "vercel.json",
-    /"src\/app\/api\/odds\/sync\/route\.ts"[\s\S]*"maxDuration": 60/,
-    "odds sync route is missing an explicit Vercel maxDuration",
+    ".github/workflows/odds-sync-10m.yml",
+    /cron: "3,13,23,33,43,53 \* \* \* \*"/,
+    "GitHub odds sync should run on an offset 10-minute cadence",
   );
   assertMatch(
     ".github/workflows/odds-sync-10m.yml",
     /workflow_dispatch:/,
-    "GitHub odds sync workflow should remain available as a manual fallback",
+    "GitHub odds sync workflow should remain available for manual refresh",
   );
   assertNotMatch(
-    ".github/workflows/odds-sync-10m.yml",
-    /^\s*schedule:/m,
-    "GitHub odds sync should not also run on schedule while Vercel Cron owns cadence",
+    "vercel.json",
+    /"path": "\/api\/odds\/sync"/,
+    "Vercel Hobby cannot run every-10-minute odds sync cron",
   );
   assertMatch(
     ".env.example",

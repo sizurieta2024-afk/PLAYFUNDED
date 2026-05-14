@@ -6,16 +6,15 @@ This is the operational first-response guide for PlayFunded launch-critical fail
 
 Signal:
 - `/api/ops/health` shows `odds_sync_recent = false`
-- Vercel Cron invocation for `/api/odds/sync` is missing or failing
-- GitHub fallback workflow `odds-sync-10m.yml` fails when manually dispatched
+- GitHub workflow `odds-sync-10m.yml` is missing scheduled runs or fails
 - `OpsEventLog` contains `cron_odds_sync_failed`
 
 First checks:
 - Confirm `ODDS_API_KEY` and `API_FOOTBALL_KEY` still exist in Vercel.
 - Call `/api/odds/sync` manually with `CRON_SECRET`.
 - Check recent `cron_odds_sync_failed` events and provider-specific error text.
-- Confirm Vercel Cron is invoking `/api/odds/sync` at minutes `3,13,23,33,43,53`.
-- Use the GitHub `Odds Sync` workflow only as a manual fallback.
+- Confirm GitHub `Odds Sync` is scheduled at minutes `3,13,23,33,43,53`.
+- If high-frequency Vercel Cron is required, upgrade the Vercel account from Hobby to Pro first.
 
 Containment:
 - Freeze public messaging that implies fresh odds if sync has been stale for more than one cycle.

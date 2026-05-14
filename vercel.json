@@ -7,16 +7,9 @@
     {
       "path": "/api/cron/backup",
       "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/odds/sync",
-      "schedule": "3,13,23,33,43,53 * * * *"
     }
   ],
   "functions": {
-    "src/app/api/odds/sync/route.ts": {
-      "maxDuration": 60
-    },
     "src/app/api/settle/route.ts": {
       "maxDuration": 60
     },

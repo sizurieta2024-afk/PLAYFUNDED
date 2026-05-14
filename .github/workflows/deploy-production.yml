@@ -59,6 +59,12 @@ jobs:
       - name: Security controls proof
         run: node scripts/prove-security-controls.js
 
+      - name: PostHog event proof
+        run: node scripts/prove-posthog-events.mjs
+
+      - name: PostHog dashboard proof
+        run: node scripts/prove-posthog-dashboard.mjs
+
       - name: Proof-based validation
         run: TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"node"}' node -r ts-node/register/transpile-only scripts/validate-proof-based.js
 

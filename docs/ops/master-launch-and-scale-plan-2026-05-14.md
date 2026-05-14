@@ -690,6 +690,10 @@ Immediate next work before lawyer response:
    - Added: `src/lib/analytics/posthog-client.ts`
    - Added: `src/lib/analytics/posthog-server.ts`
    - Added proof: `npm run proof:posthog-events`
+7. Make PostHog launch dashboard setup repeatable.
+   - Created: `docs/ops/posthog-launch-dashboard-setup-2026-05-14.md`
+   - Added setup: `npm run posthog:dashboard:setup`
+   - Added proof: `npm run proof:posthog-dashboard`
 
 Work to wait on:
 

@@ -30,9 +30,13 @@ Current behavior:
   - `src/lib/analytics/posthog-server.ts`
 - server-side capture uses PostHog's public ingestion endpoint with bounded timeout and sanitized properties.
 
-Current gap:
+Current operational gap:
 
-- PostHog dashboards still need to be created inside the PostHog UI.
+- PostHog dashboards need a private personal API key before they can be created automatically.
+- A repeatable launch dashboard setup script now exists:
+  - `scripts/setup-posthog-launch-dashboard.mjs`
+  - `npm run posthog:dashboard:setup`
+  - `npm run proof:posthog-dashboard`
 - broad marketing CTA coverage can still be expanded after the core launch funnel is stable.
 
 ## Launch Funnel To Measure
@@ -166,6 +170,10 @@ Create PostHog dashboard sections:
    - approved affiliates
    - affiliate-attributed payments
 
+Status: setup automation added in `scripts/setup-posthog-launch-dashboard.mjs`.
+The dashboard can now be created idempotently once
+`POSTHOG_PERSONAL_API_KEY` and `POSTHOG_ENVIRONMENT_ID` are available.
+
 ## Launch Questions This Should Answer
 
 - Which locale converts best?
@@ -185,7 +193,7 @@ Before public traffic:
 1. add CTA and checkout-start events - done for challenge purchase CTAs
 2. add signup/verify/login events - done
 3. add first-pick and group events - done
-4. create a launch funnel dashboard - next PostHog UI task
+4. create a launch funnel dashboard - setup script added; run once private PostHog API env is available
 
 After soft launch:
 
@@ -202,5 +210,5 @@ No-go for broad paid traffic until:
 
 - checkout-start is measured - done
 - signup-to-verify is measured - done
-- payment completion can be reconciled with Stripe/admin - done in event stream; dashboard still needed
+- payment completion can be reconciled with Stripe/admin - done in event stream; launch dashboard setup is now scripted
 - first-pick activation is measured - done
